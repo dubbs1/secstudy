@@ -1,7 +1,7 @@
 // Saved progress: localStorage key awsCourse1. load() is the only way data gets in.
 const KEY = 'awsCourse1';
 const THEMES = ['system', 'light', 'dark'];
-const TABS = ['today', 'learn', 'practice', 'labs', 'timer'];
+const TABS = ['today', 'learn', 'practice', 'labs'];   // a Timer tab saved by an older version opens Today
 const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, stage:{}, days:{}, current:null, review:null, tab:'today', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', theme:'system', timer:{len:15, end:null, left:null, task:''}};
 let S;   // loaded just before the first render, once the helpers below exist
 

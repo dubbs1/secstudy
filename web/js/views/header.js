@@ -14,7 +14,6 @@ function renderTop(){
   const left = daysUntil(EXAM.date);
   const examTxt = left > 1 ? `${left} days to go` : left === 1 ? 'tomorrow' : left === 0 ? 'today' : 'done';
   const pct = Math.round((done / LESSONS.length * 0.6 + right / QUESTIONS.length * 0.3 + labsDone / LABS.length * 0.1) * 100);
-  const t = timerLeft();
   $('#top').innerHTML = `
     <div class="top-row"><div><h1 tabindex="-1">AWS Cloud Practitioner</h1>
     <div class="sub">${EXAM.code} · <span class="nw">exam ${fmtDayYear(EXAM.date)}</span> · <span class="nw">${examTxt}</span></div></div>
@@ -25,6 +24,5 @@ function renderTop(){
       <span class="stat">Questions right <b>${right}/${QUESTIONS.length}</b></span>
       <span class="stat">Labs <b>${labsDone}/${LABS.length}</b></span>
       ${dueNow().length ? `<span class="stat timer">Review due <b style="color:inherit">${dueNow().length}</b></span>` : ''}
-      ${S.timer.end || S.timer.left != null ? `<span class="stat timer" id="miniClock">⏱ ${mmss(t)}</span>` : ''}
     </div>`;
 }

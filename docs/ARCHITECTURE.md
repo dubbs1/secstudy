@@ -36,7 +36,8 @@ web/js/store.js           saved progress: KEY 'awsCourse1', DEFAULTS, load() (cl
 web/js/course.js          lookups over the content, recording answers, spaced repetition, weak-spot statistics
 web/js/views/shared.js    domain chip, the question block, per-visit view state (live, lqi, pCur)
 web/js/views/visual.js    turns a VISUALS entry into HTML and CSS (no images: wraps on phones, follows the theme)
-web/js/views/*.js         one file per screen: header, today, learn, practice, labs, timer. Each returns an HTML
+web/js/views/timer.js     the timer button in the sticky top bar and its panel (no tab of its own)
+web/js/views/*.js         one file per screen: header, today, learn, practice, labs. Each returns an HTML
                           string from the current state. They may settle view state while drawing (which
                           lesson is open, which quiz or practice question shows) but never save
 web/js/app.js             render loop, event handlers, focus and scroll keeping, theme, install, startup

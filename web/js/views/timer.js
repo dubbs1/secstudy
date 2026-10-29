@@ -1,5 +1,6 @@
-/* ---------- Timer ---------- */
+/* ---------- Timer: a button in the top bar and a small panel under it ---------- */
 let tick = null, audio = null;
+let focusOpen = false;   // the panel is open (not saved: it starts closed)
 function timerLeft(){
   const T = S.timer;
   if (T.end) return Math.max(0, T.end - Date.now());
@@ -12,9 +13,21 @@ function suggestTask(){
   const st = S.steps[l.id] || []; const i = l.steps.findIndex((s, k) => !st[k]);
   return `Lesson ${lessonNo(l.id)}: ` + (i < 0 ? 'finish the quiz' : l.steps[i].replace(/ \(\d+ min\)$/, ''));
 }
+// The button shows the idle length, the time left while running, or a pause sign while paused.
+function renderTimerButton(){
+  const T = S.timer, ms = timerLeft(), state = T.end ? 'running' : T.left != null ? 'paused' : 'idle';
+  const b = $('#timerBtn');
+  b.className = 'timer-btn ' + state;
+  b.setAttribute('aria-expanded', focusOpen);
+  b.setAttribute('aria-label', `Focus timer, ${mmss(ms)} ${state === 'running' ? 'left' : state === 'paused' ? 'left, paused' : ''}`.trim());
+  $('#timerLabel').textContent = (state === 'paused' ? '❚❚ ' : '') + mmss(ms);
+  const panel = $('#focusPanel');
+  panel.hidden = !focusOpen;
+  panel.innerHTML = focusOpen ? renderTimer() : '';
+}
 function renderTimer(){
   const T = S.timer, ms = timerLeft(), running = !!T.end, pct = 100 - ms / (T.len * 600);
-  return `<div class="card"><div class="body" style="padding-top:16px">
+  return `<div class="body"><div class="panel-head"><b>Focus timer</b><button class="link" data-act="focusClose">Close</button></div>
     <div class="seg small" role="group">
       <button data-act="tLen" data-v="15" aria-pressed="${T.len === 15}">15 min focus</button>
       <button data-act="tLen" data-v="5" aria-pressed="${T.len === 5}">5 min</button></div>
@@ -25,7 +38,7 @@ function renderTimer(){
     <div class="btns" style="justify-content:center">
       <button class="btn" data-act="tGo" style="min-width:120px">${running ? 'Pause' : (T.left != null ? 'Resume' : 'Start')}</button>
       <button class="btn ghost" data-act="tReset">Reset</button></div>
-        </div></div>`;
+    </div>`;
 }
 function startTick(){
   clearInterval(tick);
@@ -34,7 +47,7 @@ function startTick(){
     const ms = timerLeft();
     const c = $('#clock'); if (c) c.textContent = mmss(ms);
     const r = $('#ring'); if (r) r.style.width = (100 - ms / (S.timer.len * 600)) + '%';
-    const m = $('#miniClock'); if (m) m.textContent = '⏱ ' + mmss(ms);
+    $('#timerLabel').textContent = mmss(ms);
     if (ms <= 0) finishTimer();
   }, 250);
 }

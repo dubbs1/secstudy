@@ -154,7 +154,18 @@ table.facts td:last-child{text-align:right;font-weight:600}
 h2{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
 
 /* tab bar: stays on screen, icon above a word */
-.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:6px;align-items:stretch;margin:-6px 0 8px;padding:6px 0;background:var(--bg)}
+.topbar .tabs{flex:1;min-width:0;margin-bottom:0}
+.timer-btn{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:64px;padding:6px 8px;
+  border:1px solid var(--line);border-radius:22px;background:var(--card);box-shadow:var(--shadow);color:var(--muted);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.timer-btn:hover{color:var(--text)}
+.timer-btn.running{background:var(--brand-soft);border-color:var(--brand);color:var(--brand-text)}
+.timer-btn.paused{color:var(--text)}
+.timer-btn[aria-expanded=true]{border-color:var(--brand)}
+.focus-panel{position:absolute;top:calc(100% + 6px);right:0;width:min(360px,100%);margin:0;z-index:6;box-shadow:0 8px 30px rgba(12,12,20,.18)}
+.focus-panel .body{padding-top:12px}
+.focus-panel .clock{font-size:56px;margin:10px 0 4px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .tabs button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px 6px;font-size:12.5px;min-width:0}
 .tabs button span{white-space:nowrap}
 .tabs svg{flex:none}

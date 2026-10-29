@@ -215,22 +215,45 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
 
   // ---------- Timer ----------
-  await check('timer: 15 min default, runs, survives reload, 5 min option', async () => {
-    await seed(p, {v:2, tab:'timer'});
+  await check('timer: 15 min default, runs, survives reload and tab switches, 5 min option (U8.3)', async () => {
+    await seed(p, {v:2, tab:'timer'});   // a Timer tab saved by an older version
+    ok(await p.getAttribute('#nav [data-tab=today]', 'aria-selected') === 'true' && !(await p.$('#nav [data-tab=timer]')), 'old Timer tab not mapped to Today');
+    ok(await text(p, '#timerLabel') === '15:00', 'idle button does not show 15:00');
+    await p.click('#timerBtn');
     ok(await text(p, '#clock') === '15:00', 'default not 15:00');
     await p.click('[data-act=tGo]');
     await p.waitForTimeout(1300);
-    ok((await text(p, '#clock')) < '15:00', 'not counting');
+    ok((await text(p, '#clock')) < '15:00' && (await text(p, '#timerLabel')) < '15:00', 'not counting');
+    await p.click('#nav [data-tab=labs]'); await p.waitForTimeout(1100);
+    ok((await text(p, '#timerLabel')) < '14:59', 'stopped after a tab switch');
     await p.reload();
-    ok((await text(p, '#clock')) < '15:00' && await p.$('#miniClock'), 'lost on reload');
+    ok((await text(p, '#timerLabel')) < '15:00' && await p.evaluate(() => document.querySelector('#timerBtn').classList.contains('running')), 'lost on reload');
+    await p.click('#timerBtn'); await p.click('[data-act=tGo]');   // pause
+    ok((await text(p, '#timerLabel')).startsWith('❚❚'), 'paused state not shown');
     await p.click('[data-act=tLen][data-v="5"]');
-    ok(await text(p, '#clock') === '05:00', '5 min not set');
+    ok(await text(p, '#clock') === '05:00' && await text(p, '#timerLabel') === '05:00', '5 min not set');
   });
   await check('timer: finishing resets and says time is up', async () => {
     await p.evaluate(() => { S.timer.end = Date.now() + 300; save(); render(); });
     await p.waitForTimeout(900);
-    ok(await text(p, '#clock') === '05:00', 'did not reset after finishing');
+    ok(await text(p, '#timerLabel') === '05:00', 'did not reset after finishing');
     ok(await p.$('.toast'), 'no message');
+  });
+  await check('timer panel: opens from the top bar, closes by Close, Escape, a tap outside or Back; focus returns (U8.1, U8.2)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l1'});
+    const isOpen = () => p.isVisible('#focusPanel');
+    const onBtn = () => p.evaluate(() => document.activeElement.id === 'timerBtn');
+    await p.focus('#timerBtn'); await p.keyboard.press('Enter');
+    ok(await isOpen() && await p.evaluate(() => document.activeElement.dataset.act === 'tGo'), 'panel not open with focus on Start');
+    ok(await p.getAttribute('#timerBtn', 'aria-expanded') === 'true', 'aria-expanded not set');
+    await p.click('[data-act=focusClose]'); ok(!(await isOpen()) && await onBtn(), 'Close');
+    await p.click('#timerBtn'); await p.keyboard.press('Escape'); ok(!(await isOpen()) && await onBtn(), 'Escape');
+    await p.click('#timerBtn'); await p.click('#top h1'); ok(!(await isOpen()), 'tap outside');
+    ok(await text(p, '.lesson-t') === 'Why companies use the cloud', 'the lesson behind changed');
+    await p.click('#timerBtn'); await p.goBack().catch(() => {}); await p.waitForTimeout(150);
+    ok(!(await isOpen()) && await p.evaluate(() => S.openLesson === 'l1'), 'Back did not close only the panel');
+    await p.click('#timerBtn'); await p.fill('#task', 'Draw the IaaS table');
+    ok(await p.evaluate(() => S.timer.task === 'Draw the IaaS table' && document.activeElement.id === 'task'), 'typing in Working on lost');
   });
 
   // ---------- backup ----------
@@ -273,11 +296,15 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   for (const [name, opts] of [['phone width, light', {}], ['phone width, dark', {colorScheme:'dark'}], ['narrow phone, 320 px (U7.3)', {viewport:{width:320, height:640}}], ['desktop width', {viewport:{width:1280, height:900}}]]) {
     await check('layout: no sideways scroll at ' + name, async () => {
       const q = await fresh(opts);
-      for (const tab of ['today', 'learn', 'practice', 'labs', 'timer']) {
+      for (const tab of ['today', 'learn', 'practice', 'labs']) {
         await q.click(`#nav [data-tab=${tab}]`);
         const w = await q.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         ok(w <= 0, `${tab} overflows by ${w}px`);
       }
+      await q.click('#timerBtn');   // the open timer panel fits too (U8.4)
+      const fit = await q.evaluate(() => { const r = document.querySelector('#focusPanel').getBoundingClientRect(), n = document.querySelector('#nav').getBoundingClientRect();
+        return [r.left >= 0 && r.right <= innerWidth, r.top >= n.bottom, document.documentElement.scrollWidth - innerWidth]; });
+      ok(fit[0] && fit[1] && fit[2] <= 0, 'timer panel does not fit: ' + fit);
       await q.context().close();
     });
   }
@@ -537,7 +564,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await seed(p, {v:2, tab:'learn', openLesson:'l10', stage:{l10:4}});
     ok(await p.$('[data-act=done][data-id=l10]') && await p.$('[data-act=breakTimer]') && await p.$('[data-act=goLab][data-id=lab3]'), 'missing a Done action');
     await p.click('[data-act=breakTimer]');
-    ok(await p.evaluate(() => S.timer.len === 5 && S.timer.end > Date.now()) && await p.$('#miniClock'), 'break timer not running');
+    ok(await p.evaluate(() => S.timer.len === 5 && S.timer.end > Date.now()) && await p.evaluate(() => document.querySelector('#timerBtn').classList.contains('running')), 'break timer not running');
     await p.click('[data-act=goLab]');
     ok(await p.getAttribute('#nav [data-tab=labs]', 'aria-selected') === 'true' && (await text(p, '.card.open')).includes('S3: bucket'), 'lab not opened');
   });

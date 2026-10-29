@@ -9,7 +9,7 @@ let labFromLesson = false;   // the lab was opened from a lesson: Back returns t
 
 // A selector that finds "the same control" again after the page is rebuilt.
 function controlKey(el){
-  if (!el || el === document.body || !el.closest('#top, #main')) return null;
+  if (!el || el === document.body || !el.closest('#top, #main, #focusPanel')) return null;
   if (el.id) return '#' + CSS.escape(el.id);
   const keys = ['act', 'id', 'i', 'q', 'v', 'ctx'].filter(k => el.dataset[k] != null);
   return keys.length ? keys.map(k => `[data-${k}="${CSS.escape(el.dataset[k])}"]`).join('') : null;
@@ -20,8 +20,9 @@ function render(){
   applyTheme();
   document.querySelectorAll('#nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === S.tab));
   renderTop();
-  const views = {today:renderToday, learn:renderLearn, practice:renderPractice, labs:renderLabs, timer:renderTimer};
+  const views = {today:renderToday, learn:renderLearn, practice:renderPractice, labs:renderLabs};
   $('#main').innerHTML = (views[S.tab] || renderToday)();
+  renderTimerButton();
   startTick();
   // Keyboard users keep their place: the feedback after answering, else the same control, else (when it
   // went away, e.g. "Next question") the card just opened or the first answer on screen.
@@ -74,7 +75,8 @@ window.addEventListener('pointerdown', armBack, {once:true, capture:true});
 window.addEventListener('keydown', armBack, {once:true, capture:true});
 // Closes one thing on the screen you are looking at. False when there is nothing left to close.
 function backOneStep(){
-  if (S.tab === 'learn' && S.openLesson) {
+  if (focusOpen) { focusOpen = false; focusTo = '#timerBtn'; }
+  else if (S.tab === 'learn' && S.openLesson) {
     reveal = `[data-act=openLesson][data-id="${S.openLesson}"]`; S.openLesson = null;
     if (lessonFrom && lessonFrom !== 'learn') { S.tab = lessonFrom; reveal = null; }   // opened from a lab or Today: go back there
     lessonFrom = null;
@@ -97,6 +99,14 @@ window.addEventListener('popstate', e => {
 });
 
 /* ---------- events ---------- */
+// A tap outside the timer panel closes it (the tap still does what it was for).
+document.addEventListener('pointerdown', e => {
+  if (focusOpen && !e.target.closest('#focusPanel, #timerBtn')) { focusOpen = false; renderTimerButton(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && focusOpen) { focusOpen = false; renderTimerButton(); $('#timerBtn').focus(); }
+});
+
 document.addEventListener('click', e => {
   const tabBtn = e.target.closest('#nav button');
   if (tabBtn) {
@@ -133,7 +143,7 @@ document.addEventListener('click', e => {
       const len = act === 'breakTimer' ? 5 : 15;
       try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
       S.timer = {...S.timer, len, end:Date.now() + len * 60000, left:null};
-      toast(len === 5 ? '5 min break started. The timer is at the top.' : '15 min timer started. It shows at the top.');
+      toast(len === 5 ? '5 min break started. The timer is at the top right.' : '15 min timer started. It is at the top right.');
       break;
     }
     case 'openLab':     S.open = null; S.openLab = S.openLab === id ? null : id;
@@ -182,6 +192,8 @@ document.addEventListener('click', e => {
       break;
     }
     case 'tReset': S.timer.end = null; S.timer.left = null; break;
+    case 'focusToggle': focusOpen = !focusOpen; focusTo = focusOpen ? '#focusPanel [data-act=tGo]' : '#timerBtn'; render(); return;
+    case 'focusClose':  focusOpen = false; focusTo = '#timerBtn'; render(); return;
     case 'theme': S.theme = THEMES[(THEMES.indexOf(S.theme) + 1) % THEMES.length]; break;
     case 'export': exportProgress(); return;
     case 'import': $('#importFile').click(); return;

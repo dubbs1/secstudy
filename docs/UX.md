@@ -66,8 +66,18 @@ Each lesson has scenario cards: a real situation, you think of the answer, then 
 ### U7. Comfort (X7)
 - AC7.1 Body text is 16 px with at least 1.55 line height.
 - AC7.2 The tab bar stays at the top while you scroll, with an icon and a word on each tab.
-- AC7.3 The five tabs fit at 320 px wide without sideways scrolling.
+- AC7.3 The four tabs and the timer button fit at 320 px wide without sideways scrolling.
 - AC7.4 Motion is skipped when the system asks for reduced motion.
+
+### U8. The timer is always at hand, not a tab
+The timer was a tab of its own, so starting it meant leaving what you were studying.
+It now sits at the right of the sticky tab bar on every screen and opens a small panel.
+- AC8.1 There is no Timer tab. The timer button shows 15:00 (or 5:00) when idle, the time left while
+  running, and a pause sign while paused.
+- AC8.2 Tapping it opens a panel with 15 min / 5 min, Start or Pause, Reset and "Working on". The panel
+  closes with its Close button, Escape, Back, or a tap outside, and focus returns to the timer button.
+- AC8.3 A running or paused timer survives reloads and tab switches. A saved Timer tab opens Today.
+- AC8.4 The bar and panel fit at 320 px wide; the panel never covers the tab bar.
 
 ## Kept as they were
 
