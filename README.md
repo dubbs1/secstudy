@@ -1,19 +1,40 @@
 # secstudy
 
-AWS Cloud Practitioner (CLF-C02) study tool. One file: `index.html`. No build step, no dependencies.
+Study tool for the AWS Cloud Practitioner exam (CLF-C02): 15 lessons with short quizzes, 45 practice
+questions, 6 console labs for the AWS Free plan, a review schedule for missed questions, and a 15/5 minute timer.
 
-Open `index.html` in a browser. Progress is saved in that browser's localStorage under the key `awsCourse1`
-(keep this key on any rewrite). Use **Export** at the bottom of the page to back it up, **Import** on another device.
+The whole app is `index.html`. There are three ways to use it:
 
-Tabs: Learn (today's review + 15 lessons, each with its own 3-question quiz), Practice (weak spots + 45 questions), Labs (6 console labs, Free plan), Timer (15 / 5 min).
+- **Open the file** in any browser.
+- **Install from the website** (GitHub Pages). Phone: open the site, then Share > Add to Home Screen (iPhone)
+  or the menu's Install app (Android). Desktop Chrome or Edge: the Install app link at the bottom of the page.
+  It works offline once installed.
+- **Windows app**: `AWS-CP-Study-Setup-<version>.exe` on the Releases page. It is not code-signed, so Windows
+  asks first: More info > Run anyway.
 
-UI follows Proton's design language (purple #6D4AFF, pill segmented nav, rounded cards) in hand-written CSS.
-Proton's own packages (@proton/atoms, @proton/components) live in the GPLv3 ProtonMail/WebClients monorepo and are not on npm.
+Progress is stored per browser or app (localStorage key `awsCourse1`). To move it, use Export at the bottom of
+the page and Import in the other place.
 
-Deploy later: private repo -> Cloudflare Pages or Netlify. A private repo does not make a GitHub Pages site private.
+## Files
 
-Tests: `cd tests && npm ci && npm test` (also run by GitHub on every push).
+| Path | What it is |
+|---|---|
+| `index.html` | the app |
+| `manifest.webmanifest`, `sw.js`, `icons/` | install and offline support for the website |
+| `desktop/` | Windows app build (Tauri 2). `desktop/prepare.js` copies the web files into `desktop/dist/` |
+| `tests/app.test.js` | browser checks for the app |
+| `tests/exe.test.js` | checks run against the installed Windows app |
+| `.github/workflows/test.yml` | runs the checks, builds and tests the installer, publishes the website and releases |
 
-Smart review: every answered question is scheduled. A miss comes back the next day; each right answer on a due
-question waits longer (1, 3, 7, 14 days). Up to 10 due questions per sitting. Weak spots (Practice tab) show
-accuracy per exam domain and the lessons with the most misses.
+## Checks
+
+```
+cd tests && npm ci && npm test
+```
+
+GitHub runs these on every push, then builds the Windows installer, installs it, runs `exe.test.js`
+against the app, and uninstalls it. On `main` it also publishes the website, and publishes a release
+when the version in `desktop/src-tauri/tauri.conf.json` has no release yet.
+
+To release a new Windows version, raise `version` in `desktop/src-tauri/tauri.conf.json` and
+`desktop/src-tauri/Cargo.toml`.
