@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const {chromium} = require('playwright');
 
-const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
+const URL = 'file://' + path.resolve(__dirname, '..', 'web', 'index.html');
 const results = [];
 async function check(name, fn){
   try { await fn(); results.push([true, name]); console.log('PASS', name); }
@@ -251,7 +251,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
 
   await check('installable app: manifest, icons, works offline', async () => {
     const http = require('http');
-    const root = path.resolve(__dirname, '..');
+    const root = path.resolve(__dirname, '..', 'web');
     const types = {'.html':'text/html', '.js':'text/javascript', '.png':'image/png', '.webmanifest':'application/manifest+json'};
     const server = http.createServer((req, res) => {
       const f = path.join(root, decodeURIComponent(req.url.split('?')[0]) === '/' ? 'index.html' : decodeURIComponent(req.url.split('?')[0]));
