@@ -976,6 +976,29 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(after[1], 'today not marked as a study day');
   });
 
+  await check('the content security policy blocks injected script, from disk and from the website', async () => {
+    const before = errors.length;   // the blocked injections below log errors on purpose
+    for (const where of ['disk', 'site']) {
+      let q, close = () => {};
+      if (where === 'disk') q = await fresh();
+      else { const srv = await serveWeb(); close = srv.close; q = await (await browser.newContext()).newPage(); await q.goto(srv.base); }
+      const blocked = await q.evaluate(() => new Promise(res => {
+        const seen = [];
+        document.addEventListener('securitypolicyviolation', e => seen.push(e.violatedDirective));
+        const d = document.createElement('div'); d.innerHTML = '<img src="data:," onerror="window.__ran=1">'; document.body.append(d);
+        const sc = document.createElement('script'); sc.textContent = 'window.__ran2=1'; document.body.append(sc);
+        setTimeout(() => res({ran:!!(window.__ran || window.__ran2), seen}), 300);
+      }));
+      ok(!blocked.ran && blocked.seen.some(x => x.startsWith('script-src')), `${where}: injected script ran or was not reported: ${JSON.stringify(blocked)}`);
+      await q.context().close(); close();
+    }
+    errors.splice(before, errors.length - before, ...errors.slice(before).filter(e => !/Content Security Policy/.test(e)));
+    // The page and the Windows app use the same policy (the app adds only its own ipc address).
+    const meta = await p.evaluate(() => document.querySelector('meta[http-equiv=Content-Security-Policy]').content);
+    const app = require('../desktop/src-tauri/tauri.conf.json').app.security.csp;
+    ok(app === meta.replace("connect-src 'self'", "connect-src 'self' ipc: http://ipc.localhost"), 'page and Windows app policies differ');
+  });
+
   await check('no script errors anywhere above', async () => { ok(!errors.length, errors.join(' | ')); });
 
   await browser.close();

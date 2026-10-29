@@ -1,6 +1,6 @@
 [package]
 name = "aws-cp-study"
-version = "1.0.0"
+version = "1.1.0"
 description = "AWS Cloud Practitioner study tool"
 edition = "2021"
 
