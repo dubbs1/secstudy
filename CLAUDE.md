@@ -39,7 +39,7 @@ session the preinstalled Chromium is used, elsewhere run `npx playwright install
 One PASS/FAIL line per check. Add a check for every new feature.
 
 `.github/workflows/test.yml`: `browser` (the checks) → `windows` (build the installer, silent install,
-`tests/exe.test.js` against the running app through WebView2's debug port, restart, uninstall) →
+`tests/exe.test.js` against the running app through WebView2's debug port, opened only when `SECSTUDY_DEBUG_PORT` is set (see `desktop/src-tauri/src/main.rs`), restart, uninstall) →
 on main: `release` (when the version has no release) and `pages` (needs Settings > Pages > Source: GitHub Actions).
 Rust: `cargo check --release --target x86_64-pc-windows-msvc` in `desktop/src-tauri` after `node desktop/prepare.js`
 catches most Windows build errors from Linux. Pinned: @tauri-apps/cli 2.12.3, tauri 2.12.4, tauri-build 2.7.3.

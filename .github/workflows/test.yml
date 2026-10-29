@@ -53,13 +53,18 @@ jobs:
           $exe = Join-Path $dir 'aws-cp-study.exe'
           if (-not (Test-Path $exe)) { Get-ChildItem $env:LOCALAPPDATA -Recurse -Filter aws-cp-study.exe -ErrorAction SilentlyContinue | Select-Object -First 3 | Out-Host; throw "app not found at $exe" }
           Get-Process aws-cp-study -ErrorAction SilentlyContinue | Stop-Process -Force
-          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
+          $env:SECSTUDY_DEBUG_PORT = '9222'
           foreach ($phase in 'first', 'restart') {
             $app = Start-Process $exe -PassThru
             Push-Location tests
             node exe.test.js $phase
             $code = $LASTEXITCODE
             Pop-Location
+            if ($code -ne 0) {
+              Write-Host 'WebView2 processes and their arguments:'
+              Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Select-Object -First 3 -ExpandProperty CommandLine | Out-Host
+              Get-NetTCPConnection -State Listen -LocalPort 9222 -ErrorAction SilentlyContinue | Out-Host
+            }
             if ($app.HasExited) { throw "app closed by itself during '$phase'" }
             Stop-Process -Id $app.Id -Force
             Start-Sleep -Seconds 3

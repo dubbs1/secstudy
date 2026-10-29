@@ -1,5 +1,5 @@
 // Checks the installed Windows app (Tauri). The workflow starts the app with
-// WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 and runs this twice:
+// SECSTUDY_DEBUG_PORT=9222 (opens the WebView2 debug port, see main.rs) and runs this twice:
 //   node exe.test.js first    -> app shows, a tick is saved, Export writes a file
 //   node exe.test.js restart  -> after closing and reopening the app, the tick is still there
 const fs = require('fs');
