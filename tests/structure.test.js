@@ -69,6 +69,12 @@ function runScripts(files){
     ok(/importScripts\('js\/version\.js'\)/.test(read('web/sw.js')) && /'secstudy-' \+ APP_VERSION/.test(read('web/sw.js')), 'sw.js cache name does not use APP_VERSION');
   });
 
+  await check('offline copy is fetched fresh, never from the browser cache', async () => {
+    const sw = read('web/sw.js');
+    ok(/new Request\(f, \{cache:'reload'\}\)/.test(sw), 'install does not use cache:reload');
+    ok(/fetch\(req, \{cache:'no-cache'\}\)/.test(sw), 'runtime fetch does not skip the HTTP cache');
+  });
+
   await check('Windows app and website both ship web/ as it is (AC2.1)', async () => {
     ok(JSON.parse(read('desktop/src-tauri/tauri.conf.json')).build.frontendDist === '../../web', 'Tauri frontendDist is not ../../web');
     ok(/upload-pages-artifact@v3\s+with:\s+path: web\b/.test(read('.github/workflows/test.yml')), 'pages job does not upload web/');
@@ -83,8 +89,11 @@ function runScripts(files){
 
   await check('no name is defined twice across the script files (they share one global scope)', async () => {
     const seen = {}, dupes = [];
-    for (const f of scripts) for (const m of read(f).matchAll(/^(?:const|let|var|function)\s+([A-Za-z_$][\w$]*)/gm)) {
-      if (seen[m[1]]) dupes.push(`${m[1]} (${seen[m[1]]}, ${f})`); else seen[m[1]] = f;
+    const names = src => [...src.matchAll(/^function\s+([A-Za-z_$][\w$]*)/gm)].map(m => m[1]).concat(
+      // every name in a top-level declaration, e.g. both in `let tick = null, audio = null;`
+      [...src.matchAll(/^(?:const|let|var)\s+(.*)$/gm)].flatMap(m => [...m[1].matchAll(/(?:^|,)\s*([A-Za-z_$][\w$]*)\s*(?==|,|;|$)/g)].map(x => x[1])));
+    for (const f of scripts) for (const n of names(read(f))) {
+      if (seen[n]) dupes.push(`${n} (${seen[n]}, ${f})`); else seen[n] = f;
     }
     ok(!dupes.length, dupes.join('; '));
   });

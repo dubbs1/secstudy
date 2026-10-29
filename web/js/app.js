@@ -25,13 +25,17 @@ function render(){
   const row = reveal && document.querySelector(reveal); reveal = null;
   if (key) {
     const same = document.querySelector(answered ? '#main .fb' : key);
-    const target = same && !same.disabled ? same : row || $('#main .opt:not(:disabled)') || $('#main');
+    // Fallbacks the user can see: Enter must never act on something below the screen.
+    const visible = sel => { const el = $(sel); return el && onScreen(el) ? el : null; };
+    const target = same && !same.disabled ? same
+      : row || visible('#main .opt:not(:disabled)') || visible('#main .card.open .btn') || $('#main');
     target.focus({preventScroll:true});
   }
   if (announceNext) { announceNext = false; const fb = $('#main .fb'); if (fb) announce(fb.innerText); }
   if (row) keepInView(row);
 }
 // Scroll only when the row is off screen, so opening a card never makes the page jump needlessly.
+function onScreen(el){ const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }
 function keepInView(el){
   const r = el.getBoundingClientRect();
   if (r.top < 0 || r.top > innerHeight - 80) el.closest('.card').scrollIntoView({block:'start'});
@@ -92,7 +96,11 @@ document.addEventListener('click', e => {
     case 'rvStart': S.review = {ids:dueNow().slice(0, REVIEW_MAX).map(q => q.id), i:0, right:0}; S.open = null;
       S.review.ids.forEach(q => delete live['r:' + q]); window.scrollTo(0, 0); break;
     case 'rvNext':  S.review.i++; break;
-    case 'rvClose': S.review = null; S.openLesson = null; break;
+    case 'rvClose': {
+      S.review = null; S.openLesson = null;
+      const n = nextLesson(); if (n) reveal = `[data-act=openLesson][data-id="${n.id}"]`;
+      break;
+    }
     case 'pLesson': S.pFilter = id; S.pMode = 'all'; S.open = null; pCur = null; break;
     case 'labReset': S.labs[id] = []; break;
     case 'tLen': S.timer = {...S.timer, len:+b.dataset.v, end:null, left:null}; break;
@@ -107,7 +115,7 @@ document.addEventListener('click', e => {
     case 'theme': S.theme = THEMES[(THEMES.indexOf(S.theme) + 1) % THEMES.length]; break;
     case 'export': exportProgress(); return;
     case 'import': $('#importFile').click(); return;
-    case 'importYes': finishImport(true); render(); $('#top h1').focus({preventScroll:true}); return;
+    case 'importYes': finishImport(true); render(); window.scrollTo(0, 0); $('#top h1').focus({preventScroll:true}); return;
     case 'importNo': finishImport(false); return;
     case 'install': if (installPrompt) { installPrompt.prompt(); installPrompt = null; $('#installWrap').hidden = true; } return;
     default: return;

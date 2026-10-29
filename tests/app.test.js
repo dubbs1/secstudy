@@ -51,8 +51,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(!bad.length, bad.join('; '));
   });
   await check('content: 3 questions per lesson, due dates in order before the exam', async () => {
+    const examDate = await p.evaluate(() => EXAM.date);
     const r = await p.evaluate(() => LESSONS.map((l, i) => [QUESTIONS.filter(q => q.l === l.id).length, l.due, i ? LESSONS[i - 1].due : '']));
-    r.forEach(([n, due, prev], i) => { ok(n >= 3, `lesson ${i + 1} has ${n} questions`); ok(due > prev && due < '2026-11-30', `lesson ${i + 1} due ${due}`); });
+    r.forEach(([n, due, prev], i) => { ok(n >= 3, `lesson ${i + 1} has ${n} questions`); ok(due > prev && due < examDate, `lesson ${i + 1} due ${due}`); });
   });
   await check('content: lessons follow the domain weights (4/4/5/2)', async () => {
     const c = await p.evaluate(() => ['cc', 'sec', 'tech', 'bill'].map(d => LESSONS.filter(l => l.d === d).length).join('/'));
@@ -127,7 +128,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('[data-act=done][data-id=l1]');
     const s2 = await saved(p);
     ok(s2.done.l1 === true && s2.openLesson === 'l2', 'next lesson not opened');
-    ok((await text(p, '.stats')).includes('Lessons 1/15'), 'header not updated');
+    ok((await text(p, '.stats')).includes('Lessons 1/' + await p.evaluate(() => LESSONS.length)), 'header not updated');
   });
   await check('exam facts open and close; closing reopens the next lesson', async () => {
     await p.click('[data-act=toggleFacts]');
@@ -240,8 +241,20 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.waitForFunction(() => S.done.l2 === true);
     p.off('dialog', onDialog);
     ok(!dialogs, 'a browser dialog was used (AC8.1)');
-    ok((await text(p, '.stats')).includes('Lessons 2/15'), 'import not shown');
+    ok((await text(p, '.stats')).includes('Lessons 2/' + await p.evaluate(() => LESSONS.length)), 'import not shown');
     ok(await p.evaluate(() => JSON.parse(localStorage.getItem('awsCourse1_beforeImport')).done.l3 === true), 'no backup of the replaced progress');
+  });
+
+  await check('a failed import write changes nothing and says so', async () => {
+    await seed(p, {v:2, done:{l3:true}});
+    await p.evaluate(() => { window.__set = Storage.prototype.setItem; Storage.prototype.setItem = function(){ throw new DOMException('full', 'QuotaExceededError'); }; });
+    await p.setInputFiles('#importFile', {name:'p.json', mimeType:'application/json', buffer:Buffer.from(JSON.stringify({v:2, done:{l1:true}}))});
+    await p.click('[data-act=importYes]');
+    const msg = await text(p, '.toast');
+    await p.evaluate(() => { Storage.prototype.setItem = window.__set; });
+    ok(/Could not import/.test(msg), 'message: ' + msg);
+    ok(await p.evaluate(() => S.done.l3 === true && !S.done.l1) && await p.isHidden('#importBar'), 'progress changed or bar left open');
+    ok(await p.evaluate(() => JSON.parse(localStorage.getItem('awsCourse1')).done.l3 === true), 'saved progress changed');
   });
 
   // ---------- layout ----------
@@ -296,9 +309,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
   await check('exam text follows the data (AC4.2)', async () => {
     await seed(p);
+    const [nLessons, nBillLessons] = await p.evaluate(() => [LESSONS.length, LESSONS.filter(l => l.d === 'bill').length]);
     await p.evaluate(() => {
       EXAM.date = '2027-03-15'; EXAM.questions = 70;
-      LESSONS.push({...LESSONS[14], id:'lx', t:'Extra billing lesson', due:'2027-03-01'});
+      LESSONS.push({...LESSONS.find(l => l.d === 'bill'), id:'lx', t:'Extra billing lesson', due:'2027-03-01'});
       S.open = 'facts'; render();
     });
     const head = await text(p, '#top .sub'), facts = await text(p, '.card.open');
@@ -306,9 +320,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const doneMsg = await text(p, '#main .note');
     await p.reload();   // restore the real content
     ok(head.includes('2027'), 'header year did not follow: ' + head);
-    ok(facts.includes('70 questions') && facts.includes('3 billing'), 'facts did not follow: ' + facts.slice(0, 160));
-    ok(doneMsg.startsWith('All 16 lessons done'), 'done message: ' + doneMsg);
-    ok((await text(p, '.stats')).includes('Lessons 0/15'), 'content not restored');
+    ok(facts.includes('70 questions') && facts.includes(`${nBillLessons + 1} billing`), 'facts did not follow: ' + facts.slice(0, 160));
+    ok(doneMsg.startsWith(`All ${nLessons + 1} lessons done`), 'done message: ' + doneMsg);
+    ok((await text(p, '.stats')).includes(`Lessons 0/${nLessons}`), 'content not restored');
   });
   await check('an opened lesson, lab or card stays on screen (AC5.1)', async () => {
     await seed(p);
@@ -338,6 +352,18 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     // the control goes away: "Next question" -> first answer of the next question
     await p.focus('[data-act=lqNext]'); await p.keyboard.press('Enter');
     ok(await p.evaluate(() => document.activeElement.dataset.act === 'pick' && document.activeElement.dataset.q === 'q2'), 'after Next question, focus is on ' + await active());
+    // review: Next, Finish and Stop never leave focus on something off screen
+    const seen = () => p.evaluate(() => { const a = document.activeElement, r = a.getBoundingClientRect();
+      return (r.bottom > 0 && r.top < innerHeight) ? (a.dataset.act || a.id || a.tagName) : 'OFF SCREEN ' + (a.dataset.act || a.tagName); });
+    await seed(p, {v:2, ans:{q1:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}, q2:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}}});
+    await p.focus('[data-act=rvStart]'); await p.keyboard.press('Enter');
+    ok(await seen() === 'pick', 'after Start review: ' + await seen());
+    await p.keyboard.press('Enter'); await p.focus('[data-act=rvNext]'); await p.keyboard.press('Enter');
+    ok(await seen() === 'pick', 'after Next: ' + await seen());
+    await p.keyboard.press('Enter'); await p.focus('[data-act=rvNext]'); await p.keyboard.press('Enter');
+    ok(['rvStart', 'rvClose'].includes(await seen()), 'after Finish: ' + await seen());
+    await p.focus('[data-act=rvClose]'); await p.keyboard.press('Enter');
+    ok(await seen() === 'openLesson', 'after Back to lessons: ' + await seen());
   });
   await check('filter rows are toggle buttons, only the tab bar is tabs (AC6.5)', async () => {
     await p.click('#nav [data-tab=practice]');
