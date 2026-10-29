@@ -71,6 +71,10 @@ async function connect(){
       await page.click('[data-act=step][data-id=l1][data-i="1"]');   // a change the import should undo
       await page.setInputFiles('#importFile', exported);
       await page.waitForSelector('#importBar:not([hidden])', {timeout:10000});
+      await page.click('[data-act=importNo]');
+      ok(await page.evaluate(() => S.steps.l1[1] === true), 'Cancel changed progress');
+      await page.setInputFiles('#importFile', exported);
+      await page.waitForSelector('#importBar:not([hidden])', {timeout:10000});
       await page.click('[data-act=importYes]');
       await page.waitForFunction(() => S.steps.l1 && S.steps.l1[0] === true && !S.steps.l1[1], null, {timeout:10000});
     });

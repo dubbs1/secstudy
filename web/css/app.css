@@ -138,6 +138,7 @@ table.facts td:last-child{text-align:right;font-weight:600}
 
 /* opened cards land below the top edge, not flush with it */
 .card{scroll-margin-top:12px}
+#main:focus,#top h1:focus{outline:none}
 .fb:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 
 /* import confirmation, version, screen-reader-only text */

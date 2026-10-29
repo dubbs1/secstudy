@@ -19,9 +19,10 @@ still works when opened straight from disk: browsers block module scripts on `fi
 ## The app (`web/`)
 
 ```
-web/index.html            page shell: header, tab bar, <main>, footer, script tags in load order
+web/index.html            page shell: header, tab bar, <main>, import bar, footer, script tags in load order
 web/css/app.css           Proton look; colour tokens on :root, dark tokens via data-theme or the system
-web/js/version.js         APP_VERSION (one place; checked against desktop/ by a test)
+web/js/theme-boot.js      loaded in <head>: applies a saved Light/Dark choice before the page draws
+web/js/version.js         APP_VERSION (set with tools/set-version.js; checked against desktop/ by a test)
 web/js/content/           data only, no logic
     exam.js               EXAM (code, date, format, pass mark, cost, retake) and DOMAINS (weights)
     lessons.js            LESSONS: id, domain, due date, steps, key points
@@ -30,15 +31,23 @@ web/js/content/           data only, no logic
 web/js/util.js            DOM and date helpers, toast
 web/js/store.js           saved progress: KEY 'awsCourse1', DEFAULTS, load() (cleans and migrates), save(),
                           export and import
-web/js/review.js          spaced repetition (schedule, dueNow) and weak-spot statistics
-web/js/views/*.js         one file per screen: header, question, learn, practice, labs, timer.
-                          Each returns an HTML string from the current state; no side effects
+web/js/course.js          lookups over the content, recording answers, spaced repetition, weak-spot statistics
+web/js/views/shared.js    domain chip, the question block, per-visit view state (live, lqi, pCur)
+web/js/views/*.js         one file per screen: header, learn, practice, labs, timer. Each returns an HTML
+                          string from the current state. They may settle view state while drawing (which
+                          lesson is open, which quiz or practice question shows) but never save
 web/js/app.js             render loop, event handlers, focus and scroll keeping, theme, install, startup
 web/sw.js                 offline copy (network first); precache list checked against web/ by a test
 ```
 
 Load order matters only in one direction: content and helpers first, `app.js` last. Every file
-defines top-level names; classic scripts share one global scope, so later files see earlier ones.
+defines top-level names; classic scripts share one global scope, so later files see earlier ones,
+and a name defined in two files breaks the second file (a structure check finds that).
+
+Adding things:
+- a question or lesson: edit `web/js/content/`; checks need no change.
+- a file in `web/`: add a script tag (for JS) and a line in `web/sw.js` FILES; a check fails if you forget.
+- a release: `node tools/set-version.js 1.1.0`, then merge to main.
 
 ### State and rendering
 
@@ -49,7 +58,9 @@ defines top-level names; classic scripts share one global scope, so later files 
 - Per-visit view state that is not saved: `live` (answers picked on screen), `lqi` (which quiz
   question a lesson shows), `pCur` (current practice question).
 - `render()` rebuilds the header and the current tab from `S` as HTML strings. After it runs, the
-  element that had keyboard focus gets it back, and an opened card is scrolled into view.
+  control that had focus gets it back (or the answer feedback, the opened card, or the first answer when
+  that control went away), an opened card is scrolled into view, and a new answer is announced through
+  the permanent `#announce` status region.
 - Events are delegated: one click, change and input handler for the whole page, keyed on `data-act`.
 
 ### Saved data (`awsCourse1`, version 2)

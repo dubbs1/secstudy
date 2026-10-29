@@ -20,11 +20,16 @@ function render(){
   const views = {learn:renderLearn, practice:renderPractice, labs:renderLabs, timer:renderTimer};
   $('#main').innerHTML = (views[S.tab] || renderLearn)();
   startTick();
-  // Keyboard users keep their place: the same control, or the feedback after answering.
-  const again = key && document.querySelector(answered ? '#main .fb' : key);
-  if (again && !again.disabled) again.focus({preventScroll:true});
+  // Keyboard users keep their place: the feedback after answering, else the same control, else (when it
+  // went away, e.g. "Next question") the card just opened or the first answer on screen.
+  const row = reveal && document.querySelector(reveal); reveal = null;
+  if (key) {
+    const same = document.querySelector(answered ? '#main .fb' : key);
+    const target = same && !same.disabled ? same : row || $('#main .opt:not(:disabled)') || $('#main');
+    target.focus({preventScroll:true});
+  }
   if (announceNext) { announceNext = false; const fb = $('#main .fb'); if (fb) announce(fb.innerText); }
-  if (reveal) { const row = document.querySelector(reveal); reveal = null; if (row) keepInView(row); }
+  if (row) keepInView(row);
 }
 // Scroll only when the row is off screen, so opening a card never makes the page jump needlessly.
 function keepInView(el){
@@ -48,7 +53,7 @@ document.addEventListener('click', e => {
   const {act, id} = b.dataset;
   switch (act) {
     case 'toggleFacts': S.open = S.open === 'facts' ? null : 'facts'; S.openLesson = S.open ? '' : null;
-      if (S.open) reveal = '[data-act=toggleFacts]'; break;
+      reveal = S.open ? '[data-act=toggleFacts]' : (nextLesson() ? `[data-act=openLesson][data-id="${nextLesson().id}"]` : null); break;
     case 'toggleFree':  S.open = S.open === 'free' ? null : 'free'; if (S.open) reveal = '[data-act=toggleFree]'; break;
     case 'toggleWeak':  S.open = S.open === 'weak' ? null : 'weak'; if (S.open) reveal = '[data-act=toggleWeak]'; break;
     case 'openLesson':  S.open = null; S.openLesson = S.openLesson === id ? '' : id;
@@ -102,7 +107,7 @@ document.addEventListener('click', e => {
     case 'theme': S.theme = THEMES[(THEMES.indexOf(S.theme) + 1) % THEMES.length]; break;
     case 'export': exportProgress(); return;
     case 'import': $('#importFile').click(); return;
-    case 'importYes': finishImport(true); render(); return;
+    case 'importYes': finishImport(true); render(); $('#top h1').focus({preventScroll:true}); return;
     case 'importNo': finishImport(false); return;
     case 'install': if (installPrompt) { installPrompt.prompt(); installPrompt = null; $('#installWrap').hidden = true; } return;
     default: return;

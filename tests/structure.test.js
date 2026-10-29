@@ -43,8 +43,12 @@ function runScripts(files){
       for (const n of ['EXAM', 'DOMAINS', 'LESSONS', 'QUESTIONS', 'LABS']) walk(globalThis[n] !== undefined ? globalThis[n] : eval(n), n);
       return out; })()`, ctx);
     ok(!fns.length, 'functions in content: ' + fns.join(', '));
-    const counts = vm.runInContext('[LESSONS.length, QUESTIONS.length, LABS.length, typeof EXAM.date]', ctx);
-    ok(counts.join() === '15,45,6,string', 'content did not load on its own: ' + counts);
+    const problems = vm.runInContext(`(() => { const p = [];
+      if (!LESSONS.length || !QUESTIONS.length || !LABS.length) p.push('empty list');
+      if (!/^\\d{4}-\\d\\d-\\d\\d$/.test(EXAM.date)) p.push('EXAM.date');
+      for (const l of LESSONS) { if (!DOMAINS[l.d]) p.push(l.id + ' domain'); if (QUESTIONS.filter(q => q.l === l.id).length < 3) p.push(l.id + ' has under 3 questions'); }
+      return p; })()`, ctx);
+    ok(!problems.length, 'content: ' + problems.join(', '));
   });
 
   await check('offline list matches the files in web/ (AC2.2)', async () => {
@@ -73,8 +77,16 @@ function runScripts(files){
   await check('no hard-coded exam facts outside content (AC4.1)', async () => {
     const code = walk(path.join(WEB, 'js')).filter(f => !f.includes(path.join('js', 'content'))).map(f => [f, fs.readFileSync(f, 'utf8')]);
     for (const [f, src] of code) {
-      ok(!/\b2026\b|CLF-C02|\b65 questions|All 15 lessons/.test(src), path.relative(ROOT, f) + ' has a hard-coded exam fact');
+      ok(!/\b2026\b|CLF-C02|\b65 questions|All \d+ lessons|pass mark is \d|\b70 ?%/.test(src), path.relative(ROOT, f) + ' has a hard-coded exam fact');
     }
+  });
+
+  await check('no name is defined twice across the script files (they share one global scope)', async () => {
+    const seen = {}, dupes = [];
+    for (const f of scripts) for (const m of read(f).matchAll(/^(?:const|let|var|function)\s+([A-Za-z_$][\w$]*)/gm)) {
+      if (seen[m[1]]) dupes.push(`${m[1]} (${seen[m[1]]}, ${f})`); else seen[m[1]] = f;
+    }
+    ok(!dupes.length, dupes.join('; '));
   });
 
   finish();

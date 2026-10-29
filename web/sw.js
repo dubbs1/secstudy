@@ -5,7 +5,7 @@ const CACHE = 'secstudy-' + APP_VERSION;
 // Every file in web/ except this one. tests/structure.test.js fails when this list and the folder differ.
 const FILES = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
-  './js/version.js', './js/util.js', './js/store.js', './js/course.js', './js/app.js',
+  './js/version.js', './js/theme-boot.js', './js/util.js', './js/store.js', './js/course.js', './js/app.js',
   './js/content/exam.js', './js/content/lessons.js', './js/content/questions.js', './js/content/labs.js',
   './js/views/shared.js', './js/views/header.js', './js/views/learn.js', './js/views/practice.js',
   './js/views/labs.js', './js/views/timer.js',
@@ -23,7 +23,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(req).then(res => {
+    fetch(req, {cache:'no-cache'}).then(res => {   // skip the HTTP cache so all files come from one release
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req, {ignoreSearch: true}).then(r => r || caches.match('./index.html')))

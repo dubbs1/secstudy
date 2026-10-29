@@ -16,7 +16,7 @@ function renderTop(){
   const pct = Math.round((done / LESSONS.length * 0.6 + right / QUESTIONS.length * 0.3 + labsDone / LABS.length * 0.1) * 100);
   const t = timerLeft();
   $('#top').innerHTML = `
-    <div class="top-row"><div><h1>AWS Cloud Practitioner</h1>
+    <div class="top-row"><div><h1 tabindex="-1">AWS Cloud Practitioner</h1>
     <div class="sub">${EXAM.code} · <span class="nw">exam ${fmtDayYear(EXAM.date)}</span> · <span class="nw">${examTxt}</span></div></div>
     <button class="theme" data-act="theme" aria-label="Theme: ${THEME_LABEL[S.theme]}. Change theme">${THEME_ICON[S.theme]}${THEME_LABEL[S.theme]}</button></div>
     <div class="bar" title="${pct}% overall"><i style="width:${pct}%"></i></div>

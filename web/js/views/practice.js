@@ -13,7 +13,7 @@ function weakCard(){
       <span class="muted">${s.seen ? `${s.right}/${s.seen} right${s.misses ? ` · ${s.misses} miss${s.misses > 1 ? 'es' : ''}` : ''}` : 'not started'}${s.seen < s.total ? ` · ${s.total - s.seen} new` : ''}</span></div>
       <div class="bar" style="margin:4px 0 0"><i style="width:${s.seen ? Math.max(pct, 3) : 0}%;background:${col}"></i></div></div>`;
   }
-  h += '<p class="muted" style="font-size:13px;margin:8px 0 0">Aim for green (80 %+). The real pass mark is 70 %.</p>';
+  h += `<p class="muted" style="font-size:13px;margin:8px 0 0">Aim for green (80 %+). The real pass mark is ${Math.round(EXAM.pass / EXAM.scale * 100)} %.</p>`;
   const wl = weakLessons();
   if (wl.length) {
     h += '<h3>Lessons to redo</h3>';

@@ -85,7 +85,13 @@ function showImportBar(){
 }
 function finishImport(replace){
   if (replace && pendingImport) {
-    try { localStorage.setItem(KEY + '_beforeImport', JSON.stringify(S)); localStorage.setItem(KEY, JSON.stringify(pendingImport.data)); } catch(e) {}
+    try {
+      localStorage.setItem(KEY + '_beforeImport', JSON.stringify(S));
+      localStorage.setItem(KEY, JSON.stringify(pendingImport.data));
+    } catch(e) {
+      toast('Could not import: storage is blocked or full. Nothing was changed.');
+      pendingImport = null; showImportBar(); return;
+    }
     S = load(); save();
     toast('Progress imported');
   }

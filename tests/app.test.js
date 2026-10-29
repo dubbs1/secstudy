@@ -15,6 +15,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   async function fresh(opts = {}){
     const ctx = await browser.newContext({viewport:{width:390, height:800}, acceptDownloads:true, ...opts});
     const p = await ctx.newPage();
+    p.setDefaultTimeout(8000);   // a broken build fails in minutes, not hours
     p.on('pageerror', e => errors.push(e.message));
     p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     await p.goto(URL);
@@ -29,9 +30,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
 
   // ---------- content ----------
   const p = await fresh();
-  await check('content: 15 lessons, 45 questions, 6 labs', async () => {
+  await check('content: lessons, questions and labs present; header counts match', async () => {
     const c = await p.evaluate(() => [LESSONS.length, QUESTIONS.length, LABS.length]);
-    ok(c.join() === '15,45,6', 'got ' + c);
+    ok(c.every(n => n > 0), 'got ' + c);
+    ok((await text(p, '.stats')).includes(`Lessons 0/${c[0]}`) && (await text(p, '.stats')).includes(`/${c[1]}`), 'header counts');
   });
   await check('content: every question is well-formed', async () => {
     const bad = await p.evaluate(() => {
@@ -50,7 +52,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
   await check('content: 3 questions per lesson, due dates in order before the exam', async () => {
     const r = await p.evaluate(() => LESSONS.map((l, i) => [QUESTIONS.filter(q => q.l === l.id).length, l.due, i ? LESSONS[i - 1].due : '']));
-    r.forEach(([n, due, prev], i) => { ok(n === 3, `lesson ${i + 1} has ${n} questions`); ok(due > prev && due < '2026-11-30', `lesson ${i + 1} due ${due}`); });
+    r.forEach(([n, due, prev], i) => { ok(n >= 3, `lesson ${i + 1} has ${n} questions`); ok(due > prev && due < '2026-11-30', `lesson ${i + 1} due ${due}`); });
   });
   await check('content: lessons follow the domain weights (4/4/5/2)', async () => {
     const c = await p.evaluate(() => ['cc', 'sec', 'tech', 'bill'].map(d => LESSONS.filter(l => l.d === d).length).join('/'));
@@ -173,11 +175,12 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   await check('practice: filters, "not right yet" drops right answers after Next', async () => {
     await seed(p, {v:2, tab:'practice'});
     await p.click('[data-act=pFilter][data-v=bill]');
-    ok((await text(p, '.qhead')).includes('of 6'), 'billing filter wrong');
+    const nBill = await p.evaluate(() => QUESTIONS.filter(q => LESSONS.find(l => l.id === q.l).d === 'bill').length);
+    ok((await text(p, '.qhead')).includes('of ' + nBill), 'billing filter wrong');
     const qid = await p.getAttribute('[data-act=pick]', 'data-q');
     await p.click(`[data-act=pick][data-i="${await answerOf(p, qid)}"]`);
     await p.click('[data-act=pNext]');
-    ok((await text(p, '.qhead')).includes('of 5'), 'right answer still in set');
+    ok((await text(p, '.qhead')).includes('of ' + (nBill - 1)), 'right answer still in set');
   });
   await check('weak spots: domain bars and "Practise" filters to that lesson', async () => {
     await seed(p, {v:2, tab:'practice', ans:{q19:{n:2, wrong:2, pick:0, ok:false, at:Date.now()}}});
@@ -185,7 +188,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const t = await text(p, '.card.open');
     ok(t.includes('Lowest: Security') && t.includes('Security services'), t.slice(0, 120));
     await p.click('[data-act=pLesson][data-id=l7]');
-    ok((await text(p, '.qhead')).includes('Lesson 7 · 1 of 3'), 'lesson filter not applied');
+    ok((await text(p, '.qhead')).includes('Lesson 7 · 1 of ' + await p.evaluate(() => qsFor('l7').length)), 'lesson filter not applied');
     ok((await text(p, '.seg.small')).includes('Lesson 7 ✕'), 'no clear-filter pill');
   });
 
@@ -299,9 +302,12 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       S.open = 'facts'; render();
     });
     const head = await text(p, '#top .sub'), facts = await text(p, '.card.open');
+    await p.evaluate(() => { LESSONS.forEach(l => S.done[l.id] = true); S.open = null; render(); });
+    const doneMsg = await text(p, '#main .note');
     await p.reload();   // restore the real content
     ok(head.includes('2027'), 'header year did not follow: ' + head);
     ok(facts.includes('70 questions') && facts.includes('3 billing'), 'facts did not follow: ' + facts.slice(0, 160));
+    ok(doneMsg.startsWith('All 16 lessons done'), 'done message: ' + doneMsg);
     ok((await text(p, '.stats')).includes('Lessons 0/15'), 'content not restored');
   });
   await check('an opened lesson, lab or card stays on screen (AC5.1)', async () => {
@@ -329,6 +335,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.focus('[data-act=theme]'); await p.keyboard.press('Enter');
     ok((await active()).includes('|theme|'), 'after theme change, focus is on ' + await active());
     await p.keyboard.press('Enter'); await p.keyboard.press('Enter');   // back to System
+    // the control goes away: "Next question" -> first answer of the next question
+    await p.focus('[data-act=lqNext]'); await p.keyboard.press('Enter');
+    ok(await p.evaluate(() => document.activeElement.dataset.act === 'pick' && document.activeElement.dataset.q === 'q2'), 'after Next question, focus is on ' + await active());
   });
   await check('filter rows are toggle buttons, only the tab bar is tabs (AC6.5)', async () => {
     await p.click('#nav [data-tab=practice]');
@@ -352,6 +361,19 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       await q.context().close();
     });
   }
+  await check('a saved Light or Dark theme applies before the app scripts run (AC7.5)', async () => {
+    const {base, close} = await serveWeb();
+    const ctx = await browser.newContext({colorScheme:'light'});
+    try {
+      const q = await ctx.newPage();
+      await q.goto(base);
+      await q.evaluate(() => { S.theme = 'dark'; save(); });
+      await q.route('**/js/app.js', r => r.abort());   // the app never starts: only the head script can set the theme
+      await q.reload();
+      ok(await q.evaluate(() => document.documentElement.dataset.theme) === 'dark', 'no data-theme before app.js');
+      ok(await q.evaluate(() => getComputedStyle(document.body).backgroundColor) === 'rgb(22, 20, 28)', 'page not dark before app.js');
+    } finally { await ctx.close(); close(); }
+  });
   await check('text contrast is at least 4.5:1 in both themes (AC7.4)', async () => {
     const bad = [];
     for (const theme of ['light', 'dark']) {

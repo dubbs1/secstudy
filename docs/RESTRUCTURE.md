@@ -56,7 +56,8 @@ No behaviour change.
 ### F6. Keyboard and screen reader (P6, P7, P8)
 - AC6.1 After answering with the keyboard, focus is on the answer feedback.
 - AC6.2 After ticking a step with the keyboard, focus stays on that checkbox.
-- AC6.3 After any other action, focus returns to the same control if it still exists.
+- AC6.3 After any other action, focus returns to the same control; if it went away ("Next question"),
+  to the card just opened or the first answer on screen.
 - AC6.4 The answer result is read out through a permanent `role="status"` region (a region added with the
   feedback itself is not reliably announced).
 - AC6.5 Filter rows use `aria-pressed` buttons, not tabs; the main tab bar keeps `role="tab"`.
@@ -66,6 +67,7 @@ No behaviour change.
 - AC7.2 The choice is saved with progress and survives a reload.
 - AC7.3 Light and Dark apply whatever the system setting is.
 - AC7.4 Body text, muted text and links reach 4.5:1 contrast in both themes.
+- AC7.5 A saved Light or Dark choice applies before the app scripts run (no flash of the other theme).
 
 ### F8. Import without `confirm()` (P11)
 - AC8.1 Import shows an in-page Replace / Cancel bar instead of a browser dialog.
