@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6D4AFF">
+<title>AWS CP Study</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="AWS CP Study">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/theme-boot.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top" id="top"></header>
+  <div class="topbar">
+    <nav class="seg tabs" role="tablist" id="nav">
+      <button role="tab" data-tab="today"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg><span>Today</span></button>
+      <button role="tab" data-tab="learn"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg><span>Learn</span></button>
+      <button role="tab" data-tab="practice"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg><span>Practice</span></button>
+      <button role="tab" data-tab="labs"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7 15h10"/></svg><span>Labs</span></button>
+    </nav>
+    <button class="timer-btn" id="timerBtn" data-act="focusToggle" aria-expanded="false" aria-controls="focusPanel"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg><span id="timerLabel">15:00</span></button>
+    <div class="card focus-panel" id="focusPanel" role="dialog" aria-label="Focus timer" hidden></div>
+  </div>
+  <main id="main" tabindex="-1"></main>
+  <div class="card importbar" id="importBar" hidden>
+    <div class="body">
+      <b>Replace your progress here with <span id="importName"></span>?</b>
+      <p class="muted">Your current progress is kept as a backup in this browser.</p>
+      <div class="btns"><button class="btn" data-act="importYes">Replace</button><button class="btn ghost" data-act="importNo">Cancel</button></div>
+    </div>
+  </div>
+  <div class="foot">
+    Progress is saved in this browser only.
+    <button class="link" data-act="export">Export</button> ·
+    <button class="link" data-act="import">Import</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <span id="installWrap" hidden> · <button class="link" data-act="install">Install app</button></span>
+    <div class="ver" id="ver"></div>
+  </div>
+  <div class="sr" role="status" aria-live="polite" id="announce"></div>
+</div>
+
+<!-- Classic scripts, not modules: modules do not load from file://. Order: data, helpers, views, app. -->
+<script src="js/version.js"></script>
+<script src="js/content/exam.js"></script>
+<script src="js/content/lessons.js"></script>
+<script src="js/content/questions.js"></script>
+<script src="js/content/labs.js"></script>
+<script src="js/content/visuals.js"></script>
+<script src="js/content/scenarios.js"></script>
+<script src="js/util.js"></script>
+<script src="js/store.js"></script>
+<script src="js/course.js"></script>
+<script src="js/views/shared.js"></script>
+<script src="js/views/header.js"></script>
+<script src="js/views/visual.js"></script>
+<script src="js/views/today.js"></script>
+<script src="js/views/interact.js"></script>
+<script src="js/views/learn.js"></script>
+<script src="js/views/practice.js"></script>
+<script src="js/views/labs.js"></script>
+<script src="js/views/timer.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

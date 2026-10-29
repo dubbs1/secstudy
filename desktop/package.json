@@ -1,10 +1,11 @@
 {
   "name": "secstudy-desktop",
   "private": true,
-  "description": "Windows app build of index.html (Tauri)",
+  "description": "Windows app build of web/ (Tauri)",
   "scripts": {
-    "prepare-web": "node prepare.js",
     "build": "tauri build"
   },
-  "devDependencies": { "@tauri-apps/cli": "2.12.3" }
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.3"
+  }
 }

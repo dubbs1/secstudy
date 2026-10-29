@@ -1,6 +1,6 @@
 // Checks the installed Windows app (Tauri). The workflow starts the app with
 // SECSTUDY_DEBUG_PORT=9222 (opens the WebView2 debug port, see main.rs) and runs this twice:
-//   node exe.test.js first    -> app shows, a tick is saved, Export writes a file
+//   node exe.test.js first    -> app shows, a tick is saved, Export writes a file, Import restores it
 //   node exe.test.js restart  -> after closing and reopening the app, the tick is still there
 const fs = require('fs');
 const os = require('os');
@@ -38,6 +38,7 @@ async function connect(){
   page.on('pageerror', e => errors.push(e.message));
   await page.waitForSelector('#main .card', {timeout:30000});
 
+  let exported = null;
   if (phase === 'first') {
     await check('app window shows the study tool', async () => {
       ok(await page.title() === 'AWS CP Study', 'title is ' + await page.title());
@@ -45,7 +46,8 @@ async function connect(){
     });
     await check('ticking a lesson step is saved', async () => {
       await page.evaluate(() => { localStorage.clear(); location.reload(); }).catch(() => {});
-      await page.waitForSelector('[data-act=step]');
+      await page.waitForSelector('#nextUpBtn');
+      await page.click('#nextUpBtn');   // opens lesson 1 at Read
       await page.click('[data-act=step][data-id=l1][data-i="0"]');
       const s = await page.evaluate(() => JSON.parse(localStorage.getItem('awsCourse1')));
       ok(s.steps.l1[0] === true, 'not saved');
@@ -63,6 +65,20 @@ async function connect(){
       }
       ok(file, 'no file appeared');
       ok(JSON.parse(fs.readFileSync(file, 'utf8')).steps.l1[0] === true, 'file has no progress in it');
+      exported = file;
+    });
+    await check('Import asks in the page and restores the file (AC8.2)', async () => {
+      ok(exported, 'no exported file to import');
+      await page.click('[data-act=stage][data-id=l1][data-i="2"]');
+      await page.click('[data-act=step][data-id=l1][data-i="1"]');   // a change the import should undo
+      await page.setInputFiles('#importFile', exported);
+      await page.waitForSelector('#importBar:not([hidden])', {timeout:10000});
+      await page.click('[data-act=importNo]');
+      ok(await page.evaluate(() => S.steps.l1[1] === true), 'Cancel changed progress');
+      await page.setInputFiles('#importFile', exported);
+      await page.waitForSelector('#importBar:not([hidden])', {timeout:10000});
+      await page.click('[data-act=importYes]');
+      await page.waitForFunction(() => S.steps.l1 && S.steps.l1[0] === true && !S.steps.l1[1], null, {timeout:10000});
     });
   } else {
     await check('progress is still there after closing and reopening the app', async () => {
