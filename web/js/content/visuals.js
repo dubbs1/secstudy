@@ -2,8 +2,10 @@
 // Kinds:
 //   compare  columns side by side          {cols:[{title, tone:'you'|'aws'|'plain', items:[...]}]}
 //   who      who manages each layer        {rows:[top..bottom], cols:[{title, ex, you:<rows from the top that are yours>}]}
-//   nested   boxes inside boxes            {box:{title, note, items, children:[box]}, side:[{title, note}]}
-//   scale    ordered steps between two ends {from, to, steps:[{name, note}]}
+//   nested   boxes inside boxes            {box:{title, label?, note, items, children:[box]}, side:[{title, note}]}
+//            (label: a shorter name for the game; boxes with the same label count as one place)
+//   scale    ordered steps between two ends {from, to, steps:[{name, note, rank?, unranked?}]}
+//            (rank: steps with the same rank have no fixed order between them; unranked: left out of the order game)
 //   tiles    one idea per tile             {tiles:[{tag, title, text}]}
 // Every diagram has a caption that says what it shows.
 const VISUALS = {
@@ -14,10 +16,10 @@ const VISUALS = {
   rows:['Your data and users', 'Application', 'Runtime and middleware', 'Operating system', 'Virtualization', 'Servers and storage', 'Network and data center'],
   cols:[{title:'On-prem', ex:'your servers', you:7}, {title:'IaaS', ex:'EC2', you:4}, {title:'PaaS', ex:'Beanstalk', you:2}, {title:'SaaS', ex:'web email', you:1}]},
  l3:{kind:'nested', caption:'A Region holds at least three Availability Zones. Spread across AZs to keep running when one fails.',
-  box:{title:'Region: eu-central-1 (Frankfurt)', note:'Isolated from other Regions. Pick it for law, latency, services, price.',
-       children:[{title:'AZ eu-central-1a', items:['One or more data centers']},
-                 {title:'AZ eu-central-1b', items:['One or more data centers']},
-                 {title:'AZ eu-central-1c', items:['One or more data centers']}]},
+  box:{title:'Region: eu-central-1 (Frankfurt)', label:'Region', note:'Isolated from other Regions. Pick it for law, latency, services, price.',
+       children:[{title:'AZ eu-central-1a', label:'Availability Zone', items:['One or more data centers']},
+                 {title:'AZ eu-central-1b', label:'Availability Zone', items:['One or more data centers']},
+                 {title:'AZ eu-central-1c', label:'Availability Zone', items:['One or more data centers']}]},
   side:[{title:'Edge locations', note:'Many more of them, close to users. CloudFront and Route 53 serve from here.'},
         {title:'Local Zones, Wavelength, Outposts', note:'AWS closer to a city, inside 5G networks, or in your own data center.'}]},
  l4:{kind:'tiles', caption:'The six pillars of the Well-Architected Framework.',
@@ -63,7 +65,7 @@ const VISUALS = {
  l10:{kind:'scale', caption:'S3 storage classes, from often-used data to deep archive.',
   from:'Used often, highest storage price', to:'Rarely used, lowest storage price',
   steps:[{name:'S3 Standard', note:'Data you use often.'},
-         {name:'S3 Intelligent-Tiering', note:'Unknown pattern: moves data between tiers for you, for a small monitoring fee.'},
+         {name:'S3 Intelligent-Tiering', note:'Unknown pattern: moves data between tiers for you, for a small monitoring fee.', unranked:true},
          {name:'S3 Standard-IA', note:'Used now and then, still read in milliseconds.'},
          {name:'S3 One Zone-IA', note:'Same, one AZ only: for data you can re-create.'},
          {name:'Glacier Instant Retrieval', note:'Archive you still read in milliseconds.'},
@@ -95,8 +97,8 @@ const VISUALS = {
  l14:{kind:'scale', caption:'EC2 pricing, from no discount to the biggest, and the catch at each step.',
   from:'No discount, no commitment', to:'Biggest discount',
   steps:[{name:'On-Demand', note:'Pay by the second or hour. Short or unpredictable work.'},
-         {name:'Savings Plans', note:'Commit to $ per hour for 1 or 3 years. Flexible across instance types.'},
-         {name:'Reserved Instances', note:'Commit to one instance setup for 1 or 3 years.'},
+         {name:'Savings Plans', note:'Commit to $ per hour for 1 or 3 years. Flexible across instance types.', rank:1},
+         {name:'Reserved Instances', note:'Commit to one instance setup for 1 or 3 years.', rank:1},
          {name:'Spot', note:'Up to 90 % off. Can be taken back with 2 minutes\' warning.'}]},
  l15:{kind:'scale', caption:'Support plans as the exam has tested them, and what each step up adds. Since December 2025 new accounts choose from Basic, Business Support+, Enterprise and Unified Operations instead.',
   from:'Free', to:'Most help',

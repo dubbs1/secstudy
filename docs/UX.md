@@ -82,20 +82,25 @@ It now sits at the right of the sticky tab bar on every screen and opens a small
 ### U9. Colour coding you can follow
 - AC9.1 Each exam domain has one colour, used for its chip, lesson numbers in the list, the lesson's header band,
   the key terms inside the lesson, its progress bar on Today, and the question card in Practice.
-- AC9.2 Each lesson stage has its own colour and icon in the stage strip: Read, See, Try, Check, Done.
-- AC9.3 Numbers in key points (times, percentages, limits) are highlighted in one colour, and the Read stage
-  shows a colour key.
+- AC9.2 Each lesson stage has its own icon in the stage strip (Read, See, Try, Check, Done); the current one is
+  in the brand colour. Stages get no colours of their own, so colour keeps meaning "domain".
+- AC9.3 Numbers in key points and diagrams (times, percentages, limits, dates, 24/7) are highlighted like a
+  highlighter pen, and the Read stage shows a colour key.
+- AC9.5 Domain colours can't be mistaken for right (green), wrong (red) or the brand purple, in light and dark.
 - AC9.4 Colour is never the only signal (text or a symbol goes with it), and all coloured text keeps 4.5:1
   contrast in light and dark.
 
 ### U10. Practise with your hands, not only your eyes
-- AC10.1 Read has a Points / Flip cards switch. Cards come from the lesson's own terms (at least 2 per
-  lesson), flip on tap, Enter or Space, and offer Got it / Again with a count.
+- AC10.1 Read has a Points / Flip cards switch. Every term a key point defines gets a card with its whole
+  definition (nothing capped or cut), plus fill-the-gap cards for its numbers. Cards flip on tap, Enter or
+  Space, and offer Got it / Again with a count; Again cards come back at the end of the deck.
 - AC10.2 See has a Look / Test yourself switch. Every lesson's diagram has a game: sort items into columns,
   fill in who manages each layer, put a scale in order, match clues to services, or place items in boxes.
-- AC10.3 Feedback is instant, shown with colour, a symbol (✓ or ✗) and words, and read out to screen readers.
+- AC10.3 Feedback is instant after every tap, shown with colour, a symbol (✓ or ✗) and words, and read out to
+  screen readers. Wrong answers show the right one; order games show the right order at the end.
+- AC10.6 Games only ask what has one right answer (tied steps may go in either order).
 - AC10.4 Cards and games can be restarted, and change no saved progress except marking today as a study day.
-- AC10.5 Every stage still fits within 1.4 phone screens in every mode.
+- AC10.5 Every stage still fits within 1.4 screens at 390 x 844 in every mode (cards flipped, games answered).
 
 ## Kept as they were
 

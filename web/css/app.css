@@ -5,8 +5,8 @@
   --bg:#F5F4F2;--card:#FFFFFF;--line:#EAE7E4;--field:#F5F4F2;
   --text:#0C0C14;--muted:#5C5958;
   --ok:#1EA885;--ok-soft:#E5F6F0;--bad:#DC3251;--bad-soft:#FCE9ED;--bad-text:#C42346;--warn:#B85C00;--warn-soft:#FFF1E0;
-  --cc-bg:#E6F0FF;--cc:#1B5FD1;--sec-bg:#FCE9ED;--sec:#B4223F;--tech-bg:#F0EDFF;--tech:#5530E0;--bill-bg:#E5F6F0;--bill:#127A5F;
-  --st0:#0E7490;--st1:#6D28D9;--st2:#B45309;--st3:#15803D;--st4:#0F766E;--num:#9A4A00;--num-bg:#FFF1DC;
+  --cc-bg:#E6F0FF;--cc:#1B5FD1;--sec-bg:#F8E8FB;--sec:#9A1BA8;--tech-bg:#E0F4F8;--tech:#0B6E8A;--bill-bg:#FBF0DC;--bill:#855600;
+  --num:#3B2F00;--num-bg:#FFE58A;
   --shadow:0 1px 2px rgba(12,12,20,.05),0 6px 20px rgba(12,12,20,.05);
   --r:16px;--r-sm:10px;
 }
@@ -15,16 +15,16 @@
   color-scheme:dark;
   --brand-soft:#2B2452;--brand-text:#B9A8FF;--bg:#16141C;--card:#211E29;--line:#34303D;--field:#2A2633;
   --text:#F3F2F7;--muted:#A9A5B4;--ok-soft:#14362D;--bad-soft:#3D1D27;--bad-text:#FF9AAE;--warn:#FFB35C;--warn-soft:#3A2A16;
-  --cc-bg:#1D2D4A;--cc:#8DB6FF;--sec-bg:#3D1D27;--sec:#FF9AAE;--tech-bg:#2B2452;--tech:#B9A8FF;--bill-bg:#14362D;--bill:#6FD9B6;
-  --st0:#67E8F9;--st1:#C4B5FD;--st2:#FCD34D;--st3:#86EFAC;--st4:#5EEAD4;--num:#FFC56B;--num-bg:#3A2A12;
+  --cc-bg:#1D2D4A;--cc:#8DB6FF;--sec-bg:#38173E;--sec:#E8A6F2;--tech-bg:#0D3340;--tech:#6CCFF0;--bill-bg:#3A2C0E;--bill:#F0C060;
+  --num:#FFE58A;--num-bg:#4A3C00;
   --shadow:none;
 }}
 :root[data-theme=dark]{
   color-scheme:dark;
   --brand-soft:#2B2452;--brand-text:#B9A8FF;--bg:#16141C;--card:#211E29;--line:#34303D;--field:#2A2633;
   --text:#F3F2F7;--muted:#A9A5B4;--ok-soft:#14362D;--bad-soft:#3D1D27;--bad-text:#FF9AAE;--warn:#FFB35C;--warn-soft:#3A2A16;
-  --cc-bg:#1D2D4A;--cc:#8DB6FF;--sec-bg:#3D1D27;--sec:#FF9AAE;--tech-bg:#2B2452;--tech:#B9A8FF;--bill-bg:#14362D;--bill:#6FD9B6;
-  --st0:#67E8F9;--st1:#C4B5FD;--st2:#FCD34D;--st3:#86EFAC;--st4:#5EEAD4;--num:#FFC56B;--num-bg:#3A2A12;
+  --cc-bg:#1D2D4A;--cc:#8DB6FF;--sec-bg:#38173E;--sec:#E8A6F2;--tech-bg:#0D3340;--tech:#6CCFF0;--bill-bg:#3A2C0E;--bill:#F0C060;
+  --num:#FFE58A;--num-bg:#4A3C00;
   --shadow:none;
 }
 *{box-sizing:border-box}
@@ -111,8 +111,8 @@ ul.pts li{margin:4px 0}
 .fb{border-radius:var(--r-sm);padding:10px 12px;font-size:14px}
 .fb.ok{background:var(--ok-soft)}.fb.no{background:var(--bad-soft)}
 .dots{display:flex;gap:6px}
-.dots i{width:9px;height:9px;border-radius:99px;background:var(--line)}
-.dots i.ok{background:var(--ok)}.dots i.no{background:var(--bad)}.dots i.cur{outline:2px solid var(--brand);outline-offset:1px}
+.dots i{width:15px;height:15px;border-radius:99px;background:var(--line);font-style:normal;font-size:10px;font-weight:800;line-height:15px;text-align:center;color:#fff}
+.dots i.ok{background:var(--ok);color:#06281F}.dots i.no{background:var(--bad)}.dots i.cur{outline:2px solid var(--brand);outline-offset:1px}
 
 /* timer */
 .clock{font:700 72px/1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;text-align:center;letter-spacing:-.02em;margin:18px 0 6px;font-variant-numeric:tabular-nums}
@@ -204,7 +204,7 @@ input[type=search]{-webkit-appearance:none;appearance:none}
 .group-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:15px;margin:16px 4px 8px}
 .group-h small{color:var(--muted);font-weight:500;font-size:13px}
 .pill{flex:none;font-size:11.5px;font-weight:700;border-radius:99px;padding:2px 8px;background:var(--field);color:var(--muted);white-space:nowrap}
-.pill-done{background:var(--ok-soft);color:var(--bill)}
+.pill-done{background:var(--ok-soft);color:var(--text)}
 .pill-going,.pill-next{background:var(--brand-soft);color:var(--brand-text)}
 .pill-late{background:var(--bad-soft);color:var(--bad-text)}
 
@@ -299,7 +299,7 @@ input[type=search]{-webkit-appearance:none;appearance:none}
 .band-meta{display:block;color:var(--dc);font-weight:600;font-size:12.5px}
 .lesson-band .lesson-t{margin:4px 0 8px}
 .lesson .pts b{color:var(--dc)}
-.num{color:var(--num);background:var(--num-bg);border-radius:4px;padding:0 3px;font-weight:700;white-space:nowrap}
+.num{color:var(--num);background:var(--num-bg);border-radius:4px;padding:0 3px;font-weight:700;white-space:nowrap}   /* a highlighter pen */
 .colour-key{font-size:12px;line-height:1.4;color:var(--muted);margin:0 0 4px}
 .colour-key b{color:var(--dc)}
 .nextup.coloured{border-color:var(--dc)}
@@ -307,10 +307,7 @@ input[type=search]{-webkit-appearance:none;appearance:none}
 .coloured-top{border-top:4px solid var(--dc)}
 /* stages: each has its own colour and icon */
 .stage .stage-l{display:flex;align-items:center;gap:4px}
-.stage.st0{--sc:var(--st0)}.stage.st1{--sc:var(--st1)}.stage.st2{--sc:var(--st2)}.stage.st3{--sc:var(--st3)}.stage.st4{--sc:var(--st4)}
-.stage.past i{background:var(--sc);opacity:.4}
-.stage.cur i{background:var(--sc)}
-.stage.cur,.stage.past{color:var(--sc)}
+/* Stages share the brand colour; each has its own icon. Fewer colours, so the domain colour stays meaningful. */
 @media (max-width:359px){.stage .stage-l svg{display:none}}
 .mode{margin:0 0 8px}
 /* flip cards */
@@ -346,7 +343,12 @@ input[type=search]{-webkit-appearance:none;appearance:none}
 .picked .ord{background:var(--brand);color:var(--on-brand)}
 button.who-c{border:0;font:inherit;font-weight:600;font-size:11.5px}
 .who-c.blank{background:var(--card);border:1.5px dashed var(--muted);color:var(--muted)}
-button.who-c.ok{outline:2px solid var(--ok);outline-offset:-2px}
-button.who-c.no{outline:2px solid var(--bad);outline-offset:-2px}
+.who-c.no{outline:2px solid var(--bad);outline-offset:-2px}
+.who-fb{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.who-fb li{padding:4px 10px;border-radius:var(--r-sm)}
+.who-fb li.ok{background:var(--ok-soft)}.who-fb li.no{background:var(--bad-soft)}
+.answer-order{margin-top:10px;padding:10px 12px;border-radius:var(--r-sm);background:var(--field);font-size:14px}
+.answer-order ol{margin:4px 0 0;padding-left:22px}
+.flipcard.gap span{font-size:15px}
 .game-score{margin-top:12px;padding:10px 12px;border-radius:var(--r-sm);background:var(--field);font-size:14.5px}
 .game-score.all{background:var(--ok-soft)}

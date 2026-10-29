@@ -47,7 +47,8 @@ web/sw.js                 offline copy (network first); precache list checked ag
 ```
 
 Colour coding: each exam domain has one colour (tokens --cc, --sec, --tech, --bill and their -bg pairs; a block
-sets --dc/--dcbg with domainVars()), each lesson stage has one (--st0 to --st4), numbers use --num.
+sets --dc/--dcbg with domainVars()), chosen apart from right/wrong green and red and the brand purple. Stages have
+icons, not colours. Numbers use --num/--num-bg (a highlighter).
 
 Load order matters only in one direction: content and helpers first, `app.js` last. Every file
 defines top-level names; classic scripts share one global scope, so later files see earlier ones,

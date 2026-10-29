@@ -55,7 +55,7 @@ function taskHTML(l, i){
 
 function lessonView(l){
   const st = S.stage[l.id] || 0, qs = qsFor(l.id);
-  const strip = STAGES.map((name, k) => `<button class="stage st${k} ${k === st ? 'cur' : ''} ${k < st ? 'past' : ''}" data-act="stage" data-id="${l.id}" data-i="${k}"
+  const strip = STAGES.map((name, k) => `<button class="stage ${k === st ? 'cur' : ''} ${k < st ? 'past' : ''}" data-act="stage" data-id="${l.id}" data-i="${k}"
     aria-current="${k === st ? 'step' : 'false'}"><i></i><span class="stage-l">${STAGE_ICONS[k]}${name}</span></button>`).join('');
   const timerOff = !S.timer.end;
   let h = `<div class="card lesson" id="lessonTop" style="${domainVars(l.d)}"><div class="lesson-band">
@@ -82,7 +82,7 @@ function stageHTML(l, st, qs){
   if (st === 1) {
     const test = modeOf(l, 1, 'look') === 'test';
     return modeSwitch(l, 1, [['look', 'Look'], ['test', 'Test yourself']]) + (test ? gameHTML(l)
-      : `<p class="muted lead">Look at the picture for a minute, then say what it shows in your own words. Then tap Test yourself.</p>${visualHTML(VISUALS[l.id])}`);
+      : `<p class="muted lead">Look at the picture for a minute, then say what it shows in your own words. Then tap Test yourself.</p>${markNumbers(visualHTML(VISUALS[l.id]))}`);
   }
   if (st === 2) return tryHTML(l);
   if (st === 3) return `${taskHTML(l, 2)}${quizHTML(l, qs)}`;
