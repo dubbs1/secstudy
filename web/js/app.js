@@ -116,6 +116,22 @@ document.addEventListener('pointerdown', e => {
 });
 // Enter in a practice console box checks it, like its Check button.
 document.addEventListener('keydown', e => {
+  // In the practice console: Escape closes the menu; the arrow keys move within a radio group or the menu.
+  const lab = e.target.closest && e.target.closest('.cs');
+  if (lab) {
+    const id = lab.dataset.labsim, st = labState(id);
+    if (e.key === 'Escape' && st.menu) { st.menu = false; focusTo = `[data-act=labMenu][data-id="${id}"]`; render(); return; }
+    if (['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(e.key)) {
+      const group = e.target.closest('[role=radiogroup], [role=menu]');
+      if (group) {
+        const items = [...group.querySelectorAll('[role=radio], [role=menuitem]')], i = items.indexOf(e.target);
+        const next = items[(i + (e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : items.length - 1)) % items.length];
+        e.preventDefault();
+        if (next.getAttribute('role') === 'radio') next.click(); else next.focus();   // a radio is chosen as you move, like a real one
+        return;
+      }
+    }
+  }
   // Enter runs a terminal command, or presses the page's main button, like a real form.
   if (e.key === 'Enter' && e.target.dataset && e.target.dataset.lab) {
     e.preventDefault();
@@ -237,7 +253,7 @@ document.addEventListener('click', e => {
     // Practise here: the practice console
     case 'labMode': labState(id).mode = b.dataset.v; focusTo = `[data-act=labMode][data-v="${b.dataset.v}"]`; break;
     case 'labNav': labState(id).nav = !labState(id).nav; focusTo = `[data-act=labNav][data-id="${id}"]`; break;
-    case 'labMenu': labState(id).menu = !labState(id).menu; focusTo = labState(id).menu ? '.cs-menu button' : `[data-act=labMenu][data-id="${id}"]`; break;
+    case 'labMenu': labState(id).menu = !labState(id).menu; focusTo = labState(id).menu ? '.cs-menu [role=menuitem]' : `[data-act=labMenu][data-id="${id}"]`; break;
     case 'labPick': case 'labToggle': case 'labText': case 'labGo': {
       const st = labState(id), step = LAB_SIMS[id].steps[st.step];
       st.draft = st.draft || {}; document.querySelectorAll('.cs input[data-lab]').forEach(i => st.draft[i.dataset.c] = i.value);   // keep what was typed
@@ -248,7 +264,7 @@ document.addEventListener('click', e => {
         (st.sent = st.sent || {})[st.step] = true; st.err = null;
         const wrong = step.controls.filter(x => !labCheck(x, st.vals[x.id], id).ok).length;
         say = wrong ? `${wrong} ${wrong > 1 ? 'things need' : 'thing needs'} fixing. See the red text and the Coach.` : '';
-        focusTo = wrong ? '.cs [aria-invalid=true], .cs-err' : '[data-act=labNext]';
+        focusTo = wrong ? '.cs input[aria-invalid=true], .cs button[aria-invalid=true], .cs [aria-invalid=true] [role=radio][tabindex="0"], .cs-err[tabindex]' : '[data-act=labNext]';
       } else {
         if (act === 'labPick') st.vals[c.id] = +b.dataset.i;
         else if (act === 'labToggle') st.vals[c.id] = !(st.vals[c.id] == null ? !!c.on : st.vals[c.id]);
@@ -261,7 +277,8 @@ document.addEventListener('click', e => {
         const r = labCheck(c, st.vals[c.id], id);
         if (labIsBar(c)) { st.menu = false; st.err = r.ok ? null : c.options[st.vals[c.id]].err || null; }   // a wrong button gets the console's banner
         if (labShowErr(id, c)) say += (r.ok ? 'Right. ' : 'Not quite. ') + (r.why || '');
-        focusTo = c.type === 'text' || c.type === 'cmd' ? `#lc-${id}-${c.id}` : `[data-act=${act}][data-v="${c.id}"]${act === 'labPick' && !labIsBar(c) ? `[data-i="${b.dataset.i}"]` : ''}`;
+        focusTo = c.type === 'text' || c.type === 'cmd' ? `#lc-${id}-${c.id}` : c.style === 'menu' ? `[data-act=labMenu][data-id="${id}"]`
+          : `[data-act=${act}][data-v="${c.id}"]${act === 'labPick' ? `[data-i="${b.dataset.i}"]` : ''}`;
       }
       studied();
       const done = labStepDone(id, st.step);

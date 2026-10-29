@@ -474,9 +474,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 1; ui.mode['l10:1'] = 'look';`,
       `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1; ui.mode['l12:1'] = 'look';`,
       `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = [true];`,
-      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'My Bucket', region:1, block:false}, sent:{0:true}, out:{}, draft:{}, nav:true};`,
-      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'alex-notes', region:0, ver:1}, sent:{0:true}, out:{}, draft:{}};`,
-      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:4, vals:{name:'alex-notes', clean:2}, err:'This bucket is not empty.', out:{}, draft:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'My Bucket', btype:1, block:false}, sent:{0:true}, out:{}, draft:{}, nav:true};`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'alex-notes', btype:0, ver:1}, sent:{0:true}, out:{}, draft:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:4, vals:{name:'alex-notes', clean:1}, err:'This bucket is not empty.', out:{}, draft:{}};`,
       `S.tab = 'labs'; S.openLab = 'lab4'; S.labs.lab4 = []; labUi.lab4 = {mode:'sim', step:2, vals:{iname:'test'}, out:{uname:['$ ls', 'command not recognised']}, draft:{}};`,
       `S.tab = 'labs'; S.openLab = 'lab4'; S.labs.lab4 = []; labUi.lab4 = {mode:'sim', step:3, vals:{iname:'test'}, out:{}, draft:{}, menu:true};`,
       `S.tab = 'labs'; S.openLab = 'lab5'; S.labs.lab5 = []; labUi.lab5 = {mode:'sim', step:1, vals:{fname:'hello', code:'print(hi)'}, sent:{1:true}, out:{}, draft:{}};`,
@@ -1246,17 +1246,18 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('[data-act=labNav]');
     ok((await text(p, '.cs-nav')).includes('General purpose buckets'), 'no service menu');
     // Mistakes show only when Create bucket is pressed, as red text under the field, with the reason in the Coach.
-    await p.fill('#lc-lab3-name', 'My Bucket'); await p.click('[data-act=labPick][data-v=region][data-i="1"]');
+    await p.fill('#lc-lab3-name', 'My Bucket'); await p.click('[data-act=labPick][data-v=btype][data-i="1"]');
     await p.click('[data-act=labToggle][data-v=block]');
     ok(!(await p.$('.cs-err')), 'errors before the main button');
     await p.click('[data-act=labGo]');
     ok((await text(p, '#fb-lab3-name')).includes('lowercase') && await p.getAttribute('#lc-lab3-name', 'aria-invalid') === 'true', 'bad name not shown under the field');
     const errs = await p.$$eval('.cs-err', es => es.map(e => e.textContent).join(' | '));
-    ok(errs.includes('round the world') && errs.includes('public to anyone'), 'mistakes do not say why: ' + errs);
+    ok(errs.includes('S3 Express One Zone') && errs.includes('public to anyone') && errs.includes('overwrites'), 'mistakes do not say why: ' + errs);
+    ok(await p.evaluate(() => !!document.activeElement.closest('[aria-invalid=true]')), 'focus not on the first mistake');
     const tryName = async v => { await p.fill('#lc-lab3-name', v); await p.click('[data-act=labGo]'); return text(p, '#fb-lab3-name'); };
     ok((await tryName('a..b')).includes('two periods') && (await tryName('test')).includes('already taken'), 'S3 naming rules missing');
     await p.fill('#lc-lab3-name', 'alex-notes-2026');
-    await p.click('[data-act=labPick][data-v=region][data-i="0"]'); await p.click('[data-act=labToggle][data-v=block]');
+    await p.click('[data-act=labPick][data-v=btype][data-i="0"]'); await p.click('[data-act=labToggle][data-v=block]');
     await p.click('[data-act=labPick][data-v=ver][data-i="1"]');
     ok(await p.inputValue('#lc-lab3-name') === 'alex-notes-2026', 'typed name lost when another answer was tapped');
     await p.press('#lc-lab3-name', 'Enter');   // Enter presses Create bucket
@@ -1271,9 +1272,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('[data-act=labToggle][data-v=show]');
     ok(await p.$$eval('.cs-table tbody tr', r => r.length) === 2, 'Show versions did not list both'); await p.click('[data-act=labNext]');
     // Deleting a full bucket gets the console's error banner, and the Coach says why.
-    await p.click('[data-act=labPick][data-v=clean][data-i="2"]');
-    ok((await text(p, '.cs-flash.bad')).includes('not empty') && (await text(p, '.coach')).includes('must be empty'), 'deleting a full bucket not refused');
     await p.click('[data-act=labPick][data-v=clean][data-i="1"]');
+    ok((await text(p, '.cs-flash.bad')).includes('not empty') && (await text(p, '.coach')).includes('must be empty'), 'deleting a full bucket not refused');
+    await p.click('[data-act=labPick][data-v=clean][data-i="0"]');
     ok((await text(p, '.cs-flash.ok')).includes('Successfully emptied'), 'Empty did not work'); await p.click('[data-act=labNext]');
     await p.fill('#lc-lab3-confirm', 'alex-notes'); await p.click('[data-act=labGo]');
     ok((await text(p, '.cs-err')).includes('exactly'), 'wrong confirmation accepted');
@@ -1297,7 +1298,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Linux ip-'));
     await p.click('[data-act=labNext]');
     await p.click('[data-act=labMenu]');
-    ok(await p.$$eval('.cs-menu [role=menuitem]', b => b.length) === 3, 'Instance state menu did not open');
+    ok(await p.$$eval('.cs-menu [role=menuitem]', b => b.length) === 3 && await p.evaluate(() => document.activeElement.getAttribute('role') === 'menuitem'), 'Instance state menu did not open with focus inside');
+    await p.keyboard.press('ArrowDown'); ok(await p.evaluate(() => document.activeElement.dataset.i === '1'), 'arrow keys do not move in the menu');
+    await p.keyboard.press('Escape');
+    ok(!(await p.$('.cs-menu')) && await p.evaluate(() => document.activeElement.dataset.act === 'labMenu'), 'Escape did not close the menu');
+    await p.click('[data-act=labMenu]');
     await p.click('.cs-menu [data-i="0"]');
     ok((await text(p, '.coach')).includes('still stored and billed'), 'Stop not explained');
     await p.click('[data-act=labMenu]'); await p.click('.cs-menu [data-i="2"]');
@@ -1309,6 +1314,13 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok((await text(p, '.cs-err')).includes('Not that line'), 'wrong code accepted');
     await p.fill('#lc-lab5-code', '    print("hello from lambda")'); await p.click('[data-act=labGo]');
     ok((await text(p, '.cs-flash.ok')).includes('Successfully updated the function hello'), 'Deploy did not land');
+    // An unanswered choice is an error once the main button is pressed; arrow keys move within a radio group.
+    await seed(p, {v:2, tab:'labs', openLab:'lab1'});
+    await p.click('[data-act=labGo]');
+    ok((await text(p, '#fb-lab1-plan')).includes('Choose one'), 'an unanswered choice shows no error');
+    await p.focus('[data-act=labPick][data-v=plan][data-i="0"]'); await p.keyboard.press('ArrowRight');
+    ok(await p.evaluate(() => document.activeElement.dataset.i === '1' && document.activeElement.getAttribute('aria-checked') === 'true'), 'arrow keys do not move in a radio group');
+    ok(await p.$$eval('[data-v=plan][role=radio]', bs => bs.filter(b => b.tabIndex === 0).length) === 1, 'radio group is not one Tab stop');
     // Typed text is kept when another answer on the same page is tapped.
     await seed(p, {v:2, tab:'labs', openLab:'lab1'});
     await p.evaluate(() => { labUi.lab1 = {mode:'sim', step:2, vals:{}, out:{}, draft:{}}; render(); });

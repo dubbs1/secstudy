@@ -14,10 +14,12 @@ function labFill(id, text){
 }
 // Whether a control is right, and what to say about its current value.
 function labCheck(c, v, id){
-  if (c.type === 'choice') { if (v == null) return {ok:false}; const o = c.options[v]; return {ok:!!o.ok, why:o.why, said:true}; }
-  if (c.type === 'toggle') { const on = v == null ? !!c.on : v; return {ok:on === c.want, why:on === c.want ? '' : c.why, said:v != null}; }
+  const st = labState(id), sent = !!(st.sent && st.sent[st.step]);   // after the main button, an unanswered field is an error too
+  if (c.type === 'note') return {ok:true};
+  if (c.type === 'choice') { if (v == null) return {ok:false, why:'Choose one of these options.', said:sent}; const o = c.options[v]; return {ok:!!o.ok, why:o.why, said:true}; }
+  if (c.type === 'toggle') { const on = v == null ? !!c.on : v; return {ok:on === c.want, why:on === c.want ? '' : c.why, said:v != null || sent}; }
   if (c.type === 'text') {
-    if (v == null) return {ok:false};
+    if (v == null || (!c.same && !v.trim() && !(c.bad || []).some(b => new RegExp(b.re).test(v)))) return {ok:false, why:'This field is required.', said:sent};
     if (c.same) { const want = (labState(id).vals[c.same] || '').trim(); return v.trim() === want ? {ok:true, why:'', said:true} : {ok:false, why:`Type the bucket name exactly: ${esc(want)}. The console asks so nobody deletes the wrong bucket by accident.`, said:true}; }
     const bad = (c.bad || []).find(b => new RegExp(b.re).test(v));
     if (bad) return {ok:false, why:bad.why, said:true};
@@ -25,7 +27,7 @@ function labCheck(c, v, id){
     if (!new RegExp(c.need).test(v)) return {ok:false, why:`Not quite: ${labFill(id, c.hint)}.`, said:true};
     return {ok:true, why:'', said:true};
   }
-  if (c.type === 'cmd') { if (v == null) return {ok:false}; const ok = c.expect.some(re => new RegExp(re).test(v)); return {ok, why:ok ? '' : c.editor ? 'Not that line. Inside the handler, print exactly: hello from lambda.' : 'Not that command. Check the task and type it exactly.', said:true}; }
+  if (c.type === 'cmd') { if (v == null) return {ok:false, why:c.editor ? 'Write the line, then Deploy.' : '', said:sent && !!c.editor}; const ok = c.expect.some(re => new RegExp(re).test(v)); return {ok, why:ok ? '' : c.editor ? 'Not that line. Inside the handler, print exactly: hello from lambda.' : 'Not that command. Check the task and type it exactly.', said:true}; }
   return {ok:false};
 }
 const labControls = (id, step) => LAB_SIMS[id].steps[step].controls;
@@ -45,22 +47,27 @@ const labIsBar = c => c.style === 'buttons' || c.style === 'menu';
 function labControlHTML(id, c){
   const st = labState(id), v = st.vals[c.id], r = labCheck(c, v, id), key = `data-id="${id}" data-v="${c.id}"`;
   st.draft = st.draft || {};
-  const fid = `fb-${id}-${c.id}`, bad = r.said && !r.ok && labShowErr(id, c);
-  const err = bad ? `<p class="cs-err" id="${fid}"><b aria-hidden="true">⚠</b> ${r.why}</p>` : '';
-  const aria = `aria-describedby="${fid}" ${bad ? 'aria-invalid="true"' : ''}`;
-  const head = `${c.label ? `<span class="cs-label" id="lb-${id}-${c.id}">${labFill(id, c.label)}</span>` : ''}${c.desc ? `<span class="cs-desc">${c.desc}</span>` : ''}`;
+  const fid = `fb-${id}-${c.id}`, did = `ds-${id}-${c.id}`, bad = r.said && !r.ok && labShowErr(id, c);
+  const err = bad ? `<p class="cs-err" id="${fid}" tabindex="-1"><b aria-hidden="true">⚠</b> ${r.why}</p>` : '';
+  // The helper text and the error both describe the field; an error also marks it invalid.
+  const aria = `aria-describedby="${c.desc ? did + ' ' : ''}${fid}" ${bad ? 'aria-invalid="true"' : ''}`;
+  const desc = c.desc ? `<span class="cs-desc" id="${did}">${c.desc}</span>` : '';
+  const head = `${c.label ? `<span class="cs-label" id="lb-${id}-${c.id}">${labFill(id, c.label)}</span>` : ''}${desc}`;
+  if (c.type === 'note') return `<div class="cs-field"><span class="cs-label">${labFill(id, c.label)}</span><span class="cs-note">${c.t}</span>${desc}</div>`;
   if (c.type === 'choice') {
-    return `<div class="cs-field">${head}<div class="cs-${c.style === 'tiles' ? 'tiles' : 'radios'}" role="radiogroup" ${c.label ? `aria-labelledby="lb-${id}-${c.id}"` : 'aria-label="Choose one"'}>${c.options.map((o, i) =>
-      `<button class="cs-radio ${v === i ? 'on' : ''}" role="radio" aria-checked="${v === i}" data-act="labPick" ${key} data-i="${i}"><i aria-hidden="true"></i><span>${labFill(id, o.t)}</span></button>`).join('')}</div>${err}</div>`;
+    // A radio group is one Tab stop; the arrow keys move between its options.
+    const tab = v != null ? v : 0;
+    return `<div class="cs-field">${head}<div class="cs-${c.style === 'tiles' ? 'tiles' : 'radios'}" role="radiogroup" ${c.label ? `aria-labelledby="lb-${id}-${c.id}"` : 'aria-label="Choose one"'} ${aria}>${c.options.map((o, i) =>
+      `<button class="cs-radio ${v === i ? 'on' : ''}" role="radio" aria-checked="${v === i}" tabindex="${i === tab ? 0 : -1}" data-act="labPick" ${key} data-i="${i}"><i aria-hidden="true"></i><span>${labFill(id, o.t)}</span></button>`).join('')}</div>${err}</div>`;
   }
   if (c.type === 'toggle') { const on = v == null ? !!c.on : v, sw = c.style === 'switch';
-    return `<div class="cs-field"><button class="cs-check ${sw ? 'switch' : ''} ${on ? 'on' : ''}" role="${sw ? 'switch' : 'checkbox'}" aria-checked="${on}" data-act="labToggle" ${key}>
+    return `<div class="cs-field"><button class="cs-check ${sw ? 'switch' : ''} ${on ? 'on' : ''}" role="${sw ? 'switch' : 'checkbox'}" aria-checked="${on}" ${aria} data-act="labToggle" ${key}>
       <i aria-hidden="true">${!sw && on ? '✓' : ''}</i><span>${labFill(id, c.label)}</span></button>${err}</div>`; }
   if (c.type === 'text') return `<div class="cs-field"><label class="cs-label" for="lc-${id}-${c.id}">${labFill(id, c.label)}</label>${c.desc ? `<span class="cs-desc">${c.desc}</span>` : ''}
       <input class="field cs-input ${bad ? 'bad' : ''}" id="lc-${id}-${c.id}" data-lab="${id}" data-c="${c.id}" ${aria} value="${esc(st.draft[c.id] != null ? st.draft[c.id] : v || '')}" placeholder="${labFill(id, c.hint || '')}" autocomplete="off" spellcheck="false">${err}</div>`;
   if (c.type === 'cmd' && c.editor) return `<div class="cs-editor"><div class="cs-ed-tab">${c.editor.file}</div><ol class="cs-ed-lines">
       ${c.editor.before.map(l => `<li><code>${esc(l) || ' '}</code></li>`).join('')}
-      <li class="cs-ed-me"><input class="cs-ed-in ${bad ? 'bad' : ''}" id="lc-${id}-${c.id}" data-lab="${id}" data-c="${c.id}" ${aria} aria-label="Line ${c.editor.before.length + 1} of ${c.editor.file}" value="${esc(st.draft[c.id] != null ? st.draft[c.id] : v || '')}" placeholder="    write your line here" autocomplete="off" spellcheck="false"></li>
+      <li class="cs-ed-me"><code aria-hidden="true">    </code><input class="cs-ed-in ${bad ? 'bad' : ''}" id="lc-${id}-${c.id}" data-lab="${id}" data-c="${c.id}" ${aria} aria-label="Line ${c.editor.before.length + 1} of ${c.editor.file}" value="${esc(st.draft[c.id] != null ? st.draft[c.id] : v || '')}" placeholder="    write your line here" autocomplete="off" spellcheck="false"></li>
       ${c.editor.after.map(l => `<li><code>${esc(l)}</code></li>`).join('')}</ol></div>${err}`;
   if (c.type === 'cmd') return `<div class="cs-term"><div class="cs-term-bar">${labFill(id, c.window || 'Terminal')}</div><div class="cs-term-body">
       ${(c.banner || []).map(l => `<div class="dim">${esc(l)}</div>`).join('')}
@@ -75,8 +82,8 @@ function labListHTML(id, s){
   const L = s.list, st = labState(id), act = s.controls.find(labIsBar);
   let bar = '';
   if (act && act.style === 'buttons') bar = `<div class="cs-toolbar" role="group" aria-label="Actions">${act.options.map((o, i) =>
-    `<button class="cs-btn ${o.ok ? 'primary' : ''}" data-act="labPick" data-id="${id}" data-v="${act.id}" data-i="${i}">${o.t}</button>`).join('')}</div>`;
-  if (act && act.style === 'menu') bar = `<div class="cs-toolbar"><button class="cs-btn" data-act="labMenu" data-id="${id}" aria-expanded="${!!st.menu}">${act.label} ▾</button>
+    `<button class="cs-btn" data-act="labPick" data-id="${id}" data-v="${act.id}" data-i="${i}">${o.t}</button>`).join('')}</div>`;
+  if (act && act.style === 'menu') bar = `<div class="cs-toolbar"><button class="cs-btn" data-act="labMenu" data-id="${id}" aria-haspopup="menu" aria-expanded="${!!st.menu}">${act.label} ▾</button>
     ${st.menu ? `<div class="cs-menu" role="menu">${act.options.map((o, i) => `<button role="menuitem" data-act="labPick" data-id="${id}" data-v="${act.id}" data-i="${i}">${o.t}</button>`).join('')}</div>` : ''}</div>`;
   return `<div class="cs-panel"><div class="cs-panel-h"><b>${labFill(id, L.title)}</b>${bar}</div>${labTableHTML(id, L)}</div>`;
 }
@@ -92,7 +99,7 @@ function labPage(id, {crumbs, title, nav, flash, flashBad, body}){
   return `<div class="cs" data-labsim="${id}">
     <div class="cs-top"><button class="cs-menu-btn" data-act="labNav" data-id="${id}" aria-expanded="${!!st.nav}" aria-label="${lab.service} menu">☰</button>
       <span class="cs-brand">Practice console</span><span class="cs-search" aria-hidden="true">🔍 Search</span>
-      <span class="cs-region"><span class="long">Europe (Frankfurt)</span><span class="short">Frankfurt</span> ▾</span></div>
+      <span class="cs-region">${lab.region ? lab.region : '<span class="long">Europe (Frankfurt)</span><span class="short">Frankfurt</span>'} ▾</span></div>
     ${st.nav ? `<nav class="cs-nav" aria-label="${lab.service} menu"><b>${lab.service}</b>${lab.nav.map(n => `<span class="${n === nav ? 'on' : ''}">${n}</span>`).join('')}</nav>` : ''}
     <div class="cs-main">
       ${crumbs ? `<div class="cs-crumbs">${crumbs.map(c => labFill(id, c)).join(' <span aria-hidden="true">›</span> ')}</div>` : ''}
@@ -107,7 +114,9 @@ function labSimHTML(lab){
     <p class="muted">You know the screens, the buttons and the traps. Ready for the real console?</p>
     <div class="btns"><button class="btn" data-act="labMode" data-id="${id}" data-v="real">Do it in the real console ›</button>
     <button class="btn ghost" data-act="labRestart" data-id="${id}">Practise again</button></div></div>`;
-  const s = sim.steps[st.step], done = labStepDone(id, st.step);
+  const s = sim.steps[st.step];
+  s.controls.forEach(c => { if (c.pre != null && st.vals[c.id] === undefined) st.vals[c.id] = c.pre; });   // what the real console starts with
+  const done = labStepDone(id, st.step);
   const dots = sim.steps.map((x, i) => `<i class="${i < st.step ? 'ok' : ''} ${i === st.step ? 'cur' : ''}">${i < st.step ? '✓' : ''}</i>`).join('');
   let page;
   if (done && s.after) {
@@ -131,7 +140,7 @@ function labSimHTML(lab){
   // The Coach: the task, then why each answer was right or wrong.
   // Mistakes in a field show in red under it; the Coach adds why right answers are right, and why a wrong toolbar or
   // menu button (which has no field to show under) is wrong.
-  const said = s.controls.map(c => [c, labCheck(c, st.vals[c.id], id)]).filter(([c, r]) => r.said && r.why && (r.ok || (labIsBar(c) && labShowErr(id, c))));
+  const said = s.controls.map(c => [c, labCheck(c, st.vals[c.id], id)]).filter(([c, r]) => r.said && r.why && labShowErr(id, c) && (r.ok || labIsBar(c)));
   const coach = `<div class="coach"><div class="qhead"><small class="task-tag">Coach · step ${st.step + 1} of ${n}</small><span class="dots" aria-hidden="true">${dots}</span></div>
     <p class="pcon-task" tabindex="-1"><b>Your task:</b> ${labFill(id, s.task)}</p>
     ${said.map(([c, r]) => `<p class="lc-fb ${r.ok ? 'ok' : 'no'}"><b>${r.ok ? '✓' : '✗'}</b> ${labFill(id, r.why)}</p>`).join('')}
