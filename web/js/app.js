@@ -44,6 +44,7 @@ function render(){
   if (score && score.dataset.k !== lastScore) { lastScore = score.dataset.k; announce((tapSaid ? tapSaid + ' ' : '') + score.querySelector('b').textContent); }
   tapSaid = '';
   if (row) keepInView(row);
+  simPlay();   // a What if map test sends its request after the page is drawn
 }
 // Scroll only when the row is off screen, so opening a card never makes the page jump needlessly.
 function onScreen(el){ const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }
@@ -240,12 +241,12 @@ document.addEventListener('click', e => {
     // What if: switch a part, or pick an option, and say what changed
     case 'simToggle': case 'simPick': {
       const before = SIMS[id].goals.map(g => simGoal(id, g));
-      if (act === 'simToggle') { const on = simOn(id); on[b.dataset.v] = !on[b.dataset.v]; simUi.last = b.dataset.v; }
+      if (act === 'simToggle') { const on = simOn(id); on[b.dataset.v] = !on[b.dataset.v]; simUi.last = b.dataset.v; simUi.lastKey = id; }
       else simUi.pick[id] = b.dataset.v;
       studied(); announce(simSay(id, before));
       focusTo = `[data-sim="${id}"] [data-v="${b.dataset.v}"]`; break;
     }
-    case 'simWhy': { const i = +b.dataset.i; simUi.open[id] = simUi.open[id] === i ? null : i; focusTo = `[data-sim="${id}"] [data-act=simWhy][data-i="${i}"]`; break; }
+    case 'simWhy': { const i = +b.dataset.i; simUi.open[id] = simUi.open[id] === i && !SIMS[id].map ? null : i; if (SIMS[id].map) simUi.play = {key:id, gi:i}; focusTo = `[data-sim="${id}"] [data-act=simWhy][data-i="${i}"]`; break; }
     case 'domainFlow': flowUi.open = flowUi.open === id ? null : id; if (flowUi.open) { reveal = `[data-act=domainFlow][data-id="${id}"]`; studied(); } break;
     case 'gCol': {
       const c = VISUALS[id].cols[+b.dataset.i], v = +b.dataset.v;

@@ -463,6 +463,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 2; ui.mode['l1:2'] = 'cases'; revealed['l1:0'] = true;`,
       `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 2; ui.mode['l12:2'] = 'sim'; simUi.on.l12 = {igw:true, sg:true, naclout:false, nat:false}; simUi.open.l12 = 0;`,
       `S.tab = 'learn'; S.openLesson = 'l14'; S.stage.l14 = 2; ui.mode['l14:2'] = 'sim'; simUi.pick.l14 = 'spot'; simUi.open.l14 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 2; ui.mode['l7:2'] = 'sim'; simUi.on.l7 = {waf:true}; simUi.open.l7 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l3'; S.stage.l3 = 2; ui.mode['l3:2'] = 'sim'; simUi.open.l3 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l8'; S.stage.l8 = 2; ui.mode['l8:2'] = 'sim'; simUi.on.l8 = {trail:true}; simUi.open.l8 = 0;`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 2; ui.mode['l12:2'] = 'sim'; simUi.open.l12 = 2;`,
       `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 1; ui.mode['l2:1'] = 'look';`,
       `S.tab = 'learn'; S.openLesson = 'l4'; S.stage.l4 = 1; ui.mode['l4:1'] = 'look';`,
       `S.tab = 'learn'; S.openLesson = 'l5'; S.stage.l5 = 1; ui.mode['l5:1'] = 'look';`,
@@ -487,7 +491,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
       '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag',
       '.num', '.band-meta', '.lesson .pts b', '.colour-key b', '.stage.cur', '.flipcard small', '.flipcard span', '.chipbtn.right', '.chipbtn.wrong', '.game-fb',
-      '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
+      '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.mnode', '.mnode small', '.mnode.part.off small', '.mframe span', '.sim-test.ok', '.sim-test.no', '.sim-test.never', '.sim-result', '.sim-result small', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
       '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
@@ -1080,28 +1084,39 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await p.evaluate(() => LESSONS.every(l => SIMS[l.id] && SIMS[l.id].goals.length >= 3)), 'a lesson has no sandbox, or under 3 goals');
     await seed(p, {v:2, tab:'learn', openLesson:'l12', stage:{l12:2}});
     ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'sim', 'Try does not open on What if');
-    const goal = t => p.evaluate(t => [...document.querySelectorAll('.sim-goals li')].find(li => li.textContent.includes(t)).className.trim(), t);
-    ok((await goal('Users reach the web server')).startsWith('ok'), 'default VPC does not reach the web server');
+    // A goal's state (ok, no, never, open), whether it shows as a list row or as a test button on a map.
+    const goal = t => p.evaluate(t => [...document.querySelectorAll('[data-goal]')].find(el => (el.getAttribute('aria-label') || el.textContent).includes(t)).dataset.state, t);
+    const reason = () => text(p, '.sim-result, .sim-goals li [aria-expanded=true]');
+    ok((await goal('Users reach the web server')) === 'ok', 'default VPC does not reach the web server');
     await p.click('[data-act=simToggle][data-v=naclout]');
-    ok((await goal('Users reach the web server')).startsWith('no') && (await text(p, '.sim-goals li.no')).includes('stateless'), 'no outbound ACL rule did not explain stateless');
+    ok((await goal('Users reach the web server')) === 'no' && (await text(p, '.sim-result')).includes('stateless'), 'no outbound ACL rule did not explain stateless');
     ok(await p.getAttribute('[data-act=simToggle][data-v=naclout]', 'aria-pressed') === 'false' && await p.evaluate(() => document.activeElement.dataset.v === 'naclout'), 'switch state or focus wrong');
     await p.waitForFunction(() => document.querySelector('#announce').textContent.includes('Users reach the web server: no'));
-    ok((await text(p, '.sim-goals li.no .sim-needs')).includes('✗ Network ACL: allow replies out'), 'needs list does not mark the missing part');
-    ok((await goal('private database')).includes('never') && !(await goal('private database')).includes('no'), 'a by-design limit is not shown as never');
+    ok((await text(p, '.sim-result .sim-needs')).includes('✗ Network ACL'), 'needs list does not mark the missing part');
+    // The request is sent along the map and stops, marked ✗, at the part that is off.
+    await p.waitForSelector('.mnode.hit-no[data-node=nacl]', {timeout:5000});
+    ok((await goal('private database')) === 'never', 'a by-design limit is not shown as never');
     await p.click('[data-act=simToggle][data-v=nat]');
-    ok((await goal('downloads updates')).startsWith('ok'), 'NAT gateway did not let the private server out');
+    ok((await goal('downloads updates')) === 'ok', 'NAT gateway did not let the private server out');
     // An explicit deny wins over an allow.
     await seed(p, {v:2, tab:'learn', openLesson:'l6', stage:{l6:2}});
-    ok((await goal('Alice can read')).startsWith('ok'), 'allow alone does not work');
+    ok((await goal('Alice can read')) === 'ok', 'allow alone does not work');
     await p.click('[data-act=simToggle][data-v=deny]');
-    ok((await goal('Alice can read')).startsWith('no') && (await text(p, '.sim-goals li.no')).includes('deny always wins'), 'deny did not win');
+    ok((await goal('Alice can read')) === 'no' && (await text(p, '.sim-result')).includes('deny always wins'), 'deny did not win');
+    await p.waitForSelector('.mnode.hit-no[data-node=iam]', {timeout:5000});
+    // A defence doing its job: with WAF on, the SQL injection test stops at WAF, marked ✓.
+    await seed(p, {v:2, tab:'learn', openLesson:'l7', stage:{l7:2}});
+    await p.click('[data-act=simToggle][data-v=waf]');
+    ok((await goal('SQL injection')) === 'ok' && await p.getAttribute('[data-act=simToggle][data-v=waf]', 'aria-pressed') === 'true', 'WAF did not block SQL injection');
+    await p.waitForSelector('.mnode.hit-ok[data-node=waf]', {timeout:5000});
+    ok((await p.getAttribute('.sim-test[data-goal="1"]', 'aria-label')).startsWith('Block SQL injection'), 'short test name hides the full goal from screen readers');
   });
   await check('What if: picking an option shows what it can and can\'t do; the data is consistent (U12.3, U12.4)', async () => {
     await seed(p, {v:2, tab:'learn', openLesson:'l10', stage:{l10:2}});
     ok(!(await p.$('.sim-goals li.ok, .sim-goals li.no')), 'results before picking');
     await p.click('[data-act=simPick][data-v=store]');
-    const keep = await p.evaluate(() => [...document.querySelectorAll('.sim-goals li')].find(li => li.textContent.includes('Keeps the data')).className);
-    ok(keep.startsWith('no') && (await text(p, '.sim-goals')).includes('lost when the instance stops'), 'instance store keeps data');
+    const keep = await p.evaluate(() => [...document.querySelectorAll('.sim-goals li')].find(li => li.textContent.includes('Keeps the data')).dataset.state);
+    ok(keep === 'no' && (await text(p, '.sim-goals')).includes('lost when the instance stops'), 'instance store keeps data');
     ok((await text(p, '.sim-sum')).match(/^\d of 5 goals met/), 'no goal count');
     const bad = await p.evaluate(() => {
       const out = [];
@@ -1114,6 +1129,12 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
           if (g.never) continue;
           if ([...g.needs, ...(g.unless || [])].some(id => !ids.includes(id) || !g.why[id])) out.push(k + ' ' + g.t + ' missing a reason');
           if (!g.needs.length && !g.ok) out.push(k + ' ' + g.t + ' no text');
+        }
+        if (sm.map) {
+          const ns = sm.map.nodes.map(n => n.id);
+          if ([...sm.map.links.flat(), ...Object.values(sm.map.routes).flatMap(r => r.path)].some(id => !ns.includes(id))) out.push(k + ' map refers to a missing node');
+          if (sm.parts.some(pt => !sm.map.nodes.some(n => n.part === pt.id || (n.checks || []).includes(pt.id)))) out.push(k + ' a part is not on the map');
+          Object.entries(sm.map.routes).forEach(([gi, r]) => { if (!sm.goals[gi] || (r.stop && !r.path.includes(r.stop))) out.push(k + ' route ' + gi); });
         }
         // Every part matters to at least one goal, and every option can do at least one thing.
         ids.forEach(id => { if (!sm.goals.some(g => (g.needs || []).includes(id) || (g.unless || []).includes(id) || (g.yes || []).includes(id))) out.push(k + ' ' + id + ' does nothing'); });

@@ -408,3 +408,37 @@ button.fnode{width:100%;font:inherit;font-size:13.5px}
 .sim-picked{margin:-4px 0 8px;font-size:13.5px}
 .sim-goals li.never{background:var(--field);border-style:dashed;border-color:var(--muted)}
 .never-tag{flex:none;font-size:11.5px;font-weight:700;color:var(--muted)}
+
+/* What if maps: the real setup, parts switched on the map, a dot for each test */
+.simmap{position:relative;width:100%;aspect-ratio:1/var(--r);margin:6px 0 10px;border-radius:var(--r-sm);background:var(--field);overflow:hidden}
+.simmap > svg{position:absolute;inset:0;width:100%;height:100%}
+.simmap line{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+.mframe{position:absolute;border:1.5px dashed var(--muted);border-radius:10px}
+.mframe span{position:absolute;left:6px;top:3px;font-size:10.5px;font-weight:700;color:var(--muted);line-height:1.2}
+.mnode{position:absolute;transform:translate(-50%,-50%);width:23%;display:flex;flex-direction:column;align-items:center;gap:1px;
+  padding:4px 3px;border-radius:9px;border:1.5px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-size:10.5px;font-weight:600;line-height:1.15;text-align:center;z-index:1}
+.mnode svg{flex:none;width:16px;height:16px;color:var(--dc, var(--brand-text))}
+.mnode small{font-size:10px;font-weight:700;color:var(--muted)}
+.mnode.part{cursor:pointer}
+.mnode.part.on{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)}
+.mnode.part.on small{color:var(--brand-text)}
+.mnode.part.off{border-style:dashed;background:var(--field)}
+.mnode.down{border-color:var(--bad);background:var(--bad-soft)}
+.mnode.hit::after{position:absolute;top:-8px;right:-6px;width:18px;height:18px;border-radius:99px;font-size:11px;font-weight:800;line-height:18px;text-align:center}
+.mnode.hit-ok::after{content:'✓';background:var(--ok);color:#06281F}
+.mnode.hit-no::after{content:'✗';background:var(--bad);color:#fff}
+.mnode.hit-never::after{content:'⊘';background:var(--muted);color:var(--card)}
+.mdot{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:99px;background:var(--brand);box-shadow:0 0 0 3px var(--brand-soft);z-index:2;display:none}
+.mdot.go{display:block}
+.sim-tests{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.sim-test{display:flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:99px;padding:5px 11px;background:var(--card);color:var(--text);font:inherit;font-size:13px;font-weight:600;text-align:left}
+.sim-test.ok{border-color:var(--ok);background:var(--ok-soft)}.sim-test.no{border-color:var(--bad);background:var(--bad-soft)}
+.sim-test.never{border-style:dashed;border-color:var(--muted);background:var(--field)}
+.sim-test[aria-pressed=true]{box-shadow:0 0 0 2px var(--brand)}
+.sim-result{border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;font-size:14px}
+.sim-result.ok{border-color:var(--ok);background:var(--ok-soft)}.sim-result.no{border-color:var(--bad);background:var(--bad-soft)}
+.sim-result.never{border-style:dashed;border-color:var(--muted);background:var(--field)}
+.sim-result > small{display:block;margin-top:3px;font-size:13px;line-height:1.4}
+@media (prefers-reduced-motion:reduce){.mdot{transition:none}}
+@media (max-width:359px){.simmap{aspect-ratio:1/calc(var(--r) * 1.3)}.mnode{font-size:9.5px;padding:3px 2px}.mnode svg{width:13px;height:13px}.mframe span{font-size:9.5px}}
+.sim-tests .sim-sum{align-self:center;margin:0 4px 0 0}

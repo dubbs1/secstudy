@@ -133,3 +133,8 @@ Each lesson's Try step opens on "What if", a small sandbox (data in `web/js/cont
 - AC12.4 Every part or option matters to at least one goal; every missing part has its own reason.
 - AC12.5 After a tap the goal it changed opens with its reason, and the change is read out. Focus stays on the switch.
 - AC12.6 Fits 1.4 screens at 390 x 844 with the longest reason open.
+- AC12.7 Where the setup has a place (lessons 3, 6, 7, 9, 12) the sandbox is a live map: frames for Regions,
+  AZs, subnets and accounts; parts switched by tapping them on the map; one test button per goal. A test sends
+  a dot along its path; it stops with ✗ at the first missing or blocking part, with ✓ at a defence doing its job
+  (WAF, MFA), or arrives. Test buttons carry the full goal name for screen readers; motion is skipped when
+  reduced motion is asked for.

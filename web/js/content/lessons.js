@@ -84,7 +84,7 @@ const LESSONS = [
        '<b>ElastiCache</b>: in-memory cache (Redis / Memcached-compatible). <b>Neptune</b>: graph. <b>DocumentDB</b>: MongoDB-compatible.',
        '<b>DMS</b>: Database Migration Service. Moves databases to AWS with little downtime.']},
  {id:'l12', d:'tech', due:'2026-11-18', t:'Networking and content delivery',
-  steps:['Read the key points (5 min)','Draw a VPC box with a public subnet, a private subnet, an internet gateway and a NAT gateway. Label which subnet holds the web server and which the database (8 min)','Answer the 3 questions (5 min)'],
+  steps:['Read the key points (5 min)','Draw a VPC: public and private subnet, internet gateway, NAT gateway. Mark where the web server and the database go (8 min)','Answer the 3 questions (5 min)'],
   pts:['<b>VPC</b>: your private network in a Region. <b>Subnets</b> live in one AZ; public subnets route to an <b>internet gateway</b>.',
        '<b>Security group</b>: firewall on the instance, <b>stateful</b>, allow rules only. <b>Network ACL</b>: firewall on the subnet, <b>stateless</b>, allow and deny rules.',
        '<b>NAT gateway</b>: lets private instances reach out to the internet without being reachable.',
