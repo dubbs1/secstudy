@@ -7,6 +7,7 @@ const todayISO = () => isoOf(new Date());
 const parseISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 const addDays = (s, n) => { const d = parseISO(s); d.setDate(d.getDate() + n); return isoOf(d); };
 const fmtDate = s => parseISO(s).toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short'});
+const fmtDayYear = s => parseISO(s).toLocaleDateString(undefined, {day:'numeric', month:'short', year:'numeric'});
 const fmtDateYear = s => parseISO(s).toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short', year:'numeric'});
 const daysUntil = s => Math.round((parseISO(s) - parseISO(todayISO())) / 864e5);
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);

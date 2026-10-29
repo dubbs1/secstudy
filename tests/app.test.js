@@ -340,13 +340,13 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await check(`theme: cycles, overrides a ${system} system, survives reload (AC7.1-7.3)`, async () => {
       const q = await fresh({colorScheme:system});
       const bg = () => q.evaluate(() => getComputedStyle(document.body).backgroundColor);
-      ok(await text(q, '[data-act=theme]') === 'Theme: System', 'does not start on System');
+      ok((await q.getAttribute('[data-act=theme]', 'aria-label')).startsWith('Theme: System'), 'does not start on System');
       await q.click('[data-act=theme]');
-      ok(await text(q, '[data-act=theme]') === 'Theme: Light' && await bg() === 'rgb(245, 244, 242)', 'Light not applied: ' + await bg());
+      ok((await q.getAttribute('[data-act=theme]', 'aria-label')).startsWith('Theme: Light') && await bg() === 'rgb(245, 244, 242)', 'Light not applied: ' + await bg());
       await q.click('[data-act=theme]');
-      ok(await text(q, '[data-act=theme]') === 'Theme: Dark' && await bg() === 'rgb(22, 20, 28)', 'Dark not applied: ' + await bg());
+      ok((await q.getAttribute('[data-act=theme]', 'aria-label')).startsWith('Theme: Dark') && await bg() === 'rgb(22, 20, 28)', 'Dark not applied: ' + await bg());
       await q.reload();
-      ok(await text(q, '[data-act=theme]') === 'Theme: Dark' && await bg() === 'rgb(22, 20, 28)', 'Dark lost on reload');
+      ok((await q.getAttribute('[data-act=theme]', 'aria-label')).startsWith('Theme: Dark') && await bg() === 'rgb(22, 20, 28)', 'Dark lost on reload');
       await q.click('[data-act=theme]');
       ok(await bg() === (system === 'dark' ? 'rgb(22, 20, 28)' : 'rgb(245, 244, 242)'), 'System not restored');
       await q.context().close();
