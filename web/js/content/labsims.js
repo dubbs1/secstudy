@@ -21,9 +21,9 @@ const LAB_SIMS = {
       {t:'Create access keys for root', why:'Never create access keys for root: if they leak, someone gets full control of the account.'},
       {t:'Nothing for now', why:'A leaked root password alone would give away the whole account. Turn on MFA first.'}]}],
    see:'The root user listed with an MFA device assigned.'},
-  {where:'Billing and Cost Management › Budgets › Create budget', task:'Get told the moment anything costs money.', controls:[
+  {where:'Billing and Cost Management › Budgets › Create budget', task:'Get an email when anything starts to cost money.', controls:[
     {type:'choice', id:'tpl', label:'Template', options:[
-      {t:'Zero spend budget', ok:true, why:'It alerts you as soon as spending goes above $0.01.'},
+      {t:'Zero spend budget', ok:true, why:'It emails you once your costs go above $0.01. Budgets update a few times a day, not instantly.'},
       {t:'Monthly cost budget', why:'Useful later, with a monthly amount. For a learning account the zero spend budget warns you earliest.'}]},
     {type:'text', id:'email', label:'Email for alerts', need:'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$', bad:[{re:'^\\s*$', why:'Enter the email address where alerts should go.'}], hint:'An email address, e.g. you@example.com'}],
    see:'Your zero spend budget in the Budgets list.'},
@@ -40,7 +40,7 @@ const LAB_SIMS = {
       {t:'No policy', why:'A group without a policy gives its members no permissions at all.'}]}],
    see:'Admins in the user groups list, with AdministratorAccess under Permissions.'},
   {where:'IAM › Users › Create user', task:'Create your own user and let it sign in to the console.', controls:[
-    {type:'text', id:'user', label:'User name', need:'^[\\w+=,.@-]{1,64}$', bad:[{re:'\\s', why:'IAM names cannot contain spaces.'}], taken:['root'], hint:'e.g. alex'},
+    {type:'text', id:'user', label:'User name', need:'^[\\w+=,.@-]{1,64}$', bad:[{re:'\\s', why:'IAM names cannot contain spaces.'}], taken:['admin'], hint:'e.g. alex'},
     {type:'toggle', id:'console', label:'Provide user access to the AWS Management Console', want:true, why:'Without console access this user could only use access keys, and could not sign in to the console.'}],
    see:'The Set permissions page.'},
   {where:'IAM › Users › Set permissions', task:'Give the user its permissions.', controls:[
@@ -61,14 +61,16 @@ const LAB_SIMS = {
   {where:'S3 › Create bucket', task:'Name the bucket and pick a Region.', controls:[
     {type:'text', id:'name', label:'Bucket name', need:'^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$',
      bad:[{re:'[A-Z]', why:'Bucket names can only use lowercase letters.'}, {re:'\\s', why:'No spaces in bucket names.'}, {re:'_', why:'No underscores: use hyphens instead.'},
-          {re:'^.{0,2}$', why:'At least 3 characters.'}, {re:'^.{64,}$', why:'At most 63 characters.'}, {re:'^[.-]|[.-]$', why:'Start and end with a letter or a number.'}],
+          {re:'^.{0,2}$', why:'At least 3 characters.'}, {re:'^.{64,}$', why:'At most 63 characters.'}, {re:'^[.-]|[.-]$', why:'Start and end with a letter or a number.'},
+          {re:'\\.\\.', why:'No two periods in a row.'}, {re:'^\\d+\\.\\d+\\.\\d+\\.\\d+$', why:'Must not look like an IP address.'},
+          {re:'^(xn--|sthree-|amzn-s3-demo-)', why:'That prefix is reserved by AWS.'}, {re:'(-s3alias|--ol-s3|\\.mrap|--x-s3|--table-s3)$', why:'That ending is reserved by AWS.'}],
      taken:['test', 'my-bucket', 'bucket', 'photos'], hint:'e.g. alex-notes-2026'},
     {type:'choice', id:'region', label:'AWS Region', options:[
       {t:'The Region nearest to you', ok:true, why:'Lower latency, and it keeps data where your laws expect it.'},
       {t:'The Region on the other side of the world', why:'It works, but every request travels further. Pick the nearest Region unless a law or a service says otherwise.'}]}],
    see:'The bucket settings page.'},
   {where:'S3 › Create bucket › Settings', task:'Keep it private and keep old versions.', controls:[
-    {type:'toggle', id:'block', label:'Block all public access', want:true, on:true, why:'Turning it off can make your files readable by anyone. Leave it on unless you mean to publish them.'},
+    {type:'toggle', id:'block', label:'Block all public access', want:true, on:true, why:'Turning it off lets a bucket policy or ACL make your files public to anyone. Leave it on unless you mean to publish them.'},
     {type:'toggle', id:'ver', label:'Bucket Versioning', want:true, why:'With versioning on, uploading a file with the same name keeps the old one as a version.'}],
    see:'Your new bucket in the bucket list.'},
   {where:'S3 › your bucket › Upload', task:'Upload notes.txt.', controls:[
@@ -100,11 +102,11 @@ const LAB_SIMS = {
    see:'The type you picked, labelled Free tier eligible.'},
   {where:'EC2 › Launch instance › Network settings', task:'Let yourself connect, nothing more.', controls:[
     {type:'choice', id:'sg', label:'Security group rule', options:[
-      {t:'Allow SSH (port 22)', ok:true, why:'Just what EC2 Instance Connect needs. A security group allows nothing else in.'},
+      {t:'Allow SSH (port 22) from Anywhere, or from the EC2 Instance Connect prefix list', ok:true, why:'Instance Connect in the browser comes from AWS\'s own addresses, so port 22 must be open to them. A security group allows nothing else in.'},
       {t:'Allow all traffic from anywhere', why:'That opens every port to the whole internet. Allow only what you need.'}]},
     {type:'choice', id:'key', label:'Key pair', options:[
       {t:'Proceed without a key pair', ok:true, why:'This lab connects with EC2 Instance Connect from the browser, which needs no key pair.'},
-      {t:'Create a new key pair', why:'Also fine for SSH from your computer, but this lab connects in the browser and needs none.'}]}],
+      {t:'Create a new key pair', ok:true, why:'Fine too, for SSH from your own computer later; Instance Connect in the browser doesn\'t need it.'}]}],
    see:'A success message with the new instance ID.'},
   {where:'EC2 › Instances › Connect › EC2 Instance Connect', task:'You are on the server. Type uname -a and press Enter.', controls:[
     {type:'cmd', id:'uname', expect:['^\\s*uname\\s+-a\\s*$'], output:'Linux ip-172-31-5-20 6.1.0 x86_64 GNU/Linux'}],
@@ -122,7 +124,7 @@ const LAB_SIMS = {
       {t:'Node.js', why:'Lambda runs Node.js too, but this lab\'s code is Python.'}]}],
    see:'The function page with a code editor.'},
   {where:'Lambda › your function › Code', task:'Inside the handler, add a line that prints hello from lambda.', controls:[
-    {type:'cmd', id:'code', expect:['^\\s*print\\(\\s*"hello from lambda"\\s*\\)\\s*$', '^\\s*print\\(\\s*\'hello from lambda\'\\s*\\)\\s*$'], output:'Successfully updated the function.', prompt:'>>>'}],
+    {type:'cmd', id:'code', expect:['^\\s*print\\(\\s*"hello from lambda"\\s*\\)\\s*$', '^\\s*print\\(\\s*\'hello from lambda\'\\s*\\)\\s*$'], output:'Successfully updated the function.', prompt:'code'}],
    see:'A message that the function was updated (after Deploy).'},
   {where:'Lambda › your function › Test', task:'Run it with a test event.', controls:[
     {type:'choice', id:'test', label:'Action', options:[{t:'Test', ok:true, why:'Status: Succeeded. Function Logs: hello from lambda.'}]}],
@@ -153,12 +155,12 @@ const LAB_SIMS = {
    see:'A cost chart. A new account can take up to a day to fill it in.'},
   {where:'Trusted Advisor', task:'On Basic support, which checks do you get?', controls:[
     {type:'choice', id:'ta', label:'Checks', options:[
-      {t:'The core checks only', ok:true, why:'Basic and Developer get the core checks; Business and up get all of them.'},
-      {t:'All checks', why:'All checks come with Business support and up.'}]}],
+      {t:'The core checks only', ok:true, why:'Basic gets the service quota checks and a few core security checks; Business (Business Support+ today) and up get all of them.'},
+      {t:'All checks', why:'All checks come with Business (Business Support+ today) and up.'}]}],
    see:'Check categories such as Security and Service limits; some are locked on Basic support.'},
   {where:'Support › Support plans', task:'Production is down and you need 24/7 phone help. The cheapest plan, as the exam tests it?', controls:[
     {type:'choice', id:'plan', label:'Plan', options:[
-      {t:'Business', ok:true, why:'The first plan with 24/7 phone and chat, under 1 hour when production is down.'},
+      {t:'Business (Business Support+ for new accounts today)', ok:true, why:'The first plan with 24/7 phone and chat, under 1 hour when production is down.'},
       {t:'Developer', why:'Business-hours email only.'},
       {t:'Basic', why:'No technical support cases.'}]}],
    see:'Basic as your plan, next to the plans available since December 2025.'}]}

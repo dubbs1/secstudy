@@ -4,7 +4,7 @@
 // practising saves nothing except today's study day.
 const labUi = {};   // per lab: {step, vals:{controlId: value}, said:{controlId: text}}
 
-function labState(id){ return labUi[id] || (labUi[id] = {step:0, vals:{}, out:{}}); }
+function labState(id){ return labUi[id] || (labUi[id] = {step:0, vals:{}, out:{}, draft:{}}); }
 // Whether a control is right, and what to say about its current value.
 function labCheck(c, v){
   if (c.type === 'choice') { if (v == null) return {ok:false}; const o = c.options[v]; return {ok:!!o.ok, why:o.why, said:true}; }
@@ -13,7 +13,7 @@ function labCheck(c, v){
     if (v == null) return {ok:false};
     const bad = (c.bad || []).find(b => new RegExp(b.re).test(v));
     if (bad) return {ok:false, why:bad.why, said:true};
-    if ((c.taken || []).includes(v.trim().toLowerCase())) return {ok:false, why:`"${esc(v.trim())}" is already taken. ${c.id === 'name' ? 'Bucket names are shared by every AWS account in the world: add something of your own.' : 'Pick another name.'}`, said:true};
+    if ((c.taken || []).includes(v.trim().toLowerCase())) return {ok:false, why:`"${esc(v.trim())}" is already taken. ${c.id === 'name' ? 'Bucket names are shared by every AWS account in the world: add something of your own.' : 'User names must be unique in the account (case does not count).'}`, said:true};
     if (!new RegExp(c.need).test(v)) return {ok:false, why:`Not quite: ${c.hint}.`, said:true};
     return {ok:true, why:'', said:true};
   }
@@ -24,16 +24,18 @@ const labStepDone = (id, step) => LAB_SIMS[id].steps[step].controls.every(c => l
 
 function labControlHTML(id, c){
   const st = labState(id), v = st.vals[c.id], r = labCheck(c, v), key = `data-id="${id}" data-v="${c.id}"`;
-  const fb = r.said && r.why ? `<p class="lc-fb ${r.ok ? 'ok' : 'no'}"><b>${r.ok ? '✓' : '✗'}</b> ${r.why}</p>` : r.said && r.ok ? '<p class="lc-fb ok"><b>✓</b> Right.</p>' : '';
+  st.draft = st.draft || {};
+  const fid = `fb-${id}-${c.id}`, aria = `aria-describedby="${fid}" ${r.said && !r.ok ? 'aria-invalid="true"' : ''}`;   // the box and its feedback belong together
+  const fb = r.said && r.why ? `<p class="lc-fb ${r.ok ? 'ok' : 'no'}" id="${fid}"><b>${r.ok ? '✓' : '✗'}</b> ${r.why}</p>` : r.said && r.ok ? `<p class="lc-fb ok" id="${fid}"><b>✓</b> Right.</p>` : '';
   if (c.type === 'choice') return `<fieldset class="lc"><legend>${c.label}</legend>${c.options.map((o, i) => `<button class="lc-opt ${v === i ? (o.ok ? 'right' : 'wrong') : ''}"
       data-act="labPick" ${key} data-i="${i}" aria-pressed="${v === i}">${v === i ? (o.ok ? '✓ ' : '✗ ') : ''}${o.t}</button>`).join('')}</fieldset>${fb}`;
   if (c.type === 'toggle') { const on = v == null ? !!c.on : v;
     return `<div class="lc"><button class="lc-toggle ${on ? 'on' : ''}" data-act="labToggle" ${key} aria-pressed="${on}"><span class="sw" aria-hidden="true">${on ? 'On' : 'Off'}</span>${c.label}</button></div>${fb}`; }
   if (c.type === 'text') return `<div class="lc"><label class="lc-l" for="lc-${id}-${c.id}">${c.label}</label>
-      <div class="lc-row"><input class="field" id="lc-${id}-${c.id}" data-lab="${id}" data-c="${c.id}" value="${esc(v || '')}" placeholder="${esc(c.hint || '')}" autocomplete="off" spellcheck="false">
+      <div class="lc-row"><input class="field" id="lc-${id}-${c.id}" data-lab="${id}" data-c="${c.id}" ${aria} value="${esc(v != null ? v : st.draft[c.id] || '')}" placeholder="${esc(c.hint || '')}" autocomplete="off" spellcheck="false">
       <button class="btn small" data-act="labText" ${key}>Check</button></div></div>${fb}`;
   if (c.type === 'cmd') return `<div class="lc term"><div class="term-out" aria-live="polite">${(st.out[c.id] || []).map(line => `<div>${esc(line)}</div>`).join('')}</div>
-      <div class="lc-row"><span class="term-p" aria-hidden="true">${c.prompt || '$'}</span><input class="field term-in" id="lc-${id}-${c.id}" data-lab="${id}" data-c="${c.id}"
+      <div class="lc-row"><span class="term-p" aria-hidden="true">${c.prompt || '$'}</span><input class="field term-in" id="lc-${id}-${c.id}" data-lab="${id}" data-c="${c.id}" ${aria} value="${esc(st.draft[c.id] || '')}"
         aria-label="Type a command" autocomplete="off" spellcheck="false" ${r.ok ? 'disabled' : ''}><button class="btn small" data-act="labText" ${key} ${r.ok ? 'disabled' : ''}>Enter</button></div></div>${fb}`;
   return '';
 }
@@ -50,7 +52,7 @@ function labSimHTML(lab){
   return `<div class="pcon" data-labsim="${lab.id}">
     <div class="pcon-bar"><span class="pcon-tag">Practice console</span><span class="pcon-where">${s.where}</span></div>
     <div class="pcon-body"><div class="qhead"><span>Step ${st.step + 1} of ${n}</span><span class="dots" aria-hidden="true">${dots}</span></div>
-      <p class="pcon-task"><b>${s.task}</b></p>${s.controls.map(c => labControlHTML(lab.id, c)).join('')}
+      <p class="pcon-task" tabindex="-1"><b>${s.task}</b></p>${s.controls.map(c => labControlHTML(lab.id, c)).join('')}
       ${done ? `<div class="pcon-see"><b>In the real console you would now see:</b> ${s.see}${s.table ? `<table class="pcon-table"><thead><tr>${s.table.cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
         <tbody>${s.table.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>` : ''}</div>
         <div class="btns"><button class="btn" data-act="labNext" data-id="${lab.id}">${st.step + 1 < n ? 'Next step ›' : 'Finish'}</button></div>` : ''}

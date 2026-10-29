@@ -488,3 +488,4 @@ button.fnode{width:100%;font:inherit;font-size:13.5px}
 .pcon-table{width:100%;margin-top:8px;border-collapse:collapse;font-size:13px;background:var(--card)}
 .pcon-table th,.pcon-table td{border:1px solid var(--line);padding:5px 8px;text-align:left}
 .pcon-done{text-align:center;padding:12px 0}
+.field::placeholder{color:var(--muted);opacity:1}

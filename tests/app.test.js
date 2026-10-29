@@ -1240,14 +1240,18 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const name = async v => { await p.fill('#lc-lab3-name', v); await p.press('#lc-lab3-name', 'Enter'); return text(p, '.lc-fb'); };
     ok((await name('My Bucket')).includes('lowercase'), 'capital letters not explained');
     ok((await name('test')).includes('already taken') && (await name('test')).includes('every AWS account'), 'a taken name not explained');
+    ok((await name('a..b')).includes('two periods') && (await name('192.168.5.4')).includes('IP address') && (await name('xn--abc')).includes('reserved'), 'S3 naming rules missing');
+    ok(await p.getAttribute('#lc-lab3-name', 'aria-invalid') === 'true' && await p.getAttribute('#lc-lab3-name', 'aria-describedby') === 'fb-lab3-name', 'feedback not tied to the box');
     ok((await name('alex-notes-2026')).startsWith('✓'), 'a good name not accepted');
     await p.click('[data-act=labPick][data-v=region][data-i="1"]');
     ok((await text(p, '.lc-fb.no')).includes('nearest Region'), 'far Region not explained');
     await p.click('[data-act=labPick][data-v=region][data-i="0"]');
     ok((await text(p, '.pcon-see')).includes('bucket settings') && await p.evaluate(() => document.activeElement.dataset.act === 'labNext'), 'step not done, or focus not on Next');
     await p.click('[data-act=labNext]');
+    ok(await p.evaluate(() => document.activeElement.classList.contains('pcon-task')), 'focus lost after Next step');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Step 2 of 6'));
     await p.click('[data-act=labToggle][data-v=block]');
-    ok((await text(p, '.lc-fb.no')).includes('readable by anyone'), 'turning off Block public access not explained');
+    ok((await text(p, '.lc-fb.no')).includes('public to anyone'), 'turning off Block public access not explained');
     await p.click('[data-act=labToggle][data-v=block]'); await p.click('[data-act=labToggle][data-v=ver]'); await p.click('[data-act=labNext]');
     await p.click('[data-act=labPick][data-v=up]'); await p.click('[data-act=labNext]');
     await p.click('[data-act=labPick][data-v=up2]'); await p.click('[data-act=labNext]');
@@ -1263,6 +1267,12 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('[data-act=labMode][data-v=real]');
     ok(await p.$('.lab-steps') && (await text(p, '.lab-meta')).includes('Cost: less than a cent'), 'Do it in the real console did not show the real steps');
   });
+  await check('Practise here: typed text is kept when another answer is tapped; the terminal reply is read out (U14.2, U14.3)', async () => {
+    await seed(p, {v:2, tab:'labs', openLab:'lab1'});
+    await p.evaluate(() => { labUi.lab1 = {mode:'sim', step:2, vals:{}, out:{}, draft:{}}; render(); });
+    await p.fill('#lc-lab1-email', 'me@example.com'); await p.click('[data-act=labPick][data-v=tpl][data-i="0"]');
+    ok(await p.inputValue('#lc-lab1-email') === 'me@example.com', 'typed email lost');
+  });
   await check('Practise here: the terminal answers commands (U14.3)', async () => {
     await seed(p, {v:2, tab:'labs', openLab:'lab4'});
     await p.evaluate(() => { labUi.lab4 = {mode:'sim', step:3, vals:{}, out:{}}; render(); });
@@ -1270,6 +1280,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok((await text(p, '.term-out')).includes('command not recognised') && (await text(p, '.lc-fb.no')).includes('Not that command'), 'a wrong command was accepted');
     await p.fill('#lc-lab4-uname', 'uname -a'); await p.press('#lc-lab4-uname', 'Enter');
     ok((await text(p, '.term-out')).includes('Linux ip-') && await p.$('.pcon-see'), 'uname -a did not answer');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Linux ip-'));
   });
 
   await check('the content security policy blocks injected script, from disk and from the website', async () => {

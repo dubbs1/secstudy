@@ -233,6 +233,7 @@ document.addEventListener('click', e => {
     case 'labMode': labState(id).mode = b.dataset.v; focusTo = `[data-act=labMode][data-v="${b.dataset.v}"]`; break;
     case 'labPick': case 'labToggle': case 'labText': {
       const st = labState(id), c = LAB_SIMS[id].steps[st.step].controls.find(x => x.id === b.dataset.v);
+      st.draft = st.draft || {}; document.querySelectorAll('.pcon input[data-lab]').forEach(i => st.draft[i.dataset.c] = i.value);   // keep what was typed
       if (act === 'labPick') st.vals[c.id] = +b.dataset.i;
       else if (act === 'labToggle') st.vals[c.id] = !(st.vals[c.id] == null ? !!c.on : st.vals[c.id]);
       else {
@@ -241,12 +242,18 @@ document.addEventListener('click', e => {
       }
       const r = labCheck(c, st.vals[c.id]); studied();
       const stepDone = labStepDone(id, st.step);
-      announce((r.ok ? 'Right. ' : 'Not quite. ') + (r.why || '') + (stepDone ? ' Step done. ' + LAB_SIMS[id].steps[st.step].see : ''));
+      if (c.type === 'cmd') st.draft[c.id] = '';
+      announce((c.type === 'cmd' ? (r.ok ? c.output : 'command not recognised') + '. ' : '') + (r.ok ? 'Right. ' : 'Not quite. ') + (r.why || '') + (stepDone ? ' Step done. ' + LAB_SIMS[id].steps[st.step].see : ''));
       focusTo = stepDone ? '[data-act=labNext]' : c.type === 'text' || c.type === 'cmd' ? `#lc-${id}-${c.id}` : `[data-act=${act}][data-v="${c.id}"]${act === 'labPick' ? `[data-i="${b.dataset.i}"]` : ''}`;
       break;
     }
-    case 'labNext': { const st = labState(id); st.step++; focusTo = st.step >= LAB_SIMS[id].steps.length ? '.pcon-done .btn' : '.pcon-task'; reveal = `[data-act=openLab][data-id="${id}"]`; break; }
-    case 'labRestart': labUi[id] = {mode:'sim', step:0, vals:{}, out:{}}; focusTo = '.pcon .lc button, .pcon .lc input'; break;
+    case 'labNext': {
+      const st = labState(id), steps = LAB_SIMS[id].steps; st.step++;
+      focusTo = st.step >= steps.length ? '.pcon-done .btn' : '.pcon-task';
+      announce(st.step >= steps.length ? 'Practice run done.' : `Step ${st.step + 1} of ${steps.length}: ${steps[st.step].task}`);
+      reveal = `[data-act=openLab][data-id="${id}"]`; break;
+    }
+    case 'labRestart': labUi[id] = {mode:'sim', step:0, vals:{}, out:{}, draft:{}}; focusTo = '.pcon .lc button, .pcon .lc input'; break;
     case 'tLen': S.timer = {...S.timer, len:+b.dataset.v, end:null, left:null}; break;
     case 'tGo': {
       try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
