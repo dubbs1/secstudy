@@ -24,7 +24,7 @@ function render(){
   const views = {today:renderToday, learn:renderLearn, practice:renderPractice, labs:renderLabs};
   $('#main').innerHTML = (views[S.tab] || renderToday)();
   renderTimerButton();
-  startTick();
+  startTick(); startMockTick();
   // Keyboard users keep their place: the feedback after answering, else the same control, else (when it
   // went away, e.g. "Next question") the card just opened or the first answer on screen.
   const row = reveal && document.querySelector(reveal); reveal = null;
@@ -47,7 +47,7 @@ function render(){
   simPlay();   // a What if map test sends its request after the page is drawn
   // A bridge that just appeared is brought into view gently, so Continue is never out of sight.
   const br = $('#main .bridge.fresh');
-  if (br) { br.classList.remove('fresh'); const r = br.getBoundingClientRect(); if (r.bottom > innerHeight) br.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'nearest'}); }
+  if (br) { br.classList.remove('fresh'); const r = br.getBoundingClientRect(); if (r.bottom > innerHeight) br.scrollIntoView({behavior:reduceMotion() ? 'auto' : 'smooth', block:'nearest'}); }
 }
 // Scroll only when the row is off screen, so opening a card never makes the page jump needlessly.
 function onScreen(el){ const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }
@@ -60,8 +60,12 @@ function announce(msg){
   setTimeout(() => { a.textContent = msg; }, 50);   // a changed text is read; the same text twice is not
 }
 function applyTheme(){
-  if (S.theme === 'system') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = S.theme;
+  const h = document.documentElement;
+  if (S.theme === 'system') delete h.dataset.theme;
+  else h.dataset.theme = S.theme;
+  // Settings: text size, motion, and the calm view (no week count or progress bars)
+  h.dataset.text = S.prefs.text; h.dataset.motion = S.prefs.motion;
+  if (S.prefs.calm) h.dataset.calm = ''; else delete h.dataset.calm;
 }
 
 /* ---------- the phone's Back button ---------- */
@@ -92,6 +96,8 @@ function backOneStep(){
   }
   else if (S.tab === 'labs' && labFromLesson && S.openLesson) { S.tab = 'learn'; reveal = '#lessonTop'; }
   else if (S.tab === 'today' && S.review) { S.review = null; reveal = '#nextUpBtn'; }
+  else if (S.tab === 'practice' && S.mock && S.mock.list) { S.mock.list = false; }
+  else if (S.tab === 'practice' && (drillUi || mockShow)) { drillUi = null; mockShow = null; mockOpen = null; }
   else if (S.tab === 'learn' && flowUi.open) { reveal = `[data-act=domainFlow][data-id="${flowUi.open}"]`; flowUi.open = null; }
   else if (S.open) { S.open = null; }   // an expanded card (exam facts, weak spots, Free plan) folds first
   else if (S.tab !== 'today') { S.tab = 'today'; window.scrollTo(0, 0); }
@@ -150,6 +156,14 @@ document.addEventListener('click', e => {
     if (S.tab === 'learn' && tabBtn.dataset.tab === 'learn') { S.openLesson = null; lessonFrom = null; }   // Learn again: back to the list
     S.tab = tabBtn.dataset.tab; save(); render(); window.scrollTo(0, 0); return;
   }
+  // A link to another site: the browser opens it in a new tab; the Windows app copies it for the browser.
+  const ext = e.target.closest('a[data-ext]');
+  if (ext && inDesktopApp()) {
+    e.preventDefault();
+    const href = ext.getAttribute('href');
+    (navigator.clipboard ? navigator.clipboard.writeText(href) : Promise.reject()).then(() => toast('Link copied. Paste it into your web browser.'), () => toast(href));
+    return;
+  }
   const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return;
   const {act, id} = b.dataset;
   if (pathUi.next && act !== 'advGo' && act !== 'advStay') stayHere();   // any other tap keeps you where you are
@@ -206,6 +220,7 @@ document.addEventListener('click', e => {
     case 'goLab':       labFromLesson = S.tab === 'learn' && !!S.openLesson; S.tab = 'labs'; S.open = null; S.openLab = id; reveal = `[data-act=openLab][data-id="${id}"]`; break;
     case 'goQuestion':  S.tab = 'practice'; S.pFilter = 'all'; S.pMode = 'all'; pCur = id; delete live['p:' + id]; window.scrollTo(0, 0); break;
     case 'goPractice':  S.tab = 'practice'; window.scrollTo(0, 0); break;
+    case 'goMock':      S.tab = 'practice'; drillUi = null; mockShow = null; if (!S.mock) mockStart('full'); window.scrollTo(0, 0); focusTo = '#main .opt'; break;
     case 'lessonTimer': case 'breakTimer': {
       const len = act === 'breakTimer' ? 5 : 15;
       try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
@@ -215,14 +230,76 @@ document.addEventListener('click', e => {
     }
     case 'openLab':     S.open = null; S.openLab = S.openLab === id ? null : id;
       if (S.openLab) reveal = `[data-act=openLab][data-id="${id}"]`; break;
-    case 'pick': {
-      const i = +b.dataset.i, qid = b.dataset.q, ctx = b.dataset.ctx;
-      record(qid, i);
-      if (ctx === 'l') { live[qid] = i; S.current = QUESTIONS.find(q => q.id === qid).l; } else live[ctx + ':' + qid] = i;
-      if (ctx === 'r' && i === QUESTIONS.find(q => q.id === qid).a) S.review.right++;
-      const lid = QUESTIONS.find(q => q.id === qid).l, qs = qsFor(lid);
-      if (ctx === 'l' && qs.every(q => S.ans[q.id])) { const st = S.steps[lid] || []; st[LESSONS.find(l => l.id === lid).steps.length - 1] = true; S.steps[lid] = st; finishPart(lid, [3, null]); }
+    case 'pick': case 'pickCheck': {
+      const qid = b.dataset.q, ctx = b.dataset.ctx, q = QUESTIONS.find(x => x.id === qid);
+      const pick = act === 'pick' ? +b.dataset.i : [...(live['sel:' + ctx + ':' + qid] || [])].sort((x, y) => x - y);
+      delete live['sel:' + ctx + ':' + qid];
+      record(qid, pick);
+      live[liveKey(ctx, qid)] = pick;
+      if (ctx === 'l') S.current = q.l;
+      if (ctx === 'r' && isRight(q, pick)) S.review.right++;
+      const qs = qsFor(q.l);
+      if (ctx === 'l' && qs.every(x => S.ans[x.id])) { const st = S.steps[q.l] || []; st[LESSONS.find(l => l.id === q.l).steps.length - 1] = true; S.steps[q.l] = st; finishPart(q.l, [3, null]); }
       announceNext = true; studied();
+      if (act === 'pickCheck') focusTo = '#main .fb';
+      break;
+    }
+    case 'pickM': {   // "Choose two": select or unselect; Check marks it
+      const q = QUESTIONS.find(x => x.id === b.dataset.q), k = 'sel:' + b.dataset.ctx + ':' + q.id, i = +b.dataset.i;
+      const sel = live[k] = live[k] || [];
+      if (sel.includes(i)) sel.splice(sel.indexOf(i), 1);
+      else if (sel.length < q.a.length) sel.push(i);
+      else { toast(`Choose ${q.a.length}: unselect one first`); return; }
+      focusTo = controlKey(b); break;
+    }
+    case 'sure': setSure(b.dataset.q, b.dataset.v === '1'); focusTo = controlKey(b); announce(b.dataset.v === '1' ? 'Marked sure.' : 'Marked as a guess. It comes back in review tomorrow.'); break;
+    case 'speak': try { speak(b.dataset.v); } catch(err) {} return;
+    // Guess first: one question before a lesson is read
+    case 'guess': S.guess[id] = +b.dataset.i; guessUi[id] = true; studied(); focusTo = '.guess .fb'; announce(plain(GUESS[id].x)); break;
+    case 'guessSkip': S.guess[id] = -1;   // falls through
+    case 'guessDone': delete guessUi[id]; focusTo = '[data-act=mode][aria-pressed=true], .task input'; break;
+    // Mock exam
+    case 'mStart': mockStart(b.dataset.v); window.scrollTo(0, 0); focusTo = '#main .opt'; announce(`${mockName(b.dataset.v)} started. ${S.mock.ids.length} questions, ${S.mock.mins} minutes.`); break;
+    case 'mPick': {
+      const M = S.mock, q = QUESTIONS.find(x => x.id === M.ids[M.i]), i = +b.dataset.i;
+      if (multi(q)) {
+        const sel = Array.isArray(M.picks[q.id]) ? M.picks[q.id] : [];
+        if (sel.includes(i)) sel.splice(sel.indexOf(i), 1);
+        else if (sel.length < q.a.length) sel.push(i);
+        else { toast(`Choose ${q.a.length}: unselect one first`); return; }
+        if (sel.length) M.picks[q.id] = sel.sort((x, y) => x - y); else delete M.picks[q.id];
+      } else M.picks[q.id] = i;
+      focusTo = controlKey(b); break;
+    }
+    case 'mFlag': { const M = S.mock, qid = M.ids[M.i]; if (M.flags[qid]) delete M.flags[qid]; else M.flags[qid] = true; focusTo = '.flagbtn'; break; }
+    case 'mGo': S.mock.i = Math.max(0, Math.min(S.mock.ids.length - 1, +b.dataset.i)); S.mock.list = false; mockConfirm = false; focusTo = '.mock .qhead + .qt, #main .opt'; reveal = '.mock'; break;
+    case 'mList': S.mock.list = true; mockConfirm = false; focusTo = '.mock h3'; reveal = '.mock'; break;
+    case 'mSubmit': {
+      const M = S.mock, blank = M.ids.some(id => M.picks[id] == null);
+      if (blank && !b.dataset.v && !M.over) { mockConfirm = true; focusTo = '#mockWarn'; break; }
+      mockFinish(); window.scrollTo(0, 0); focusTo = '.mock .finish b'; break;
+    }
+    case 'mQuit': S.mock = null; mockConfirm = false; focusTo = '[data-act=mStart]'; break;
+    case 'mShow': mockShow = b.dataset.v; mockOpen = null; window.scrollTo(0, 0); focusTo = '.mock .finish b'; break;
+    case 'mOpen': mockOpen = mockOpen === b.dataset.q ? null : b.dataset.q; focusTo = controlKey(b); break;
+    case 'mClose': mockShow = null; mockOpen = null; focusTo = '[data-act=mStart]'; break;
+    // Drills
+    case 'dStart': drillStart(b.dataset.v, id); focusTo = '.drill .opt'; reveal = '.drill'; break;
+    case 'dPick': { const D = drillUi, x = D.set[D.i], i = +b.dataset.i; D.picks[D.i] = i; if (i === drillAnswer(x)) D.right++; studied(); focusTo = '.drill .fb'; announce((i === drillAnswer(x) ? 'Right. ' : `Not quite: ${drillOpts(x)[drillAnswer(x)]}. `) + plain(x.q.x)); break; }
+    case 'dNext': drillUi.i++; focusTo = '.drill .opt, #main .finish ~ .btns .btn'; reveal = '#main .card.open'; break;
+    case 'dClose': drillUi = null; focusTo = '[data-act=dStart]'; break;
+    // Today: exam plan, settings
+    case 'togglePlan':  S.open = S.open === 'plan' ? null : 'plan'; if (S.open) reveal = '[data-act=togglePlan]'; break;
+    case 'togglePrefs': S.open = S.open === 'prefs' ? null : 'prefs'; if (S.open) reveal = '[data-act=togglePrefs]'; break;
+    case 'pref': {
+      const k = b.dataset.v, v = b.dataset.i, want = PREFS[k];
+      S.prefs[k] = typeof want === 'boolean' ? v === '1' : v;
+      if (k === 'speak' && !S.prefs.speak) try { speechSynthesis.cancel(); } catch(err) {}
+      focusTo = `[data-act=pref][data-v="${k}"][data-i="${v}"]`; break;
+    }
+    case 'tKeep': case 'tBreak': {
+      const len = act === 'tBreak' ? 5 : 15;
+      timerEnded = false; S.timer = {...S.timer, len, end:Date.now() + len * 60000, left:null}; focusTo = '#focusPanel [data-act=tGo]';
       break;
     }
     case 'lqNext': lqi[id]++; break;
@@ -293,7 +370,7 @@ document.addEventListener('click', e => {
       reveal = `[data-act=openLab][data-id="${id}"]`; break;
     }
     case 'labRestart': labUi[id] = {mode:'sim', step:0, vals:{}, out:{}, draft:{}}; focusTo = '.pcon-task'; break;
-    case 'tLen': S.timer = {...S.timer, len:+b.dataset.v, end:null, left:null}; break;
+    case 'tLen': timerEnded = false; S.timer = {...S.timer, len:+b.dataset.v, end:null, left:null}; break;
     case 'tGo': {
       try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
       const T = S.timer;
@@ -367,7 +444,7 @@ document.addEventListener('click', e => {
     }
     case 'gameReset': delete ui.game[id]; focusTo = '.game .chipbtn, button.who-c'; break;
     case 'focusToggle': focusOpen = !focusOpen; focusTo = focusOpen ? '#focusPanel [data-act=tGo]' : '#timerBtn'; render(); return;
-    case 'focusClose':  focusOpen = false; focusTo = '#timerBtn'; render(); return;
+    case 'focusClose':  focusOpen = false; timerEnded = false; focusTo = '#timerBtn'; render(); return;
     case 'theme': S.theme = THEMES[(THEMES.indexOf(S.theme) + 1) % THEMES.length]; break;
     case 'export': exportProgress(); return;
     case 'import': $('#importFile').click(); return;
@@ -391,12 +468,16 @@ document.addEventListener('change', e => {
     const st = S.labs[t.dataset.id] || []; st[+t.dataset.i] = t.checked; S.labs[t.dataset.id] = st;
     studied(); save(); render();
     if (st.filter(Boolean).length === LABS.find(l => l.id === t.dataset.id).steps.length) toast('Lab complete');
+  } else if (t.dataset.act === 'chk') {
+    if (t.checked) S.check[t.dataset.v] = true; else delete S.check[t.dataset.v];
+    save(); focusTo = `[data-act=chk][data-v="${t.dataset.v}"]`; render();
   } else if (t.id === 'importFile' && t.files[0]) {
     readImport(t.files[0]); t.value = '';
   }
 });
 document.addEventListener('input', e => {
   if (e.target.id === 'task') { S.timer.task = e.target.value; save(); }
+  if (e.target.id === 'plan') { S.plan = e.target.value.slice(0, 120); save(); }
   // Look up redraws only its results, so the box keeps focus and the cursor stays put.
   if (e.target.id === 'lookup') { lookupQ = e.target.value; $('#lookupResults').innerHTML = lookupHTML(lookupQ); }
 });

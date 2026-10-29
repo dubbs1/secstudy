@@ -1,6 +1,10 @@
 /* ---------- Timer: a button in the top bar and a small panel under it ---------- */
 let tick = null, audio = null;
 let focusOpen = false;   // the panel is open (not saved: it starts closed)
+let timerEnded = false;  // the panel shows "Time's up" and the choice of what next
+// A short movement idea for the break: one bout of exercise helps focus. Optional, never required.
+const MOVES = ['Stand up and stretch your arms over your head for 30 seconds.', 'Walk to a window and back, twice.', 'Do 10 slow squats or calf raises.',
+  'Roll your shoulders 10 times, then drink a glass of water.', 'March on the spot for one minute.'];
 function timerLeft(){
   const T = S.timer;
   if (T.end) return Math.max(0, T.end - Date.now());
@@ -26,6 +30,10 @@ function renderTimerButton(){
   panel.innerHTML = focusOpen ? renderTimer() : '';
 }
 function renderTimer(){
+  if (timerEnded) return `<div class="body"><div class="panel-head"><b>Time's up</b><button class="link" data-act="focusClose">Close</button></div>
+    <p>Nice work. Keep going if you're in the flow, or take a short break.</p>
+    <p class="muted small"><b>Move a little:</b> ${MOVES[new Date().getMinutes() % MOVES.length]}</p>
+    <div class="btns" style="justify-content:center"><button class="btn" data-act="tKeep">Keep going: 15 min</button><button class="btn ghost" data-act="tBreak">5 min break</button></div></div>`;
   const T = S.timer, ms = timerLeft(), running = !!T.end, pct = 100 - ms / (T.len * 600);
   return `<div class="body"><div class="panel-head"><b>Focus timer</b><button class="link" data-act="focusClose">Close</button></div>
     <div class="seg small" role="group">
@@ -55,7 +63,9 @@ function finishTimer(){
   clearInterval(tick);
   S.timer.end = null; S.timer.left = null; save();
   beep(); if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-  toast("Time's up");
+  // The panel opens with the choice; nothing starts by itself.
+  timerEnded = true; focusOpen = true; focusTo = '#focusPanel [data-act=tKeep]';
+  announce("Time's up. Keep going, or take a 5 minute break.");
   render();
 }
 function beep(){

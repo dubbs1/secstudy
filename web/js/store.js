@@ -2,7 +2,9 @@
 const KEY = 'awsCourse1';
 const THEMES = ['system', 'light', 'dark'];
 const TABS = ['today', 'learn', 'practice', 'labs'];   // a Timer tab saved by an older version opens Today
-const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, stage:{}, days:{}, current:null, review:null, tab:'today', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', theme:'system', timer:{len:15, end:null, left:null, task:''}};
+const PREFS = {text:'m', motion:'system', calm:false, speak:true, extra:false};
+const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, stage:{}, days:{}, current:null, review:null, tab:'today', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', theme:'system', timer:{len:15, end:null, left:null, task:''},
+  mock:null, mocks:{}, check:{}, guess:{}, plan:'', prefs:{...PREFS}};
 let S;   // loaded just before the first render, once the helpers below exist
 
 function load(){
@@ -29,13 +31,26 @@ function load(){
     const r = s.ans[qid];
     if (!isObj(r)) { (s.old_ans = isObj(s.old_ans) ? s.old_ans : {})[qid] = r; delete s.ans[qid]; continue; }   // set aside, never dropped
     r.n = Math.max(0, Math.floor(+r.n) || 0); r.wrong = Math.max(0, Math.floor(+r.wrong) || 0);
-    r.ok = r.ok === true; r.pick = [0, 1, 2, 3].includes(r.pick) ? r.pick : null;
+    r.ok = r.ok === true; r.pick = validPick(r.pick);
+    if ('f' in r && typeof r.f !== 'boolean') delete r.f;   // first try right (older answers have none: see firstTry)
+    if ('sure' in r && r.sure !== true && r.sure !== false) r.sure = null;
   }
   for (const qid in s.srs) {
     const e = s.srs[qid];
     if (!known(qid) || !isObj(e) || !/^\d{4}-\d\d-\d\d$/.test(e.due) || isNaN(parseISO(e.due))) { delete s.srs[qid]; continue; }
     e.box = Math.min(GAPS.length - 1, Math.max(0, Math.floor(+e.box) || 0));
+    if (e.sw !== true) delete e.sw;
   }
+  // 1.3.0: mock exams, the exam checklist, guess-first answers, the study plan line, settings
+  for (const k in s.prefs) if (!(k in PREFS)) delete s.prefs[k];
+  for (const k in PREFS) if (typeof s.prefs[k] !== typeof PREFS[k]) s.prefs[k] = PREFS[k];
+  if (!['m', 'l', 'xl'].includes(s.prefs.text)) s.prefs.text = 'm';
+  if (!['system', 'reduce'].includes(s.prefs.motion)) s.prefs.motion = 'system';
+  if (typeof s.plan !== 'string') s.plan = ''; else s.plan = s.plan.slice(0, 120);
+  for (const k in s.check) if (s.check[k] !== true) delete s.check[k];
+  for (const k in s.guess) if (!LESSONS.some(l => l.id === k) || !(s.guess[k] === -1 || Number.isInteger(validPick(s.guess[k])))) delete s.guess[k];   // -1: skipped
+  for (const k in s.mocks) { const m = s.mocks[k]; if (!isObj(m) || !Number.isFinite(m.at) || !Number.isInteger(m.n) || !Number.isInteger(m.right) || !isObj(m.dom)) delete s.mocks[k]; }
+  s.mock = cleanMock(s.mock, known);
   if (s.review !== null) {
     const R = s.review;
     const fine = isObj(R) && Array.isArray(R.ids);
@@ -63,6 +78,22 @@ function load(){
   }
   s.v = 2;
   return s;
+}
+// An option index (0 to 4), or a sorted list of distinct ones for "Choose two". Anything else is no answer.
+function validPick(p){
+  const one = i => Number.isInteger(i) && i >= 0 && i <= 4;
+  if (one(p)) return p;
+  if (Array.isArray(p) && p.length && p.length <= 5 && p.every(one) && new Set(p).size === p.length) return [...p].sort((a, b) => a - b);
+  return null;
+}
+// A mock exam in progress: kept across reloads, dropped if it no longer makes sense.
+function cleanMock(m, known){
+  if (!isObj(m) || !Array.isArray(m.ids) || !m.ids.length || !m.ids.every(known) || !Number.isFinite(m.start) || !(m.mins > 0)) return null;
+  const picks = isObj(m.picks) ? m.picks : {}, flags = isObj(m.flags) ? m.flags : {};
+  for (const k in picks) if (!m.ids.includes(k) || validPick(picks[k]) === null) delete picks[k]; else picks[k] = validPick(picks[k]);
+  for (const k in flags) if (!m.ids.includes(k) || flags[k] !== true) delete flags[k];
+  return {ids:m.ids, picks, flags, start:m.start, mins:m.mins, kind:typeof m.kind === 'string' ? m.kind : 'full',
+    i:Number.isInteger(m.i) && m.i >= 0 && m.i < m.ids.length ? m.i : 0, list:m.list === true, over:m.over === true};
 }
 function save(){
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { toast('Could not save. Storage is blocked or full.'); }

@@ -10,6 +10,8 @@ const fmtDate = s => parseISO(s).toLocaleDateString(undefined, {weekday:'short',
 const fmtDayYear = s => parseISO(s).toLocaleDateString(undefined, {day:'numeric', month:'short', year:'numeric'});
 const fmtDateYear = s => parseISO(s).toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short', year:'numeric'});
 const daysUntil = s => Math.round((parseISO(s) - parseISO(todayISO())) / 864e5);
+// Less motion: the setting, or the system's own choice.
+const reduceMotion = () => (typeof S !== 'undefined' && S && S.prefs && S.prefs.motion === 'reduce') || matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
 
 function toast(msg){

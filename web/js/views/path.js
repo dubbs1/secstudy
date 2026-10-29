@@ -38,7 +38,7 @@ function goNextPart(){
   announce(`Now: ${sameStage || !n.to[1] ? '' : STAGES[n.to[0]] + ', '}${partLabel(n.to)}.`);
   save(); render();
   const top = $('#lessonTop');   // a gentle scroll back up to the lesson, not a jump
-  if (top && top.getBoundingClientRect().top < 0) top.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start'});
+  if (top && top.getBoundingClientRect().top < 0) top.scrollIntoView({behavior:reduceMotion() ? 'auto' : 'smooth', block:'start'});
 }
 
 // How the next part builds on the one just done: one sentence that ties them together.
