@@ -57,7 +57,8 @@ No behaviour change.
 - AC6.1 After answering with the keyboard, focus is on the answer feedback.
 - AC6.2 After ticking a step with the keyboard, focus stays on that checkbox.
 - AC6.3 After any other action, focus returns to the same control if it still exists.
-- AC6.4 Answer feedback is in a `role="status"` region.
+- AC6.4 The answer result is read out through a permanent `role="status"` region (a region added with the
+  feedback itself is not reliably announced).
 - AC6.5 Filter rows use `aria-pressed` buttons, not tabs; the main tab bar keeps `role="tab"`.
 
 ### F7. Theme choice (P9)

@@ -1,8 +1,9 @@
 # Notes for Claude Code
 
-AWS Cloud Practitioner study tool. The app is one file, `index.html` (no build step, no dependencies).
-It also ships as an installable website (`manifest.webmanifest`, `sw.js`, `icons/`, GitHub Pages) and a
-Windows app (`desktop/`, Tauri 2, NSIS per-user installer on the Releases page). See README.md.
+AWS Cloud Practitioner study tool. The app is `web/` (no build step, no dependencies): classic script files,
+not ES modules, so it still opens from disk. The same folder ships as the installable website (GitHub Pages)
+and inside the Windows app (`desktop/`, Tauri 2, NSIS per-user installer on Releases).
+Read `docs/ARCHITECTURE.md` before changing structure; `docs/RESTRUCTURE.md` lists the acceptance criteria.
 
 ## Working rule: do it all automatically
 
@@ -34,14 +35,17 @@ Lessons follow this: 4 / 4 / 5 / 2.
 
 ## Tests
 
-`cd tests && npm ci && npm test` (Playwright, pinned in `tests/package.json`; in a Claude Code cloud
-session the preinstalled Chromium is used, elsewhere run `npx playwright install chromium` once).
-One PASS/FAIL line per check. Add a check for every new feature.
+`cd tests && npm ci && npm test`: `structure.test.js` (no browser) then `app.test.js` (Playwright, pinned in
+`tests/package.json`; in a Claude Code cloud session the preinstalled Chromium is used, elsewhere run
+`npx playwright install chromium` once). One PASS/FAIL line per check. Add a check for every new feature.
+A new file in `web/` must also go in `web/sw.js` FILES (a check fails otherwise). The version lives in
+`web/js/version.js`, `tauri.conf.json` and `Cargo.toml` (a check fails if they differ).
+`tests/exe-standin.js` lets `exe.test.js` run on Linux against Chromium instead of the Windows app.
 
 `.github/workflows/test.yml`: `browser` (the checks) → `windows` (build the installer, silent install,
 `tests/exe.test.js` against the running app through WebView2's debug port, opened only when `SECSTUDY_DEBUG_PORT` is set (see `desktop/src-tauri/src/main.rs`), restart, uninstall) →
 on main: `release` (when the version has no release) and `pages` (needs Settings > Pages > Source: GitHub Actions).
-Rust: `cargo check --release --target x86_64-pc-windows-msvc` in `desktop/src-tauri` after `node desktop/prepare.js`
+Rust: `cargo check --release --target x86_64-pc-windows-msvc` in `desktop/src-tauri`
 catches most Windows build errors from Linux. Pinned: @tauri-apps/cli 2.12.3, tauri 2.12.4, tauri-build 2.7.3.
 The service worker is registered only on https or localhost, so it stays off in the Windows app and in file:// use.
 
