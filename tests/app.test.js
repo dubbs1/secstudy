@@ -209,6 +209,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   await check('labs: ticks persist across a reload', async () => {
     await seed(p, {v:2, tab:'labs'});
     await p.click('[data-act=openLab][data-id=lab3]');
+    await p.click('[data-act=labMode][data-v=real]');
     await p.click('.check input');
     await p.reload();
     ok((await text(p, '.card.open')).includes('1/6 steps'), 'tick lost');
@@ -460,13 +461,25 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'today'; lookupQ = 'nat';`,
       `S.tab = 'learn'; S.openLesson = null; S.stage.l1 = 2;`,
       `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 3; S.ans.q1 = {n:1, wrong:1, pick:1, ok:false, at:Date.now()}; lqi.l1 = 0;`,
-      `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 2; revealed['l1:0'] = true;`,
-      `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 1;`,
-      `S.tab = 'learn'; S.openLesson = 'l4'; S.stage.l4 = 1;`,
-      `S.tab = 'learn'; S.openLesson = 'l5'; S.stage.l5 = 1;`,
-      `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 1;`,
-      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 2; ui.mode['l1:2'] = 'cases'; revealed['l1:0'] = true;`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 2; ui.mode['l12:2'] = 'sim'; simUi.on.l12 = {igw:true, sg:true, naclout:false, nat:false}; simUi.open.l12 = 0;`,
+      `S.tab = 'learn'; S.openLesson = 'l14'; S.stage.l14 = 2; ui.mode['l14:2'] = 'sim'; simUi.pick.l14 = 'spot'; simUi.open.l14 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 2; ui.mode['l7:2'] = 'sim'; simUi.on.l7 = {waf:true}; simUi.open.l7 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l3'; S.stage.l3 = 2; ui.mode['l3:2'] = 'sim'; simUi.open.l3 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l8'; S.stage.l8 = 2; ui.mode['l8:2'] = 'sim'; simUi.on.l8 = {trail:true}; simUi.open.l8 = 0;`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 2; ui.mode['l12:2'] = 'sim'; simUi.open.l12 = 2;`,
+      `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 1; ui.mode['l2:1'] = 'look';`,
+      `S.tab = 'learn'; S.openLesson = 'l4'; S.stage.l4 = 1; ui.mode['l4:1'] = 'look';`,
+      `S.tab = 'learn'; S.openLesson = 'l5'; S.stage.l5 = 1; ui.mode['l5:1'] = 'look';`,
+      `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 1; ui.mode['l10:1'] = 'look';`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1; ui.mode['l12:1'] = 'look';`,
       `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = [true];`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'My Bucket', btype:1, block:false}, sent:{0:true}, out:{}, draft:{}, nav:true};`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'alex-notes', btype:0, ver:1}, sent:{0:true}, out:{}, draft:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:4, vals:{name:'alex-notes', clean:1}, err:'This bucket is not empty.', out:{}, draft:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab4'; S.labs.lab4 = []; labUi.lab4 = {mode:'sim', step:2, vals:{iname:'test'}, out:{uname:['$ ls', 'command not recognised']}, draft:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab4'; S.labs.lab4 = []; labUi.lab4 = {mode:'sim', step:3, vals:{iname:'test'}, out:{}, draft:{}, menu:true};`,
+      `S.tab = 'labs'; S.openLab = 'lab5'; S.labs.lab5 = []; labUi.lab5 = {mode:'sim', step:1, vals:{fname:'hello', code:'print(hi)'}, sent:{1:true}, out:{}, draft:{}};`,
       `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 0; ui.mode['l10:0'] = 'points';`,
       `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 0; ui.mode['l7:0'] = 'cards'; ui.cards.l7 = {order:[0,1,2], pos:0, flipped:true, got:0, again:[]};`,
       `S.tab = 'learn'; S.openLesson = 'l9'; S.stage.l9 = 0; ui.mode['l9:0'] = 'cards'; ui.cards.l9 = {order:[flashCards(LESSONS[8]).findIndex(c => c.kind === 'gap')], pos:0, flipped:true, got:0, again:[]};`,
@@ -474,7 +487,13 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = 'l14'; S.stage.l14 = 1; ui.mode['l14:1'] = 'test'; ui.game.l14 = {picks:{}, cur:0, seq:[3,2,1,0], cols:{}, run:1};`,
       `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 1; ui.mode['l7:1'] = 'test'; ui.game.l7 = {picks:{0:(gameQuestions(LESSONS[6]).qs[0].answer + 1) % 3}, cur:0, seq:[], cols:{}, run:1};`,
       `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 1; ui.mode['l2:1'] = 'test'; ui.game.l2 = {picks:{}, cur:0, seq:[], cols:{0:7, 1:2}, run:1};`,
-      `S.tab = 'practice'; pCur = 'q19';`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1; ui.mode['l12:1'] = 'how'; flowUi.at.l12 = 5; delete flowUi.order.l12;`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1; ui.mode['l12:1'] = 'how'; flowUi.order.l12 = {seq:[6,5,4,3,2,1,0], run:1};`,
+      `S.tab = 'learn'; S.openLesson = null; flowUi.open = 'sec'; flowUi.at.sec = 3;`,
+      `S.tab = 'learn'; S.openLesson = 'l3'; S.stage.l3 = 0; ui.mode['l3:0'] = 'scene'; sceneUi.l3 = [0, 2]; pathUi.done['l3:0:points'] = true; pathUi.next = {id:'l3', from:[0, 'scene'], to:[0, 'points']};`,
+      `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 0; ui.mode['l2:0'] = 'points'; pathUi.next = null;`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 0; ui.mode['l12:0'] = 'recap'; recapUi.l12 = ['l3:0'];`,
+      `S.tab = 'practice'; pCur = 'q19'; pathUi.next = null;`,
       `S.tab = 'learn'; S.openLesson = null;`
     ];
     const sels = ['body', '#top .sub', '.stat', '.stat.timer', '.theme', '.chip.d-cc', '.chip.d-sec', '.chip.d-tech', '.chip.d-bill', '.foot', '.foot .link', 'h3',
@@ -482,7 +501,8 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
       '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag',
       '.num', '.band-meta', '.lesson .pts b', '.colour-key b', '.stage.cur', '.flipcard small', '.flipcard span', '.chipbtn.right', '.chipbtn.wrong', '.game-fb',
-      '.who-c.blank', '.btn.good', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
+      '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.pcon-task', '.coach', '.lc-fb.ok', '.lc-fb.no', '.cs-crumbs', '.cs-title', '.cs-flash.ok', '.cs-flash.bad', '.cs-label', '.cs-desc', '.cs-err', '.cs-radio', '.cs-check',
+      '.cs-btn', '.cs-btn.primary', '.cs-table th', '.cs-table td', '.cs-badge', '.cs-nav span', '.cs-menu button', '.cs-term-bar', '.term-out div', '.term-p', '.cs-ed-tab', '.cs-ed-lines code', '.cs-panel-h b', '.scene-t', '.scene-q', '.scene-a b', '.scene-a small', '.bridge', '.bridge-t', '.part-ok', '.mnode', '.mnode small', '.mnode.part.off small', '.mframe span', '.sim-test.ok', '.sim-test.no', '.sim-test.never', '.sim-result', '.sim-result small', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
       '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
@@ -554,9 +574,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await seed(p, {v:2, tab:'learn', openLesson:'l2'});
     ok(await p.$$eval('[data-act=stage]', b => b.length) === 5 && (await p.$$('.stage-body')).length === 1, 'not five stages with one body');
     ok(await p.$$eval('[aria-current=step]', b => b.map(x => x.textContent.trim()).join()) === 'Read', 'does not start on Read');
-    await p.click('[data-act=stageNext]'); ok(await p.$('figure.vis'), 'Next did not show See');
-    await p.click('[data-act=stageNext]'); ok(await p.$('.scenario'), 'Next did not show Try');
-    await p.click('[data-act=stagePrev]'); ok(await p.$('figure.vis'), 'Back did not show See');
+    await p.click('[data-act=stageNext]'); ok(await p.$('.stage-body .flow'), 'Next did not show See (How it works)');
+    await p.click('[data-act=mode][data-v=look]'); ok(await p.$('figure.vis'), 'Picture did not show the diagram');
+    await p.click('[data-act=stageNext]'); ok(await p.$('.stage-body .sim'), 'Next did not show Try (What if)');
+    await p.click('[data-act=mode][data-v=cases]'); ok(await p.$('.scenario'), 'Situations did not show the worked examples');
+    await p.click('[data-act=stagePrev]'); ok(await p.$('figure.vis'), 'Back did not show See as it was left');
     await p.click('[data-act=stage][data-i="3"]'); ok(await p.$('.opt'), 'strip did not jump to Check');
     await p.reload();
     ok(await p.$('.opt') && await text(p, '.lesson-t') === 'Service and deployment models', 'stage not kept after reload');
@@ -586,9 +608,16 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const tall = await q.evaluate(() => {
       const out = [];
       for (const l of LESSONS) for (let k = 0; k < STAGES.length; k++) {
-        for (const mode of k === 0 ? ['points', 'cards'] : k === 1 ? ['look', 'test'] : ['-']) {
-          S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; ui.mode[l.id + ':' + k] = mode; (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true);
+        for (const mode of k === 0 ? ['recap', 'scene', 'points', 'cards'] : k === 1 ? ['how', 'how-order', 'look', 'test'] : k === 2 ? ['sim', 'cases'] : ['-']) {
+          S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; ui.mode[l.id + ':' + k] = mode.replace('-order', ''); (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true);
+          if (mode === 'scene') sceneUi[l.id] = SCENES[l.id].items.map((x, i) => i);   // every picture opened
+          if (mode === 'recap') recapUi[l.id] = recapItems(l).map(it => it.key);
           if (mode === 'cards') { const cs = flashCards(l), i = cs.reduce((b, c, j) => c.back.length > cs[b].back.length ? j : b, 0); ui.cards[l.id] = {order:[i], pos:0, flipped:true, got:0, again:[]}; }
+          // What if at its tallest: every goal open with its reason (build: all parts off; pick: the last option).
+          if (mode === 'sim') { const sm = SIMS[l.id]; if (sm.kind === 'build') simUi.on[l.id] = {}; else simUi.pick[l.id] = sm.options[sm.options.length - 1].id;
+            simUi.open[l.id] = sm.goals.reduce((bi, g, i) => JSON.stringify(g).length > JSON.stringify(sm.goals[bi]).length ? i : bi, 0); }
+          if (mode === 'how') { delete flowUi.order[l.id]; flowUi.at[l.id] = FLOWS[l.id].rows.length - 1; }
+          if (mode === 'how-order') flowUi.order[l.id] = {seq:FLOWS[l.id].rows.map((r, j) => j).reverse(), run:1};
           if (mode === 'test') {
             const g = gameQuestions(l); delete ui.game[l.id]; const st = gameState(l);
             if (g.kind === 'pick') { const i = g.qs.reduce((b, x, j) => (x.text + (x.sub || '')).length > (g.qs[b].text + (g.qs[b].sub || '')).length ? j : b, 0); st.cur = i; st.picks[i] = (g.qs[i].answer + 1) % (g.qs[i].opts || g.options).length; }
@@ -610,10 +639,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const probs = await p.evaluate(() => {
       const out = [];
       for (const l of LESSONS) {
-        S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = 1; render();
+        S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = 1; ui.mode[l.id + ':1'] = 'look'; render();
         const fig = document.querySelector('.stage-body figure.vis');
         if (!fig || !fig.querySelector('figcaption') || fig.querySelector('figcaption').textContent.trim().length < 15) out.push(l.id + ' diagram/caption');
-        S.stage[l.id] = 2; render();
+        S.stage[l.id] = 2; ui.mode[l.id + ':2'] = 'cases'; render();
         const sc = document.querySelectorAll('.scenario');
         if (!sc.length) out.push(l.id + ' no scenario');
         if (document.querySelector('.answer')) out.push(l.id + ' answer shown before asking');
@@ -624,6 +653,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     });
     ok(!probs.length, probs.join(', '));
     await seed(p, {v:2, tab:'learn', openLesson:'l9', stage:{l9:2}});
+    await p.click('[data-act=mode][data-v=cases]');
     await p.focus('[data-act=reveal][data-i="0"]'); await p.keyboard.press('Enter');
     ok((await text(p, '.answer')).startsWith('Lambda'), 'answer not shown');
     ok(await p.evaluate(() => document.activeElement.classList.contains('answer')), 'focus not on the answer');
@@ -741,6 +771,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
   await check('Back from a lab opened in a lesson returns to the lesson; after a relaunch Back still closes the lesson', async () => {
     let q = await backPage({v:2, tab:'learn', openLesson:'l10', stage:{l10:2}});
+    await q.click('[data-act=mode][data-v=cases]');
     await q.click('.handson [data-act=goLab]');
     await back(q);
     ok(!left(q) && await q.evaluate(() => S.tab === 'learn' && S.openLesson === 'l10'), 'Back from the lab did not return to the lesson');
@@ -765,6 +796,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const rgb = hex => { const n = parseInt(hex.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`; };
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('[data-id=l5] .n')).color) === rgb(col.sec), 'list number not in its domain colour');
     await p.click('[data-act=openLesson][data-id=l5]');
+    await p.click('[data-act=mode][data-v=points]');
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lesson-band')).backgroundColor) === rgb(col.secbg), 'lesson band not in its domain colour');
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lesson .pts b')).color) === rgb(col.sec), 'key terms not in the domain colour');
     await p.click('#nav [data-tab=today]');
@@ -802,16 +834,17 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
   await check('numbers in key points are highlighted, names with digits are not, with a colour key (U9.3)', async () => {
     await seed(p, {v:2, tab:'learn', openLesson:'l10'});
+    await p.click('[data-act=mode][data-v=points]');
     const nums = await p.$$eval('.pts .num', ns => ns.map(n => n.textContent));
     ok(['99.999999999 %', '11 nines', '12 hours'].every(x => nums.includes(x)), 'numbers: ' + nums);
     ok(!nums.some(x => /^3$/.test(x)), 'the 3 in S3 was highlighted');
-    ok(await p.$('.colour-key'), 'no colour key');
-    await p.evaluate(() => { S.openLesson = 'l3'; render(); });
+    ok(!(await p.$('.colour-key')), 'colour key still shown after lesson 3');
+    await p.evaluate(() => { S.openLesson = 'l3'; ui.mode['l3:0'] = 'points'; render(); });
     const n3 = await p.$$eval('.pts .num', ns => ns.map(n => n.textContent));
     ok(!n3.includes('1') && n3.includes('3'), 'eu-central-1 marked, or "at least 3" not: ' + n3);
     const odd = await p.evaluate(() => [...new DOMParser().parseFromString(markNumbers('a 2-minute warning, 24/7 phone, until 1 January 2027, since December 2025, 5G'), 'text/html').querySelectorAll('.num')].map(n => n.textContent));
     ok(JSON.stringify(odd) === JSON.stringify(['2-minute', '24/7', '1 January 2027', 'December 2025']), 'hyphen, 24/7 or dates: ' + odd);
-    await p.evaluate(() => { S.openLesson = 'l15'; S.stage.l15 = 1; render(); });
+    await p.evaluate(() => { S.openLesson = 'l15'; S.stage.l15 = 1; ui.mode['l15:1'] = 'look'; render(); });
     ok((await p.$$eval('figure.vis .num', ns => ns.map(n => n.textContent))).includes('24/7'), 'diagram numbers not highlighted');
     ok(await p.evaluate(() => { const h = markNumbers('<code>port 22</code> and <a href="x1">5 min</a> &#39;'); return h.includes('<code>port 22</code>') && h.includes('href="x1"') && h.includes('&#39;') && h.includes('<span class="num">5 min</span>'); }), 'markNumbers touched code, an attribute or an entity');
   });
@@ -974,6 +1007,327 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const after = await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('awsCourse1')); const d = s.days; delete s.days; s.stage.l10 = 1; return [JSON.stringify(s), d[todayISO()] === true]; });
     ok(after[0] === before, 'saved progress changed by practising');
     ok(after[1], 'today not marked as a study day');
+  });
+
+  await check('How it works: every lesson and domain has a step-through that builds up one step at a time (U11.1, U11.2)', async () => {
+    ok(await p.evaluate(() => LESSONS.every(l => FLOWS[l.id] && FLOWS[l.id].rows.length >= 4) && Object.keys(DOMAINS).every(d => FLOWS[d])), 'a lesson or domain has no flow, or under 4 steps');
+    await seed(p, {v:2, tab:'learn', openLesson:'l12', stage:{l12:1}});
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'how', 'See does not open on How it works');
+    const n = await p.evaluate(() => FLOWS.l12.rows.length);
+    ok((await text(p, '.flow-say small')) === `Step 1 of ${n}` && await p.$$eval('.flow-row', r => r.length) === 1, 'does not start with one step');
+    await p.focus('[data-act=flowNext]'); await p.keyboard.press('Enter');
+    ok((await text(p, '.flow-say small')) === `Step 2 of ${n}` && await p.$$eval('.flow-row', r => r.length) === 2 && await p.$('.flow-row.past') && await p.$('.flow-row.cur'), 'Next did not add a step');
+    ok(await p.evaluate(() => document.activeElement.dataset.act === 'flowNext'), 'focus left Next');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Step 2 of'));
+    ok((await p.getAttribute('.flow-pic', 'aria-label')).includes('Internet gateway') && (await p.getAttribute('.flow-pic', 'aria-label')).includes('Route 53 (DNS)'), 'picture has no text for screen readers, or no notes');
+    await p.click('[data-act=flowBack]'); ok(await p.$$eval('.flow-row', r => r.length) === 1, 'Back did not remove a step');
+    for (let i = 1; i < n; i++) await p.click('[data-act=flowNext]');
+    ok(await p.$('[data-act=flowOrder]') && !(await p.$('[data-act=flowNext]')), 'last step does not offer the order game');
+    const say = await p.evaluate(() => [...new DOMParser().parseFromString(flowHTML('l14').replace(/^/, ''), 'text/html').querySelectorAll('.flow-say')].length);
+    ok(say === 1, 'flow has no step text');
+  });
+  await check('How it works: put the steps in order, checked at each tap, right order shown (U11.3)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l9', stage:{l9:1}});
+    await p.evaluate(() => { flowUi.at.l9 = FLOWS.l9.rows.length - 1; delete flowUi.order.l9; render(); });
+    await p.click('[data-act=flowOrder]');
+    const order = await p.evaluate(() => { const g = flowGame('l9'); return g.ranks.map(r => g.items.findIndex(i => i.rank === r)); });
+    await p.click(`[data-act=flowPick][data-i="${order[1]}"]`);
+    ok((await text(p, '.game.order li.no')).includes('goes at 2'), 'wrong tap not checked at once');
+    await p.click(`[data-act=flowPick][data-i="${order[0]}"]`);
+    for (const i of order.slice(2)) await p.click(`[data-act=flowPick][data-i="${i}"]`);
+    ok((await text(p, '.game-score')).startsWith(`${order.length - 2} of ${order.length} right`) && await p.$$eval('.answer-order li', l => l.length) === order.length, 'score or right order missing: ' + await text(p, '.game-score'));
+    await p.waitForFunction(() => / right\.$/.test(document.querySelector('#announce').textContent));
+    await p.click('[data-act=flowOrder]'); for (const i of order) await p.click(`[data-act=flowPick][data-i="${i}"]`);
+    ok((await text(p, '.game-score')).startsWith(`${order.length} of ${order.length} right`), 'perfect order not full marks');
+    // Every flow's steps have distinct names, so the order game has one right answer.
+    ok(await p.evaluate(() => Object.values(FLOWS).every(f => new Set(f.rows.map(r => r.name)).size === f.rows.length)), 'two steps share a name');
+    // Ranks never go down, no game starts already solved, and tied steps score in either order.
+    const r = await p.evaluate(() => {
+      const out = [];
+      for (const [k, f] of Object.entries(FLOWS)) {
+        const rk = f.rows.map((x, i) => x.rank != null ? x.rank : i);
+        if (rk.some((x, i) => i && x < rk[i - 1])) out.push(k + ' ranks go down');
+        if (!flowHasOrder(k)) continue;
+        const g = flowGame(k);
+        if (g.items.every((it, i) => it.rank === g.ranks[i])) out.push(k + ' starts solved');
+      }
+      // Estimate first, then the five tied steps in reverse of their listed order: still all right.
+      const l14 = flowGame('l14'), byRank = l14.items.map((it, i) => i).sort((a, b) => l14.items[a].rank - l14.items[b].rank);
+      flowUi.order.l14 = {seq:[byRank[0], ...byRank.slice(1).reverse()], run:99};
+      const div = document.createElement('div'); div.innerHTML = flowOrderHTML('l14'); delete flowUi.order.l14;
+      if (!div.querySelector('.game-score b').textContent.startsWith('6 of 6')) out.push('l14 ties not accepted: ' + div.querySelector('.game-score b').textContent);
+      if (flowHasOrder('tech')) out.push('tech has a game with no real order');
+      return out;
+    });
+    ok(!r.length, r.join(', '));
+  });
+  await check('How this section fits together: one per domain in Learn, links to its lessons, Back folds it (U11.4)', async () => {
+    await seed(p, {v:2, tab:'learn'});
+    ok(await p.$$eval('[data-act=domainFlow]', b => b.length) === 4, 'not one per domain');
+    await p.click('[data-act=domainFlow][data-id=tech]');
+    ok(await p.$('.dflow.open .flow') && await p.getAttribute('[data-act=domainFlow][data-id=tech]', 'aria-expanded') === 'true', 'did not open');
+    ok(await p.getAttribute('.dflow.open .flow-pic', 'role') === 'group', 'lesson links sit inside an image role');
+    await p.click('[data-act=domainFlow][data-id=cc]');
+    ok(await p.$$eval('.dflow.open', d => d.length) === 1, 'more than one open');
+    const links = await p.evaluate(() => Object.keys(DOMAINS).every(d => FLOWS[d].rows.flatMap(r => r.nodes).every(n => LESSONS.some(l => l.id === n.lesson && l.d === d))
+      && LESSONS.filter(l => l.d === d).every(l => FLOWS[d].rows.some(r => r.nodes.some(n => n.lesson === l.id)))));
+    ok(links, 'a domain flow misses a lesson or links outside its domain');
+    await p.click('.dflow.open .fnode[data-act=openLesson]');
+    ok(await text(p, '.lesson-t') === 'Why companies use the cloud', 'node did not open its lesson');
+    await p.click('[data-act=closeLesson]');
+    ok(await p.$('.dflow.open'), 'domain picture closed after visiting a lesson');
+    await p.evaluate(() => { backOneStep(); render(); });
+    ok(!(await p.$('.dflow.open')), 'Back did not fold it');
+  });
+  await check('flows: every step text, name and node is filled in and short enough for a phone', async () => {
+    const bad = await p.evaluate(() => {
+      const out = [];
+      for (const [k, f] of Object.entries(FLOWS)) {
+        if (!f.title) out.push(k + ' no title');
+        f.rows.forEach((r, i) => {
+          if (!r.say || r.say.length > 200 || !r.name || r.name.length > 24) out.push(`${k} step ${i + 1} text`);
+          if (!r.nodes.length || r.nodes.length > 3) out.push(`${k} step ${i + 1} nodes`);
+          r.nodes.forEach(n => { if (!n.t || !FLOW_ICONS[n.k] || (n.n && n.n.length > 70)) out.push(`${k} step ${i + 1} node ${n.t}`); });
+        });
+      }
+      return out;
+    });
+    ok(!bad.length, bad.join(', '));
+  });
+
+  await check('What if: switching parts shows which goals they make possible, with the reason (U12.1, U12.2)', async () => {
+    ok(await p.evaluate(() => LESSONS.every(l => SIMS[l.id] && SIMS[l.id].goals.length >= 3)), 'a lesson has no sandbox, or under 3 goals');
+    await seed(p, {v:2, tab:'learn', openLesson:'l12', stage:{l12:2}});
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'sim', 'Try does not open on What if');
+    // A goal's state (ok, no, never, open), whether it shows as a list row or as a test button on a map.
+    const goal = t => p.evaluate(t => [...document.querySelectorAll('[data-goal]')].find(el => (el.getAttribute('aria-label') || el.textContent).includes(t)).dataset.state, t);
+    const reason = () => text(p, '.sim-result, .sim-goals li [aria-expanded=true]');
+    ok((await goal('Users reach the web server')) === 'ok', 'default VPC does not reach the web server');
+    await p.click('[data-act=simToggle][data-v=naclout]');
+    ok((await goal('Users reach the web server')) === 'no' && (await text(p, '.sim-result')).includes('stateless'), 'no outbound ACL rule did not explain stateless');
+    ok(await p.getAttribute('[data-act=simToggle][data-v=naclout]', 'aria-pressed') === 'false' && await p.evaluate(() => document.activeElement.dataset.v === 'naclout'), 'switch state or focus wrong');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.includes('Users reach the web server: no'));
+    ok((await text(p, '.sim-result .sim-needs')).includes('✗ Network ACL'), 'needs list does not mark the missing part');
+    // The request is sent along the map and stops, marked ✗, at the part that is off.
+    await p.waitForSelector('.mnode.hit-no[data-node=nacl]', {timeout:5000});
+    ok((await goal('private database')) === 'never', 'a by-design limit is not shown as never');
+    await p.click('[data-act=simToggle][data-v=nat]');
+    ok((await goal('downloads updates')) === 'ok', 'NAT gateway did not let the private server out');
+    // An explicit deny wins over an allow.
+    await seed(p, {v:2, tab:'learn', openLesson:'l6', stage:{l6:2}});
+    ok((await goal('Alice can read')) === 'ok', 'allow alone does not work');
+    await p.click('[data-act=simToggle][data-v=deny]');
+    ok((await goal('Alice can read')) === 'no' && (await text(p, '.sim-result')).includes('deny always wins'), 'deny did not win');
+    await p.waitForSelector('.mnode.hit-no[data-node=iam]', {timeout:5000});
+    // A defence doing its job: with WAF on, the SQL injection test stops at WAF, marked ✓.
+    await seed(p, {v:2, tab:'learn', openLesson:'l7', stage:{l7:2}});
+    await p.click('[data-act=simToggle][data-v=waf]');
+    ok((await goal('SQL injection')) === 'ok' && await p.getAttribute('[data-act=simToggle][data-v=waf]', 'aria-pressed') === 'true', 'WAF did not block SQL injection');
+    await p.waitForSelector('.mnode.hit-ok[data-node=waf]', {timeout:5000});
+    ok((await p.getAttribute('.sim-test[data-goal="1"]', 'aria-label')).startsWith('Block SQL injection'), 'short test name hides the full goal from screen readers');
+  });
+  await check('What if: picking an option shows what it can and can\'t do; the data is consistent (U12.3, U12.4)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l10', stage:{l10:2}});
+    ok(!(await p.$('.sim-goals li.ok, .sim-goals li.no')), 'results before picking');
+    await p.click('[data-act=simPick][data-v=store]');
+    const keep = await p.evaluate(() => [...document.querySelectorAll('.sim-goals li')].find(li => li.textContent.includes('Keeps the data')).dataset.state);
+    ok(keep === 'no' && (await text(p, '.sim-goals')).includes('lost when the instance stops'), 'instance store keeps data');
+    ok((await text(p, '.sim-sum')).match(/^\d of 5 goals met/), 'no goal count');
+    const bad = await p.evaluate(() => {
+      const out = [];
+      for (const [k, sm] of Object.entries(SIMS)) {
+        const ids = (sm.parts || sm.options).map(x => x.id);
+        if (new Set(ids).size !== ids.length) out.push(k + ' repeats an id');
+        (sm.parts || sm.options).forEach(x => { if (!x.t || !x.does || !FLOW_ICONS[x.k]) out.push(k + ' ' + x.id); });
+        for (const g of sm.goals) {
+          if (sm.kind === 'pick') { if (!g.yes.length || g.yes.some(id => !ids.includes(id)) || !g.why) out.push(k + ' ' + g.t); continue; }
+          if (g.never) continue;
+          if ([...g.needs, ...(g.unless || [])].some(id => !ids.includes(id) || !g.why[id])) out.push(k + ' ' + g.t + ' missing a reason');
+          if (!g.needs.length && !g.ok) out.push(k + ' ' + g.t + ' no text');
+        }
+        if (sm.map) {
+          const ns = sm.map.nodes.map(n => n.id);
+          if ([...sm.map.links.flat(), ...Object.values(sm.map.routes).flatMap(r => r.path)].some(id => !ns.includes(id))) out.push(k + ' map refers to a missing node');
+          if (sm.parts.some(pt => !sm.map.nodes.some(n => n.part === pt.id || (n.checks || []).includes(pt.id)))) out.push(k + ' a part is not on the map');
+          Object.entries(sm.map.routes).forEach(([gi, r]) => { if (!sm.goals[gi] || (r.stop && !r.path.includes(r.stop))) out.push(k + ' route ' + gi); });
+        }
+        // Every part matters to at least one goal, and every option can do at least one thing.
+        ids.forEach(id => { if (!sm.goals.some(g => (g.needs || []).includes(id) || (g.unless || []).includes(id) || (g.yes || []).includes(id))) out.push(k + ' ' + id + ' does nothing'); });
+      }
+      return out;
+    });
+    ok(!bad.length, bad.join(', '));
+  });
+
+  await check('Picture it, and Remember from before: earlier lessons come back first, then today\'s pictures (U13.1, U13.4)', async () => {
+    ok(await p.evaluate(() => LESSONS.every(l => SCENES[l.id] && SCENES[l.id].items.length >= 4
+      && SCENES[l.id].items.every(it => it.e && it.t && it.aws && it.n) && new Set(SCENES[l.id].items.map(it => it.aws)).size === SCENES[l.id].items.length)), 'a lesson has no scene, a short one, or a repeated idea');
+    ok(await p.evaluate(() => LESSONS.every((l, i) => (SCENES[l.id].builds || []).every(id => LESSONS.findIndex(x => x.id === id) < i)) && LESSONS.slice(1).every(l => hasRecap(l))), 'a lesson builds on a later one, or has nothing to remember');
+    // Lesson 1 has nothing before it: it opens on Picture it.
+    await seed(p, {v:2, tab:'learn', openLesson:'l1'});
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'lesson 1 does not open on Picture it');
+    await p.click('[data-act=sceneTap][data-i="1"]');
+    ok((await text(p, '.scene-item.open')).includes('= The cloud') && await p.getAttribute('[data-act=sceneTap][data-i="1"]', 'aria-expanded') === 'true', 'tap did not show the AWS idea');
+    // Lesson 3 starts by remembering lesson 2's pictures; tapping them all bridges to Picture it.
+    await seed(p, {v:2, tab:'learn', openLesson:'l3'});
+    ok((await text(p, '.recap')).includes('From lesson 2') && !(await p.$('[data-act=mode][aria-pressed=true]')), 'lesson 3 does not start with Remember from before');
+    const n = await p.$$eval('[data-act=recapTap]', b => b.length);
+    for (let i = 0; i < n; i++) await p.click(`[data-act=recapTap] >> nth=${i}`);
+    ok((await text(p, '.recap .scene-item.open')).includes('= ') && (await text(p, '.bridge')).includes('You remembered ' + n + ' ideas from lesson 2'), 'no bridge after remembering');
+    await p.click('[data-act=advGo]');
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'Continue did not open Picture it');
+    // Skip goes straight to today's pictures, and the lesson does not start with remembering again.
+    await seed(p, {v:2, tab:'learn', openLesson:'l12'});
+    await p.click('[data-act=recapSkip]');
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'Skip did not open Picture it');
+  });
+  await check('the path: a bridge card under each finished part, Continue fades the next one in; nothing moves by itself (U13.2, U13.3)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l1'});
+    const n = await p.evaluate(() => SCENES.l1.items.length);
+    for (let i = 0; i < n; i++) await p.click(`[data-act=sceneTap][data-i="${i}"]`);
+    ok((await text(p, '.bridge')).includes('Picture it done') && (await text(p, '.bridge')).includes('key points') && (await text(p, '.bridge [data-act=advGo]')).includes('Key points'), 'no bridge after the last picture');
+    ok((await p.textContent('#advanceBar')).includes('Picture it done'), 'the bridge is not read out');
+    await p.waitForTimeout(2600);
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'moved on by itself');
+    await p.click('[data-act=advGo]');
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'points' && await p.evaluate(() => document.activeElement.dataset.v === 'points'), 'Continue did not open Key points with focus on its tab');
+    ok(await p.$('.stage-body.enter') && !(await p.$('.bridge')) && (await text(p, '[data-act=mode][data-v=scene]')).includes('✓'), 'no fade-in, bridge left, or no tick on Picture it');
+    // Going back to a finished part and tapping again does not offer the bridge again.
+    await p.click('[data-act=mode][data-v=scene]'); await p.click('[data-act=sceneTap][data-i="0"]');
+    ok(!(await p.$('.bridge')), 'offered to move on again from a finished part');
+    // Not now keeps you where you were, with focus back on what you tapped.
+    await p.click('[data-act=mode][data-v=points]'); await p.click('[data-act=partDone]');
+    ok(await p.evaluate(() => S.steps.l1 && S.steps.l1[0] === true) && (await text(p, '.bridge')).includes('flip cards'), 'I\'ve read these did not tick the Read task or bridge to Flip cards');
+    await p.click('[data-act=advStay]');
+    ok(!(await p.$('.bridge')) && await p.evaluate(() => document.activeElement.dataset.act === 'partDone'), 'Not now did not keep focus');
+    // The deck leads to See; the quiz leads to Done, keeping the last explanation on screen until Continue.
+    await seed(p, {v:2, tab:'learn', openLesson:'l9'});
+    await p.evaluate(() => { ui.mode['l9:0'] = 'cards'; render(); });
+    const cards = await p.evaluate(() => flashCards(LESSONS[8]).length);
+    for (let i = 0; i < cards; i++) { await p.click('.flipcard'); await p.click('[data-act=cardGot]'); }
+    ok((await text(p, '.bridge [data-act=advGo]')).includes('See: How it works'), 'finishing the deck does not lead to See');
+    await p.click('[data-act=advGo]');
+    ok(await p.evaluate(() => S.stage.l9 === 1) && await p.$('.stage-body .flow'), 'Continue did not open See on How it works');
+    await seed(p, {v:2, tab:'learn', openLesson:'l1', stage:{l1:3}});
+    const qs = await p.evaluate(() => qsFor('l1').map(q => q.a));
+    for (let i = 0; i < qs.length; i++) {
+      await p.click(`.opt[data-i="${qs[i]}"]`);
+      if (i < qs.length - 1) await p.click('[data-act=lqNext]');
+    }
+    ok((await text(p, '.bridge')).includes('mark the lesson done') && await p.$('.fb'), 'finishing the quiz does not bridge to Done, or hid the explanation');
+    await p.click('[data-act=advGo]');
+    ok(await p.evaluate(() => S.stage.l1 === 4), 'Continue did not open Done');
+  });
+
+  await check('Practise here: every lab is a console run: pages, fields, main button, landing page (U14.1)', async () => {
+    const bad = await p.evaluate(() => {
+      const out = [];
+      for (const lab of LABS) {
+        const sim = LAB_SIMS[lab.id]; if (!sim || sim.steps.length < 4 || !sim.service || !sim.nav.length) { out.push(lab.id + ' has no practice run'); continue; }
+        sim.steps.forEach((st, i) => {
+          if (!st.title || !st.crumbs || !st.task || !st.see) out.push(`${lab.id} step ${i + 1}`);
+          if (!st.controls.length && !st.action) out.push(`${lab.id} step ${i + 1} has nothing to do`);
+          if (st.controls.some(c => c.style === 'buttons' || c.style === 'menu') && !st.list) out.push(`${lab.id} step ${i + 1} toolbar without a list`);
+          st.controls.forEach(c => {
+            if (c.type === 'choice' && (!c.options.some(o => o.ok) || c.options.some(o => !o.why))) out.push(`${lab.id} ${c.id} choice`);
+            if (c.type === 'toggle' && (typeof c.want !== 'boolean' || !c.why)) out.push(`${lab.id} ${c.id} toggle`);
+            try { if (c.type === 'text' && !c.same) { new RegExp(c.need); (c.bad || []).forEach(x => new RegExp(x.re)); }
+                  if (c.type === 'cmd') c.expect.forEach(x => new RegExp(x)); } catch (e) { out.push(`${lab.id} ${c.id} pattern`); }
+          });
+        });
+      }
+      return out;
+    });
+    ok(!bad.length, bad.join(', '));
+    await seed(p, {v:2, tab:'labs', openLab:'lab3'});
+    const before = await p.evaluate(() => { save(); const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; return JSON.stringify(s); });
+    ok(await p.$eval('[data-act=labMode][aria-pressed=true]', b => b.dataset.v) === 'sim' && await p.$('.cs .cs-top') && (await text(p, '.cs-brand')) === 'Practice console', 'a new lab does not open on the practice console');
+    ok((await text(p, '.cs-crumbs')).includes('Amazon S3') && (await text(p, '.cs-title')) === 'Create bucket' && (await text(p, '.cs-panel-h')).includes('General configuration'), 'not laid out like the Create bucket page');
+    await p.click('[data-act=labNav]');
+    ok((await text(p, '.cs-nav')).includes('General purpose buckets'), 'no service menu');
+    // Mistakes show only when Create bucket is pressed, as red text under the field, with the reason in the Coach.
+    await p.fill('#lc-lab3-name', 'My Bucket'); await p.click('[data-act=labPick][data-v=btype][data-i="1"]');
+    await p.click('[data-act=labToggle][data-v=block]');
+    ok(!(await p.$('.cs-err')), 'errors before the main button');
+    await p.click('[data-act=labGo]');
+    ok((await text(p, '#fb-lab3-name')).includes('lowercase') && await p.getAttribute('#lc-lab3-name', 'aria-invalid') === 'true', 'bad name not shown under the field');
+    const errs = await p.$$eval('.cs-err', es => es.map(e => e.textContent).join(' | '));
+    ok(errs.includes('S3 Express One Zone') && errs.includes('public to anyone') && errs.includes('overwrites'), 'mistakes do not say why: ' + errs);
+    ok(await p.evaluate(() => !!document.activeElement.closest('[aria-invalid=true]')), 'focus not on the first mistake');
+    const tryName = async v => { await p.fill('#lc-lab3-name', v); await p.click('[data-act=labGo]'); return text(p, '#fb-lab3-name'); };
+    ok((await tryName('a..b')).includes('two periods') && (await tryName('test')).includes('already taken'), 'S3 naming rules missing');
+    await p.fill('#lc-lab3-name', 'alex-notes-2026');
+    await p.click('[data-act=labPick][data-v=btype][data-i="0"]'); await p.click('[data-act=labToggle][data-v=block]');
+    await p.click('[data-act=labPick][data-v=ver][data-i="1"]');
+    ok(await p.inputValue('#lc-lab3-name') === 'alex-notes-2026', 'typed name lost when another answer was tapped');
+    await p.press('#lc-lab3-name', 'Enter');   // Enter presses Create bucket
+    ok((await text(p, '.cs-flash.ok')).includes('Successfully created bucket "alex-notes-2026"') && (await text(p, '.cs-table')).includes('alex-notes-2026'), 'no landing page with the new bucket');
+    ok(await p.evaluate(() => document.activeElement.dataset.act === 'labNext'), 'focus not on Next step');
+    await p.click('[data-act=labNext]');
+    ok(await p.evaluate(() => document.activeElement.classList.contains('pcon-task')), 'focus lost after Next step');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Step 2 of 6'));
+    ok((await text(p, '.cs-crumbs')).includes('alex-notes-2026'), 'the bucket name does not carry to the next page');
+    await p.click('[data-act=labGo]'); ok((await text(p, '.cs-table')).includes('1.0 KB'), 'upload did not land'); await p.click('[data-act=labNext]');
+    await p.click('[data-act=labGo]'); ok((await text(p, '.cs-table')).includes('2.0 KB') && await p.$$eval('.cs-table tbody tr', r => r.length) === 1, 'second upload not one file'); await p.click('[data-act=labNext]');
+    await p.click('[data-act=labToggle][data-v=show]');
+    ok(await p.$$eval('.cs-table tbody tr', r => r.length) === 2, 'Show versions did not list both'); await p.click('[data-act=labNext]');
+    // Deleting a full bucket gets the console's error banner, and the Coach says why.
+    await p.click('[data-act=labPick][data-v=clean][data-i="1"]');
+    ok((await text(p, '.cs-flash.bad')).includes('not empty') && (await text(p, '.coach')).includes('must be empty'), 'deleting a full bucket not refused');
+    await p.click('[data-act=labPick][data-v=clean][data-i="0"]');
+    ok((await text(p, '.cs-flash.ok')).includes('Successfully emptied'), 'Empty did not work'); await p.click('[data-act=labNext]');
+    await p.fill('#lc-lab3-confirm', 'alex-notes'); await p.click('[data-act=labGo]');
+    ok((await text(p, '.cs-err')).includes('exactly'), 'wrong confirmation accepted');
+    await p.fill('#lc-lab3-confirm', 'alex-notes-2026'); await p.click('[data-act=labGo]');
+    ok((await text(p, '.cs-flash.ok')).includes('Successfully deleted bucket') && (await text(p, '.cs-empty')).includes('No buckets'), 'bucket not deleted');
+    await p.click('[data-act=labNext]');
+    ok((await text(p, '.pcon-done')).includes('all 6 steps'), 'no end of the practice run');
+    const after = await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; return JSON.stringify(s); });
+    ok(after === before, 'practising changed saved progress');
+    await p.click('[data-act=labMode][data-v=real]');
+    ok(await p.$('.lab-steps') && (await text(p, '.lab-meta')).includes('Cost: less than a cent'), 'Do it in the real console did not show the real steps');
+  });
+  await check('Practise here: terminal, Instance state menu and code editor behave like the real ones (U14.2, U14.3)', async () => {
+    await seed(p, {v:2, tab:'labs', openLab:'lab4'});
+    await p.evaluate(() => { labUi.lab4 = {mode:'sim', step:2, vals:{iname:'test'}, out:{}, draft:{}}; render(); });
+    ok((await text(p, '.cs-term-bar')).includes('(test)') && (await text(p, '.cs-term')).includes('Amazon Linux 2023'), 'terminal not shown');
+    await p.fill('#lc-lab4-uname', 'ls'); await p.press('#lc-lab4-uname', 'Enter');
+    ok((await text(p, '.term-out')).includes('command not recognised') && (await text(p, '.cs-err')).includes('Not that command'), 'a wrong command was accepted');
+    await p.fill('#lc-lab4-uname', 'uname -a'); await p.press('#lc-lab4-uname', 'Enter');
+    ok((await text(p, '.term-out')).includes('Linux ip-') && await p.$('[data-act=labNext]'), 'uname -a did not answer');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Linux ip-'));
+    await p.click('[data-act=labNext]');
+    await p.click('[data-act=labMenu]');
+    ok(await p.$$eval('.cs-menu [role=menuitem]', b => b.length) === 3 && await p.evaluate(() => document.activeElement.getAttribute('role') === 'menuitem'), 'Instance state menu did not open with focus inside');
+    await p.keyboard.press('ArrowDown'); ok(await p.evaluate(() => document.activeElement.dataset.i === '1'), 'arrow keys do not move in the menu');
+    await p.keyboard.press('Escape');
+    ok(!(await p.$('.cs-menu')) && await p.evaluate(() => document.activeElement.dataset.act === 'labMenu'), 'Escape did not close the menu');
+    await p.click('[data-act=labMenu]');
+    await p.click('.cs-menu [data-i="0"]');
+    ok((await text(p, '.coach')).includes('still stored and billed'), 'Stop not explained');
+    await p.click('[data-act=labMenu]'); await p.click('.cs-menu [data-i="2"]');
+    ok((await text(p, '.cs-flash.ok')).includes('termination') && (await text(p, '.cs-table')).includes('Terminated'), 'terminate did not land');
+    await seed(p, {v:2, tab:'labs', openLab:'lab5'});
+    await p.evaluate(() => { labUi.lab5 = {mode:'sim', step:1, vals:{fname:'hello'}, out:{}, draft:{}}; render(); });
+    ok((await text(p, '.cs-ed-tab')) === 'lambda_function.py' && (await text(p, '.cs-ed-lines')).includes('def lambda_handler'), 'no code editor');
+    await p.fill('#lc-lab5-code', 'print(hello)'); await p.click('[data-act=labGo]');
+    ok((await text(p, '.cs-err')).includes('Not that line'), 'wrong code accepted');
+    await p.fill('#lc-lab5-code', '    print("hello from lambda")'); await p.click('[data-act=labGo]');
+    ok((await text(p, '.cs-flash.ok')).includes('Successfully updated the function hello'), 'Deploy did not land');
+    // An unanswered choice is an error once the main button is pressed; arrow keys move within a radio group.
+    await seed(p, {v:2, tab:'labs', openLab:'lab1'});
+    await p.click('[data-act=labGo]');
+    ok((await text(p, '#fb-lab1-plan')).includes('Choose one'), 'an unanswered choice shows no error');
+    await p.focus('[data-act=labPick][data-v=plan][data-i="0"]'); await p.keyboard.press('ArrowRight');
+    ok(await p.evaluate(() => document.activeElement.dataset.i === '1' && document.activeElement.getAttribute('aria-checked') === 'true'), 'arrow keys do not move in a radio group');
+    ok(await p.$$eval('[data-v=plan][role=radio]', bs => bs.filter(b => b.tabIndex === 0).length) === 1, 'radio group is not one Tab stop');
+    // Typed text is kept when another answer on the same page is tapped.
+    await seed(p, {v:2, tab:'labs', openLab:'lab1'});
+    await p.evaluate(() => { labUi.lab1 = {mode:'sim', step:2, vals:{}, out:{}, draft:{}}; render(); });
+    await p.fill('#lc-lab1-email', 'me@example.com'); await p.click('[data-act=labPick][data-v=tpl][data-i="0"]');
+    ok(await p.inputValue('#lc-lab1-email') === 'me@example.com', 'typed email lost');
+    await p.click('[data-act=labGo]');
+    ok((await text(p, '.cs-table')).includes('me@example.com'), 'the budget page does not show the email');
   });
 
   await check('the content security policy blocks injected script, from disk and from the website', async () => {

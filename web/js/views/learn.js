@@ -33,6 +33,7 @@ function lessonList(){
   for (const [d, D] of Object.entries(DOMAINS)) {
     const ls = LESSONS.filter(l => l.d === d), n = ls.filter(l => S.done[l.id]).length;
     h += `<section class="group"><h2 class="group-h">${chip(d)}${D.name}<small>${D.w} % of the exam · ${n}/${ls.length} done</small></h2>`;
+    if (FLOWS[d]) h += domainFlowHTML(d);
     for (const l of ls) {
       const s = lessonStatus(l), done = !!S.done[l.id];
       h += `<div class="card"><button class="row" data-act="openLesson" data-id="${l.id}">
@@ -64,7 +65,8 @@ function lessonView(l){
     <small class="band-meta">${DOMAINS[l.d].name} · ${DOMAINS[l.d].w} % of the exam · Lesson ${lessonNo(l.id)} of ${LESSONS.length} · due ${fmtDate(l.due)}</small>
     <h2 class="lesson-t">${l.t}</h2></div><div class="body">
     <nav class="stages" aria-label="Lesson steps">${strip}</nav>
-    <div class="stage-body">${stageHTML(l, st, qs)}</div>`;
+    <div class="stage-body ${pathUi.enter ? 'enter' : ''}">${stageHTML(l, st, qs)}${bridgeHTML(l)}</div>`;
+  pathUi.enter = false;   // the fade-in plays once, on the move
   if (st < STAGES.length - 1) {
     h += `<div class="btns stage-nav">${st ? `<button class="btn ghost" data-act="stagePrev" data-id="${l.id}">Back</button>` : ''}
       <button class="btn" data-act="stageNext" data-id="${l.id}">Next: ${STAGES[st + 1]}</button></div>`;
@@ -74,15 +76,21 @@ function lessonView(l){
 
 function stageHTML(l, st, qs){
   if (st === 0) {
-    const cards = modeOf(l, 0, 'points') === 'cards';
-    return `${taskHTML(l, 0)}${modeSwitch(l, 0, [['points', 'Key points'], ['cards', 'Flip cards']])}` + (cards ? cardsHTML(l)
-      : `<p class="colour-key"><b>Terms to know</b> in this lesson's colour · <span class="num">numbers</span> the exam likes to ask about</p>
-         <ul class="pts">${l.pts.map(p => `<li>${markNumbers(p)}</li>`).join('')}</ul>`);
+    // Picture it (an everyday scene), then the key points, then flip cards: each moves on to the next when done.
+    // A lesson that builds on earlier ones starts by remembering them (no tab of its own: it comes once, first).
+    const recapping = hasRecap(l) && (!partDone(l.id, 0, 'recap') || (pathUi.next && pathUi.next.id === l.id && pathUi.next.from[1] === 'recap'));
+    const mode = modeOf(l, 0, recapping ? 'recap' : SCENES[l.id] ? 'scene' : 'points');
+    return `${taskHTML(l, 0)}${modeSwitch(l, 0, [...(SCENES[l.id] ? [['scene', 'Picture it']] : []), ['points', 'Key points'], ['cards', 'Flip cards']], mode)}` + (mode === 'cards' ? cardsHTML(l)
+      : mode === 'scene' ? sceneHTML(l) : mode === 'recap' ? recapHTML(l)
+      : `${lessonNo(l.id) <= 3 ? `<p class="colour-key"><b>Terms to know</b> in this lesson's colour · <span class="num">numbers</span> the exam likes to ask about</p>` : ''}
+         <ul class="pts">${l.pts.map(p => `<li>${markNumbers(p)}</li>`).join('')}</ul>${partDoneBtn(l, 0, 'points', 'I\'ve read these: flip cards next')}`);
   }
   if (st === 1) {
-    const test = modeOf(l, 1, 'look') === 'test';
-    return modeSwitch(l, 1, [['look', 'Look'], ['test', 'Test yourself']]) + (test ? gameHTML(l)
-      : `<p class="muted lead">Look at the picture for a minute, then say what it shows in your own words. Then tap Test yourself.</p>${markNumbers(visualHTML(VISUALS[l.id]))}`);
+    // How it works (a picture that builds up step by step), the lesson's diagram, and its game.
+    const mode = modeOf(l, 1, 'how');
+    return modeSwitch(l, 1, [['how', 'How it works'], ['look', 'Picture'], ['test', 'Test yourself']])
+      + (mode === 'test' ? gameHTML(l) : mode === 'how' ? flowHTML(l.id)
+      : `<p class="muted lead">Look at the picture for a minute, then say what it shows in your own words.</p>${markNumbers(visualHTML(VISUALS[l.id]))}${partDoneBtn(l, 1, 'look', 'I\'ve looked: test me')}`);
   }
   if (st === 2) return tryHTML(l);
   if (st === 3) return `${taskHTML(l, 2)}${quizHTML(l, qs)}`;
@@ -90,15 +98,19 @@ function stageHTML(l, st, qs){
 }
 
 function tryHTML(l){
-  let h = '<p class="muted lead">Read the situation. Decide your answer before you open it.</p>';
-  (SCENARIOS[l.id] || []).forEach((s, i) => {
+  // What if: a sandbox to switch parts on and off (or pick one) and see what works, and why. Situations: worked examples.
+  const sim = SIMS[l.id] && modeOf(l, 2, 'sim') === 'sim';
+  let h = SIMS[l.id] ? modeSwitch(l, 2, [['sim', 'What if'], ['cases', 'Situations']]) : '';
+  if (sim) h += simHTML(l.id);
+  else h += '<p class="muted lead">Read the situation. Decide your answer before you open it.</p>';
+  if (!sim) (SCENARIOS[l.id] || []).forEach((s, i) => {
     const open = revealed[l.id + ':' + i];
     h += `<div class="scenario"><small class="task-tag">Situation</small><p>${s.situation}</p>
       ${open ? `<div class="answer" id="ans-${l.id}-${i}" tabindex="-1"><b>${s.answer}</b> ${s.why}</div>`
              : `<button class="btn ghost small" data-act="reveal" data-id="${l.id}" data-i="${i}">Show answer</button>`}</div>`;
   });
   h += taskHTML(l, 1);
-  const labs = LABS.filter(x => x.lessons.includes(l.id));
+  const labs = sim ? [] : LABS.filter(x => x.lessons.includes(l.id));   // the lab links sit under Situations
   if (labs.length) h += `<div class="handson"><small class="task-tag">Hands-on in the AWS console</small>${labs.map(x =>
     `<button class="row-link" data-act="goLab" data-id="${x.id}"><b>${x.t}</b><small>about ${x.min} min · ${x.cost}</small></button>`).join('')}</div>`;
   return h;

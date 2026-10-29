@@ -84,7 +84,7 @@ const LESSONS = [
        '<b>ElastiCache</b>: in-memory cache (Redis / Memcached-compatible). <b>Neptune</b>: graph. <b>DocumentDB</b>: MongoDB-compatible.',
        '<b>DMS</b>: Database Migration Service. Moves databases to AWS with little downtime.']},
  {id:'l12', d:'tech', due:'2026-11-18', t:'Networking and content delivery',
-  steps:['Read the key points (5 min)','Draw a VPC box with a public subnet, a private subnet, an internet gateway and a NAT gateway. Label which subnet holds the web server and which the database (8 min)','Answer the 3 questions (5 min)'],
+  steps:['Read the key points (5 min)','Draw a VPC: public and private subnet, internet gateway, NAT gateway. Mark where the web server and the database go (8 min)','Answer the 3 questions (5 min)'],
   pts:['<b>VPC</b>: your private network in a Region. <b>Subnets</b> live in one AZ; public subnets route to an <b>internet gateway</b>.',
        '<b>Security group</b>: firewall on the instance, <b>stateful</b>, allow rules only. <b>Network ACL</b>: firewall on the subnet, <b>stateless</b>, allow and deny rules.',
        '<b>NAT gateway</b>: lets private instances reach out to the internet without being reachable.',
@@ -111,7 +111,7 @@ const LESSONS = [
   steps:['Read the key points (5 min)','Write the 5 support plans in order and the one thing you get when moving up each step (6 min)','Answer the 3 questions (5 min)'],
   pts:['<b>AWS Budgets</b>: alerts when cost or usage passes, or is forecast to pass, a limit. <b>Cost Explorer</b>: charts and forecasts of spending.',
        '<b>Cost and Usage Report</b> (now Data Exports): the most detailed billing data. <b>Cost allocation tags</b>: split costs by project or team.',
-       '<b>Consolidated billing</b> (Organizations): one bill for many accounts, combined usage for volume discounts.',
-       'Support plans on the exam (AWS changed them in December 2025; answer with these): <b>Basic</b> (free, core Trusted Advisor checks) → <b>Developer</b> (business-hours email) → <b>Business</b> (24/7 phone, all Trusted Advisor checks, &lt; 1 h production down) → <b>Enterprise On-Ramp</b> (pool of TAMs, &lt; 30 min) → <b>Enterprise</b> (own TAM, &lt; 15 min business-critical).',
+       '<b>Consolidated billing</b> (Organizations): one bill for many accounts, combined for volume discounts.',
+       'Support plans on the exam (changed in December 2025; answer with these): <b>Basic</b> (free, core Trusted Advisor checks) → <b>Developer</b> (business-hours email) → <b>Business</b> (24/7 phone, all Trusted Advisor checks, &lt; 1 h production down) → <b>Enterprise On-Ramp</b> (pool of TAMs, &lt; 30 min) → <b>Enterprise</b> (own TAM, &lt; 15 min business-critical).',
        '<b>TAM</b> = Technical Account Manager. <b>AWS Marketplace</b>: buy third-party software. <b>re:Post</b>: community Q&amp;A.']}
 ];

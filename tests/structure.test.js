@@ -40,7 +40,7 @@ function runScripts(files){
     const ctx = runScripts(files);
     const fns = vm.runInContext(`(() => { const out = [];
       const walk = (v, at) => { if (typeof v === 'function') out.push(at); else if (v && typeof v === 'object') for (const k in v) walk(v[k], at + '.' + k); };
-      for (const n of ['EXAM', 'DOMAINS', 'LESSONS', 'QUESTIONS', 'LABS', 'VISUALS', 'SCENARIOS']) walk(globalThis[n] !== undefined ? globalThis[n] : eval(n), n);
+      for (const n of ['EXAM', 'DOMAINS', 'LESSONS', 'QUESTIONS', 'LABS', 'VISUALS', 'SCENARIOS', 'FLOWS', 'SIMS', 'SCENES', 'LAB_SIMS']) walk(globalThis[n] !== undefined ? globalThis[n] : eval(n), n);
       return out; })()`, ctx);
     ok(!fns.length, 'functions in content: ' + fns.join(', '));
     const problems = vm.runInContext(`(() => { const p = [];

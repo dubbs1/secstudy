@@ -106,3 +106,68 @@ It now sits at the right of the sticky tab bar on every screen and opens a small
 
 Saved progress (`awsCourse1`, version 2, older data backed up), one thing open at a time, 15/5 minute timer,
 wrong answers explaining themselves, each lesson's own quiz, Proton look, all three ways of running the app.
+
+### U11. How it works: pictures that build up step by step
+Each lesson's See step opens on "How it works": a picture of how the topic works in practice (a request
+travelling through a VPC, a photo moving through S3 storage classes, IAM deciding yes or no) that adds one
+step each time you tap Next, with one plain sentence per step. Data in `web/js/content/flows.js`.
+- AC11.1 Every lesson and every exam domain has a step-through of at least 2 steps (lessons at least 4).
+- AC11.2 It starts with one step; Next adds a step, Previous removes one; the current step is outlined and
+  read out to screen readers, and the picture has a text description. Focus stays on the button.
+- AC11.3 After the last step, "Put the steps in order" checks each tap at once, then shows the right order and a score.
+- AC11.4 The Learn list has "How this section fits together" for each domain, one open at a time; each part
+  opens its lesson, and Back folds it.
+- AC11.5 Every service shown has an icon for its job (compute, storage, database, network, security, money,
+  monitoring, AI and so on), drawn for this app, not AWS artwork. Icons use the lesson's domain colour.
+- AC11.6 Every step fits within 1.4 screens at 390 x 844 with all steps shown and after the order game.
+
+### U12. What if: see what each part makes possible, and what can't be done
+Each lesson's Try step opens on "What if", a small sandbox (data in `web/js/content/sims.js`). Situations
+(the worked examples and the lab link) is the other mode.
+- AC12.1 Build sandboxes: switch parts on and off (a VPC's gateways and rules, IAM allow/deny/MFA, security
+  services, AZs and Regions). Each goal shows ✓ or ✗ at once; open, it lists the parts it needs, each marked
+  on or off, and says why, naming the missing part (or the part that blocks it, such as an explicit deny).
+- AC12.2 Limits by design (the internet reaching a private subnet) show as "By design", not as a failure.
+- AC12.3 Pick sandboxes: choose one option (storage, databases, pricing, support plans, service models);
+  each goal shows ✓ or ✗ for it, and, open, which options can do it and why.
+- AC12.4 Every part or option matters to at least one goal; every missing part has its own reason.
+- AC12.5 After a tap the goal it changed opens with its reason, and the change is read out. Focus stays on the switch.
+- AC12.6 Fits 1.4 screens at 390 x 844 with the longest reason open.
+- AC12.7 Where the setup has a place (lessons 3, 6, 7, 9, 12) the sandbox is a live map: frames for Regions,
+  AZs, subnets and accounts; parts switched by tapping them on the map; one test button per goal. A test sends
+  a dot along its path; it stops with ✗ at the first missing or blocking part, with ✓ at a defence doing its job
+  (WAF, MFA), or arrives. Test buttons carry the full goal name for screen readers; motion is skipped when
+  reduced motion is asked for.
+
+### U13. A guided path, and Picture it
+Each lesson is one line of parts: Read (Picture it, Key points, Flip cards), See (How it works, Picture, Test
+yourself), Try (What if, Situations), Check, Done. Data for the scenes in `web/js/content/scenes.js`.
+- AC13.1 Read opens on "Picture it": an everyday scene (emoji pictures, at least 4 per lesson); tapping a picture
+  shows the AWS idea it stands for, with one line linking the two.
+- AC13.2 Nothing moves by itself. Finishing a part shows a bridge card under it: what you just did, how the next
+  part builds on it, and Continue (or Not now). The bridge is read out and brought gently into view. Continue
+  fades the next part in and scrolls gently back to the lesson. Finished means: every picture tapped; "I've read
+  these" (or the Read task ticked); the deck done; the How it works order game done (or the last step, when it has
+  no game); "I've looked"; the game done; every What if goal met (build) or every option tried (pick); every
+  situation opened; every quiz question answered. The explanation on screen stays until Continue.
+- AC13.3 Each part offers its bridge once per visit: going back to look again never bounces you forward. Any other tap
+  cancels a waiting move. Finished parts show ✓ on their tab.
+- AC13.4 Remember from before: every lesson after the first starts with 3 to 4 pictures from the lessons it builds
+  on (`builds` in scenes.js), to recall and tap to check, then bridges to Picture it. Skip goes straight there.
+  The colour key is shown in lessons 1 to 3 only.
+
+### U14. Practise here: labs in a practice console that works like the real one
+Each lab can be done first in a practice console inside the app (data in `web/js/content/labsims.js`). It follows the
+real console's layout, wording and flow, so the real thing looks familiar: a top bar with the Region, the service
+menu (☰), breadcrumbs, the page title, form sections with the console's helper text, the main button (Create bucket,
+Launch instance, Deploy...), then the page you land on with its success banner and list. It has no AWS logo or
+colours and says "Practice console" in the top bar, so it can't be mistaken for the real site; sign-in pages stay
+generic. Nothing is created in AWS and nothing costs credits.
+- AC14.1 A lab opens on Practise here unless its real console steps were already started; a switch moves between them.
+- AC14.2 Form fields are checked when the main button is pressed (or Enter in a box): each mistake shows in red
+  under its field with the reason. Toolbar buttons and menus (Empty / Delete, Instance state ▾) act at once; a wrong
+  one shows the console's own error banner. The Coach above the page gives the task and why right answers are right.
+- AC14.3 Real details: typing the bucket name to confirm deletion, a browser terminal (EC2 Instance Connect) that
+  answers commands, a code editor with Deploy and Test (Lambda), status badges, values typed earlier carried to later
+  pages (the bucket name in the breadcrumbs).
+- AC14.4 The end of a practice run leads to the real console steps. Practising saves nothing except today's study day.

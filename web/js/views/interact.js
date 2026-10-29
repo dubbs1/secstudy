@@ -194,9 +194,9 @@ function gameHTML(l){
 }
 
 // A Look / Test yourself (or Points / Flip cards) switch above a stage.
-function modeSwitch(l, stage, options){
-  const cur = ui.mode[l.id + ':' + stage] || options[0][0];
+function modeSwitch(l, stage, options, shown){
+  const cur = shown || ui.mode[l.id + ':' + stage] || options[0][0];   // shown: the part on screen, when it has no tab
   return `<div class="seg small mode" role="group" aria-label="Show">${options.map(([v, label]) =>
-    `<button data-act="mode" data-id="${l.id}" data-i="${stage}" data-v="${v}" aria-pressed="${cur === v}">${label}</button>`).join('')}</div>`;
+    `<button data-act="mode" data-id="${l.id}" data-i="${stage}" data-v="${v}" aria-pressed="${cur === v}">${label}${partDone(l.id, stage, v) ? '<span class="part-ok"> ✓<span class="sr"> done</span></span>' : ''}</button>`).join('')}</div>`;
 }
 function modeOf(l, stage, dflt){ return ui.mode[l.id + ':' + stage] || dflt; }

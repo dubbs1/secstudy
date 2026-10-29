@@ -18,9 +18,15 @@ function renderLabs(){
       <span class="t"><b>${lab.t}</b><small>about ${lab.min} min · ${n}/${lab.steps.length} steps</small></span><span class="chev">›</span></button>`;
     if (open) {
       const next = lab.steps.findIndex((s, i) => !st[i]);
-      h += `<div class="body"><div class="lab-meta"><span><b>Cost:</b> ${lab.cost}</span>
+      // Practise here first (a practice console in the app), or the real console steps.
+      // A lab already started in the real console opens there; otherwise practice comes first.
+      const mode = labState(lab.id).mode || (n ? 'real' : 'sim'), real = !LAB_SIMS[lab.id] || mode === 'real';
+      h += `<div class="body"><div class="lab-meta"><span><b>Cost:</b> ${real ? lab.cost : '$0: practice in the app'}</span>
         <span><b>Practises:</b> ${lab.lessons.map(id => `<button class="link" data-act="openLesson" data-id="${id}">Lesson ${lessonNo(id)}</button>`).join(', ')}</span></div>
-        <ol class="lab-steps">`;
+        ${LAB_SIMS[lab.id] ? `<div class="seg small mode" role="group" aria-label="Show">${[['sim', 'Practise here'], ['real', 'Real console steps']].map(([v, t]) =>
+          `<button data-act="labMode" data-id="${lab.id}" data-v="${v}" aria-pressed="${(real ? 'real' : 'sim') === v}">${t}</button>`).join('')}</div>` : ''}`;
+      if (!real) { h += labSimHTML(lab) + '</div></div>'; return; }
+      h += `<ol class="lab-steps">`;
       lab.steps.forEach((s, i) => {
         h += `<li class="${st[i] ? 'on' : ''} ${i === next ? 'now' : ''}">${i === next ? '<small class="task-tag">Do this now</small>' : ''}
           <label class="check"><input type="checkbox" data-act="labStep" data-id="${lab.id}" data-i="${i}" ${st[i] ? 'checked' : ''}><span>${s}</span></label>
