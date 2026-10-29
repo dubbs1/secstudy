@@ -156,13 +156,18 @@ yourself), Try (What if, Situations), Check, Done. Data for the scenes in `web/j
   on (`builds` in scenes.js), to recall and tap to check, then bridges to Picture it. Skip goes straight there.
   The colour key is shown in lessons 1 to 3 only.
 
-### U14. Practise here: labs in a practice console
-Each lab can be done first in a practice console inside the app (data in `web/js/content/labsims.js`), drawn in the
-app's own style and labelled "Practice console": it never imitates the real AWS console. Nothing is created in AWS
-and nothing costs credits.
+### U14. Practise here: labs in a practice console that works like the real one
+Each lab can be done first in a practice console inside the app (data in `web/js/content/labsims.js`). It follows the
+real console's layout, wording and flow, so the real thing looks familiar: a top bar with the Region, the service
+menu (☰), breadcrumbs, the page title, form sections with the console's helper text, the main button (Create bucket,
+Launch instance, Deploy...), then the page you land on with its success banner and list. It has no AWS logo or
+colours and says "Practice console" in the top bar, so it can't be mistaken for the real site; sign-in pages stay
+generic. Nothing is created in AWS and nothing costs credits.
 - AC14.1 A lab opens on Practise here unless its real console steps were already started; a switch moves between them.
-- AC14.2 Each step is one task with choices, switches, text boxes (Enter checks) or a terminal. Every answer says at
-  once why it is right or wrong (bucket naming rules, a name already taken, public access, deleting a full bucket,
-  stop versus terminate). A step done shows what the real console would show, sometimes as a small table.
-- AC14.3 The terminal prints what the server would answer to the right command and "command not recognised" otherwise.
+- AC14.2 Form fields are checked when the main button is pressed (or Enter in a box): each mistake shows in red
+  under its field with the reason. Toolbar buttons and menus (Empty / Delete, Instance state ▾) act at once; a wrong
+  one shows the console's own error banner. The Coach above the page gives the task and why right answers are right.
+- AC14.3 Real details: typing the bucket name to confirm deletion, a browser terminal (EC2 Instance Connect) that
+  answers commands, a code editor with Deploy and Test (Lambda), status badges, values typed earlier carried to later
+  pages (the bucket name in the breadcrumbs).
 - AC14.4 The end of a practice run leads to the real console steps. Practising saves nothing except today's study day.

@@ -474,10 +474,12 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 1; ui.mode['l10:1'] = 'look';`,
       `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1; ui.mode['l12:1'] = 'look';`,
       `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = [true];`,
-      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'My Bucket', region:1}, out:{}};`,
-      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'alex-notes', region:0}, out:{}};`,
-      `S.tab = 'labs'; S.openLab = 'lab4'; S.labs.lab4 = []; labUi.lab4 = {mode:'sim', step:3, vals:{uname:'uname -a'}, out:{uname:['$ ls', 'command not recognised', '$ uname -a', 'Linux ip-172-31-5-20']}};`,
-      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:4, vals:{show:true}, out:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'My Bucket', region:1, block:false}, sent:{0:true}, out:{}, draft:{}, nav:true};`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'alex-notes', region:0, ver:1}, sent:{0:true}, out:{}, draft:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:4, vals:{name:'alex-notes', clean:2}, err:'This bucket is not empty.', out:{}, draft:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab4'; S.labs.lab4 = []; labUi.lab4 = {mode:'sim', step:2, vals:{iname:'test'}, out:{uname:['$ ls', 'command not recognised']}, draft:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab4'; S.labs.lab4 = []; labUi.lab4 = {mode:'sim', step:3, vals:{iname:'test'}, out:{}, draft:{}, menu:true};`,
+      `S.tab = 'labs'; S.openLab = 'lab5'; S.labs.lab5 = []; labUi.lab5 = {mode:'sim', step:1, vals:{fname:'hello', code:'print(hi)'}, sent:{1:true}, out:{}, draft:{}};`,
       `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 0; ui.mode['l10:0'] = 'points';`,
       `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 0; ui.mode['l7:0'] = 'cards'; ui.cards.l7 = {order:[0,1,2], pos:0, flipped:true, got:0, again:[]};`,
       `S.tab = 'learn'; S.openLesson = 'l9'; S.stage.l9 = 0; ui.mode['l9:0'] = 'cards'; ui.cards.l9 = {order:[flashCards(LESSONS[8]).findIndex(c => c.kind === 'gap')], pos:0, flipped:true, got:0, again:[]};`,
@@ -499,7 +501,8 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
       '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag',
       '.num', '.band-meta', '.lesson .pts b', '.colour-key b', '.stage.cur', '.flipcard small', '.flipcard span', '.chipbtn.right', '.chipbtn.wrong', '.game-fb',
-      '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.pcon-tag', '.pcon-where', '.pcon-task', '.lc legend', '.lc-opt', '.lc-opt.right', '.lc-opt.wrong', '.lc-fb.ok', '.lc-fb.no', '.lc-toggle .sw', '.term-out div', '.term-p', '.pcon-see', '.pcon-table td', '.scene-t', '.scene-q', '.scene-a b', '.scene-a small', '.bridge', '.bridge-t', '.part-ok', '.mnode', '.mnode small', '.mnode.part.off small', '.mframe span', '.sim-test.ok', '.sim-test.no', '.sim-test.never', '.sim-result', '.sim-result small', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
+      '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.pcon-task', '.coach', '.lc-fb.ok', '.lc-fb.no', '.cs-crumbs', '.cs-title', '.cs-flash.ok', '.cs-flash.bad', '.cs-label', '.cs-desc', '.cs-err', '.cs-radio', '.cs-check',
+      '.cs-btn', '.cs-btn.primary', '.cs-table th', '.cs-table td', '.cs-badge', '.cs-nav span', '.cs-menu button', '.cs-term-bar', '.term-out div', '.term-p', '.cs-ed-tab', '.cs-ed-lines code', '.cs-panel-h b', '.scene-t', '.scene-q', '.scene-a b', '.scene-a small', '.bridge', '.bridge-t', '.part-ok', '.mnode', '.mnode small', '.mnode.part.off small', '.mframe span', '.sim-test.ok', '.sim-test.no', '.sim-test.never', '.sim-result', '.sim-result small', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
       '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
@@ -1216,17 +1219,19 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await p.evaluate(() => S.stage.l1 === 4), 'Continue did not open Done');
   });
 
-  await check('Practise here: each lab in a practice console; wrong answers explain themselves (U14.1, U14.2)', async () => {
+  await check('Practise here: every lab is a console run: pages, fields, main button, landing page (U14.1)', async () => {
     const bad = await p.evaluate(() => {
       const out = [];
       for (const lab of LABS) {
-        const sim = LAB_SIMS[lab.id]; if (!sim || sim.steps.length < 4) { out.push(lab.id + ' has no practice run'); continue; }
+        const sim = LAB_SIMS[lab.id]; if (!sim || sim.steps.length < 4 || !sim.service || !sim.nav.length) { out.push(lab.id + ' has no practice run'); continue; }
         sim.steps.forEach((st, i) => {
-          if (!st.where || !st.task || !st.see || !st.controls.length) out.push(`${lab.id} step ${i + 1}`);
+          if (!st.title || !st.crumbs || !st.task || !st.see) out.push(`${lab.id} step ${i + 1}`);
+          if (!st.controls.length && !st.action) out.push(`${lab.id} step ${i + 1} has nothing to do`);
+          if (st.controls.some(c => c.style === 'buttons' || c.style === 'menu') && !st.list) out.push(`${lab.id} step ${i + 1} toolbar without a list`);
           st.controls.forEach(c => {
             if (c.type === 'choice' && (!c.options.some(o => o.ok) || c.options.some(o => !o.why))) out.push(`${lab.id} ${c.id} choice`);
             if (c.type === 'toggle' && (typeof c.want !== 'boolean' || !c.why)) out.push(`${lab.id} ${c.id} toggle`);
-            try { if (c.type === 'text') { new RegExp(c.need); (c.bad || []).forEach(x => new RegExp(x.re)); }
+            try { if (c.type === 'text' && !c.same) { new RegExp(c.need); (c.bad || []).forEach(x => new RegExp(x.re)); }
                   if (c.type === 'cmd') c.expect.forEach(x => new RegExp(x)); } catch (e) { out.push(`${lab.id} ${c.id} pattern`); }
           });
         });
@@ -1236,51 +1241,81 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(!bad.length, bad.join(', '));
     await seed(p, {v:2, tab:'labs', openLab:'lab3'});
     const before = await p.evaluate(() => { save(); const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; return JSON.stringify(s); });
-    ok(await p.$eval('[data-act=labMode][aria-pressed=true]', b => b.dataset.v) === 'sim' && await p.$('.pcon'), 'a new lab does not open on Practise here');
-    const name = async v => { await p.fill('#lc-lab3-name', v); await p.press('#lc-lab3-name', 'Enter'); return text(p, '.lc-fb'); };
-    ok((await name('My Bucket')).includes('lowercase'), 'capital letters not explained');
-    ok((await name('test')).includes('already taken') && (await name('test')).includes('every AWS account'), 'a taken name not explained');
-    ok((await name('a..b')).includes('two periods') && (await name('192.168.5.4')).includes('IP address') && (await name('xn--abc')).includes('reserved'), 'S3 naming rules missing');
-    ok(await p.getAttribute('#lc-lab3-name', 'aria-invalid') === 'true' && await p.getAttribute('#lc-lab3-name', 'aria-describedby') === 'fb-lab3-name', 'feedback not tied to the box');
-    ok((await name('alex-notes-2026')).startsWith('✓'), 'a good name not accepted');
-    await p.click('[data-act=labPick][data-v=region][data-i="1"]');
-    ok((await text(p, '.lc-fb.no')).includes('nearest Region'), 'far Region not explained');
-    await p.click('[data-act=labPick][data-v=region][data-i="0"]');
-    ok((await text(p, '.pcon-see')).includes('bucket settings') && await p.evaluate(() => document.activeElement.dataset.act === 'labNext'), 'step not done, or focus not on Next');
+    ok(await p.$eval('[data-act=labMode][aria-pressed=true]', b => b.dataset.v) === 'sim' && await p.$('.cs .cs-top') && (await text(p, '.cs-brand')) === 'Practice console', 'a new lab does not open on the practice console');
+    ok((await text(p, '.cs-crumbs')).includes('Amazon S3') && (await text(p, '.cs-title')) === 'Create bucket' && (await text(p, '.cs-panel-h')).includes('General configuration'), 'not laid out like the Create bucket page');
+    await p.click('[data-act=labNav]');
+    ok((await text(p, '.cs-nav')).includes('General purpose buckets'), 'no service menu');
+    // Mistakes show only when Create bucket is pressed, as red text under the field, with the reason in the Coach.
+    await p.fill('#lc-lab3-name', 'My Bucket'); await p.click('[data-act=labPick][data-v=region][data-i="1"]');
+    await p.click('[data-act=labToggle][data-v=block]');
+    ok(!(await p.$('.cs-err')), 'errors before the main button');
+    await p.click('[data-act=labGo]');
+    ok((await text(p, '#fb-lab3-name')).includes('lowercase') && await p.getAttribute('#lc-lab3-name', 'aria-invalid') === 'true', 'bad name not shown under the field');
+    const errs = await p.$$eval('.cs-err', es => es.map(e => e.textContent).join(' | '));
+    ok(errs.includes('round the world') && errs.includes('public to anyone'), 'mistakes do not say why: ' + errs);
+    const tryName = async v => { await p.fill('#lc-lab3-name', v); await p.click('[data-act=labGo]'); return text(p, '#fb-lab3-name'); };
+    ok((await tryName('a..b')).includes('two periods') && (await tryName('test')).includes('already taken'), 'S3 naming rules missing');
+    await p.fill('#lc-lab3-name', 'alex-notes-2026');
+    await p.click('[data-act=labPick][data-v=region][data-i="0"]'); await p.click('[data-act=labToggle][data-v=block]');
+    await p.click('[data-act=labPick][data-v=ver][data-i="1"]');
+    ok(await p.inputValue('#lc-lab3-name') === 'alex-notes-2026', 'typed name lost when another answer was tapped');
+    await p.press('#lc-lab3-name', 'Enter');   // Enter presses Create bucket
+    ok((await text(p, '.cs-flash.ok')).includes('Successfully created bucket "alex-notes-2026"') && (await text(p, '.cs-table')).includes('alex-notes-2026'), 'no landing page with the new bucket');
+    ok(await p.evaluate(() => document.activeElement.dataset.act === 'labNext'), 'focus not on Next step');
     await p.click('[data-act=labNext]');
     ok(await p.evaluate(() => document.activeElement.classList.contains('pcon-task')), 'focus lost after Next step');
     await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Step 2 of 6'));
-    await p.click('[data-act=labToggle][data-v=block]');
-    ok((await text(p, '.lc-fb.no')).includes('public to anyone'), 'turning off Block public access not explained');
-    await p.click('[data-act=labToggle][data-v=block]'); await p.click('[data-act=labToggle][data-v=ver]'); await p.click('[data-act=labNext]');
-    await p.click('[data-act=labPick][data-v=up]'); await p.click('[data-act=labNext]');
-    await p.click('[data-act=labPick][data-v=up2]'); await p.click('[data-act=labNext]');
+    ok((await text(p, '.cs-crumbs')).includes('alex-notes-2026'), 'the bucket name does not carry to the next page');
+    await p.click('[data-act=labGo]'); ok((await text(p, '.cs-table')).includes('1.0 KB'), 'upload did not land'); await p.click('[data-act=labNext]');
+    await p.click('[data-act=labGo]'); ok((await text(p, '.cs-table')).includes('2.0 KB') && await p.$$eval('.cs-table tbody tr', r => r.length) === 1, 'second upload not one file'); await p.click('[data-act=labNext]');
     await p.click('[data-act=labToggle][data-v=show]');
-    ok((await text(p, '.pcon-table')).includes('Older version'), 'versions not shown');
-    await p.click('[data-act=labNext]');
+    ok(await p.$$eval('.cs-table tbody tr', r => r.length) === 2, 'Show versions did not list both'); await p.click('[data-act=labNext]');
+    // Deleting a full bucket gets the console's error banner, and the Coach says why.
+    await p.click('[data-act=labPick][data-v=clean][data-i="2"]');
+    ok((await text(p, '.cs-flash.bad')).includes('not empty') && (await text(p, '.coach')).includes('must be empty'), 'deleting a full bucket not refused');
     await p.click('[data-act=labPick][data-v=clean][data-i="1"]');
-    ok((await text(p, '.lc-fb.no')).includes('must be empty'), 'deleting a full bucket not refused');
-    await p.click('[data-act=labPick][data-v=clean][data-i="0"]'); await p.click('[data-act=labNext]');
+    ok((await text(p, '.cs-flash.ok')).includes('Successfully emptied'), 'Empty did not work'); await p.click('[data-act=labNext]');
+    await p.fill('#lc-lab3-confirm', 'alex-notes'); await p.click('[data-act=labGo]');
+    ok((await text(p, '.cs-err')).includes('exactly'), 'wrong confirmation accepted');
+    await p.fill('#lc-lab3-confirm', 'alex-notes-2026'); await p.click('[data-act=labGo]');
+    ok((await text(p, '.cs-flash.ok')).includes('Successfully deleted bucket') && (await text(p, '.cs-empty')).includes('No buckets'), 'bucket not deleted');
+    await p.click('[data-act=labNext]');
     ok((await text(p, '.pcon-done')).includes('all 6 steps'), 'no end of the practice run');
     const after = await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; return JSON.stringify(s); });
-    ok(after === before, 'practising changed saved progress: ' + before + ' => ' + after);
+    ok(after === before, 'practising changed saved progress');
     await p.click('[data-act=labMode][data-v=real]');
     ok(await p.$('.lab-steps') && (await text(p, '.lab-meta')).includes('Cost: less than a cent'), 'Do it in the real console did not show the real steps');
   });
-  await check('Practise here: typed text is kept when another answer is tapped; the terminal reply is read out (U14.2, U14.3)', async () => {
+  await check('Practise here: terminal, Instance state menu and code editor behave like the real ones (U14.2, U14.3)', async () => {
+    await seed(p, {v:2, tab:'labs', openLab:'lab4'});
+    await p.evaluate(() => { labUi.lab4 = {mode:'sim', step:2, vals:{iname:'test'}, out:{}, draft:{}}; render(); });
+    ok((await text(p, '.cs-term-bar')).includes('(test)') && (await text(p, '.cs-term')).includes('Amazon Linux 2023'), 'terminal not shown');
+    await p.fill('#lc-lab4-uname', 'ls'); await p.press('#lc-lab4-uname', 'Enter');
+    ok((await text(p, '.term-out')).includes('command not recognised') && (await text(p, '.cs-err')).includes('Not that command'), 'a wrong command was accepted');
+    await p.fill('#lc-lab4-uname', 'uname -a'); await p.press('#lc-lab4-uname', 'Enter');
+    ok((await text(p, '.term-out')).includes('Linux ip-') && await p.$('[data-act=labNext]'), 'uname -a did not answer');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Linux ip-'));
+    await p.click('[data-act=labNext]');
+    await p.click('[data-act=labMenu]');
+    ok(await p.$$eval('.cs-menu [role=menuitem]', b => b.length) === 3, 'Instance state menu did not open');
+    await p.click('.cs-menu [data-i="0"]');
+    ok((await text(p, '.coach')).includes('still stored and billed'), 'Stop not explained');
+    await p.click('[data-act=labMenu]'); await p.click('.cs-menu [data-i="2"]');
+    ok((await text(p, '.cs-flash.ok')).includes('termination') && (await text(p, '.cs-table')).includes('Terminated'), 'terminate did not land');
+    await seed(p, {v:2, tab:'labs', openLab:'lab5'});
+    await p.evaluate(() => { labUi.lab5 = {mode:'sim', step:1, vals:{fname:'hello'}, out:{}, draft:{}}; render(); });
+    ok((await text(p, '.cs-ed-tab')) === 'lambda_function.py' && (await text(p, '.cs-ed-lines')).includes('def lambda_handler'), 'no code editor');
+    await p.fill('#lc-lab5-code', 'print(hello)'); await p.click('[data-act=labGo]');
+    ok((await text(p, '.cs-err')).includes('Not that line'), 'wrong code accepted');
+    await p.fill('#lc-lab5-code', '    print("hello from lambda")'); await p.click('[data-act=labGo]');
+    ok((await text(p, '.cs-flash.ok')).includes('Successfully updated the function hello'), 'Deploy did not land');
+    // Typed text is kept when another answer on the same page is tapped.
     await seed(p, {v:2, tab:'labs', openLab:'lab1'});
     await p.evaluate(() => { labUi.lab1 = {mode:'sim', step:2, vals:{}, out:{}, draft:{}}; render(); });
     await p.fill('#lc-lab1-email', 'me@example.com'); await p.click('[data-act=labPick][data-v=tpl][data-i="0"]');
     ok(await p.inputValue('#lc-lab1-email') === 'me@example.com', 'typed email lost');
-  });
-  await check('Practise here: the terminal answers commands (U14.3)', async () => {
-    await seed(p, {v:2, tab:'labs', openLab:'lab4'});
-    await p.evaluate(() => { labUi.lab4 = {mode:'sim', step:3, vals:{}, out:{}}; render(); });
-    await p.fill('#lc-lab4-uname', 'ls'); await p.press('#lc-lab4-uname', 'Enter');
-    ok((await text(p, '.term-out')).includes('command not recognised') && (await text(p, '.lc-fb.no')).includes('Not that command'), 'a wrong command was accepted');
-    await p.fill('#lc-lab4-uname', 'uname -a'); await p.press('#lc-lab4-uname', 'Enter');
-    ok((await text(p, '.term-out')).includes('Linux ip-') && await p.$('.pcon-see'), 'uname -a did not answer');
-    await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Linux ip-'));
+    await p.click('[data-act=labGo]');
+    ok((await text(p, '.cs-table')).includes('me@example.com'), 'the budget page does not show the email');
   });
 
   await check('the content security policy blocks injected script, from disk and from the website', async () => {
