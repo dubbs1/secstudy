@@ -1409,6 +1409,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const sv = await saved(p);
     ok(sv.ans.q1.sure === false && sv.ans.q1.ok && sv.ans.q1.wrong === 0 && sv.srs.q1.box === 0 && sv.srs.q1.due === await p.evaluate(() => addDays(todayISO(), 1)), 'a guess: ' + JSON.stringify([sv.ans.q1, sv.srs.q1]));
     ok(await p.getAttribute('[data-act=sure][data-v="0"]', 'aria-pressed') === 'true', 'choice not shown');
+    await p.click('[data-act=sure][data-v="1"]');   // a mis-tap undone: the schedule comes back
+    const back = (await saved(p)).srs.q1;
+    ok(back.box === 2 && back.due > await p.evaluate(() => addDays(todayISO(), 1)), 'Sure after Guessed did not restore the schedule: ' + JSON.stringify(back));
   });
   await check('mock exam: the exam size and weights, unseen first, flag, review list, blank warning, results only at the end (U16.1, U16.2)', async () => {
     await seed(p, {v:2, tab:'practice', ans:{q1:{n:1, wrong:0, pick:0, ok:true, at:Date.now()}}});
@@ -1420,8 +1423,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('.mock [data-act=mPick][data-i="0"]');
     ok(await p.getAttribute('.mock [data-act=mPick][data-i="0"]', 'aria-checked') === 'true', 'pick not shown');
     await p.click('[data-act=mFlag]');
-    await p.click('.mock-nav [data-act=mGo]:not([disabled]):last-of-type');
+    await p.focus('.mock-nav [data-act=mGo]:not([disabled]):last-of-type'); await p.keyboard.press('Enter');
     ok((await text(p, '.qhead')).startsWith('Question 2 of 65'), 'Next did not move: ' + await text(p, '.qhead'));
+    ok(await p.evaluate(() => document.activeElement.matches('.mock .qt')), 'focus lost after Next: ' + await p.evaluate(() => document.activeElement.tagName));
     await p.reload();   // a reload keeps the mock, the answer and the flag
     ok(await p.evaluate(() => S.mock && S.mock.i === 1 && Object.keys(S.mock.picks).length === 1 && Object.keys(S.mock.flags).length === 1), 'mock not kept across a reload');
     await p.click('.mock .link[data-act=mList]');
@@ -1432,6 +1436,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok((await text(p, '.qhead')).startsWith('Question 2 of 65'), 'Go to the first blank went elsewhere');
     await p.evaluate(() => { S.mock.ids.forEach((id, k) => { if (k) S.mock.picks[id] = QUESTIONS.find(q => q.id === id).a; }); S.mock.list = true; render(); });
     await p.click('[data-act=mSubmit]');
+    ok(await p.evaluate(() => document.activeElement.matches('.mock .finish b')), 'focus lost on the results');
     const res = await text(p, '.mock');
     ok(/Full mock exam: \d+ of 65 right/.test(res) && res.includes('By domain') && res.includes('Meets') && !(await p.$('[data-act=mPick]')), 'results: ' + res.slice(0, 200));
     const sv = await saved(p);
@@ -1525,9 +1530,15 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(!(await p.$('[data-act=speak]')), 'read aloud still shown when off');
     await p.reload();
     ok(await p.evaluate(() => S.prefs.text === 'xl' && S.prefs.speak === false), 'settings not saved');
-    await seed(p, {v:2, prefs:{text:'huge', motion:7, calm:'yes', evil:'<b>', speak:true, extra:false}, guess:{l1:9, l2:-1, zz:0}, mock:{ids:['nope']}, mocks:{a:5}, check:{x:'y'}});
+    const good = {at:1, kind:'cc', n:2, right:1, used:3, mins:3, dom:{cc:[1, 2]}, sureWrong:0, ids:['q1', 'q2'], picks:{q1:0}, flags:{}};
+    await seed(p, {v:2, prefs:{text:'huge', motion:7, calm:'yes', evil:'<b>', speak:true, extra:false}, guess:{l1:9, l2:-1, zz:0}, mock:{ids:['q1'], start:Date.now(), mins:5, kind:'zzz'}, check:{x:'y'},
+      mocks:{a:5, m1:{at:1, n:1, right:0, dom:{}}, m2:{...good, dom:{cc:['<b id=inj>x</b>', 1]}}, 'x"><img id=inj2 src=x>':good, m3:{...good, n:0, right:0}, m4:good}});
     const sv = await p.evaluate(() => ({prefs:S.prefs, guess:S.guess, mock:S.mock, mocks:S.mocks, check:S.check}));
-    ok(JSON.stringify(sv) === JSON.stringify({prefs:{text:'m', motion:'system', calm:false, speak:true, extra:false}, guess:{l2:-1}, mock:null, mocks:{}, check:{}}), 'not cleaned: ' + JSON.stringify(sv));
+    ok(JSON.stringify(sv.prefs) === JSON.stringify({text:'m', motion:'system', calm:false, speak:true, extra:false}) && JSON.stringify(sv.guess) === '{"l2":-1}' && sv.mock === null
+      && JSON.stringify(Object.keys(sv.mocks)) === '["m4"]' && JSON.stringify(sv.check) === '{}', 'not cleaned: ' + JSON.stringify(sv));
+    await p.evaluate(() => { S.tab = 'practice'; render(); });
+    await p.click('[data-act=mShow]');
+    ok((await text(p, '.mock')).includes('Concepts mini mock: 1 of 2') && !(await p.$('#inj, #inj2')), 'a cleaned result does not show, or markup got in');
   });
   await check('read aloud uses the browser voice; a second tap stops it (U18.2)', async () => {
     await seed(p, {v:2, tab:'practice'});
@@ -1570,6 +1581,8 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await z.evaluate(() => dueNow().some(q => q.id === 'q4')), 'a once-missed question is not in the final sweep');
     await z.evaluate(() => { record('q4', QUESTIONS.find(q => q.id === 'q4').a); });
     ok(await z.evaluate(() => S.srs.q4.sw === true && !dueNow().some(q => q.id === 'q4')), 'the sweep repeats');
+    await z.evaluate(() => { S.mock = {ids:['q4'], picks:{}, flags:{}, start:Date.now(), mins:2, kind:'cc', i:0, list:false, over:false}; mockFinish(); });
+    ok(await z.evaluate(() => S.srs.q4.sw === true), 'a blank in a mock cleared the sweep mark');
     await z.context().close();
   });
   await check('Next up suggests a full mock once every lesson is done (U17.5)', async () => {

@@ -18,10 +18,17 @@ function record(qid, pick, sure){
   schedule(qid, r.ok && sure !== false);
 }
 // "How sure were you?" after an answer: a right guess comes back tomorrow, like a miss, without counting as one.
+// Changing your mind back to Sure puts the schedule back as it was.
+const sureUndo = {};   // this visit: the schedule before Guessed, by question
 function setSure(qid, sure){
   const r = S.ans[qid]; if (!r) return;
+  if (r.ok && !sure && r.sure !== false) {
+    const was = S.srs[qid]; sureUndo[qid] = was ? {...was} : null;
+    S.srs[qid] = {box:0, due:capDue(GAPS[0])}; if (was && was.sw) S.srs[qid].sw = true;
+  } else if (r.ok && sure && r.sure === false && qid in sureUndo) {
+    if (sureUndo[qid]) S.srs[qid] = sureUndo[qid]; delete sureUndo[qid];
+  }
   r.sure = sure;
-  if (r.ok && !sure) { const sw = (S.srs[qid] || {}).sw; S.srs[qid] = {box:0, due:capDue(GAPS[0])}; if (sw) S.srs[qid].sw = true; }
 }
 
 /* ---------- smart review (spaced repetition) ---------- */

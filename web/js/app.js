@@ -272,7 +272,7 @@ document.addEventListener('click', e => {
       focusTo = controlKey(b); break;
     }
     case 'mFlag': { const M = S.mock, qid = M.ids[M.i]; if (M.flags[qid]) delete M.flags[qid]; else M.flags[qid] = true; focusTo = '.flagbtn'; break; }
-    case 'mGo': S.mock.i = Math.max(0, Math.min(S.mock.ids.length - 1, +b.dataset.i)); S.mock.list = false; mockConfirm = false; focusTo = '.mock .qhead + .qt, #main .opt'; reveal = '.mock'; break;
+    case 'mGo': S.mock.i = Math.max(0, Math.min(S.mock.ids.length - 1, +b.dataset.i)); S.mock.list = false; mockConfirm = false; focusTo = '.mock .qt'; reveal = '.mock'; break;
     case 'mList': S.mock.list = true; mockConfirm = false; focusTo = '.mock h3'; reveal = '.mock'; break;
     case 'mSubmit': {
       const M = S.mock, blank = M.ids.some(id => M.picks[id] == null);

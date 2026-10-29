@@ -37,7 +37,7 @@ function mockFinish(){
     const q = QUESTIONS.find(x => x.id === id), d = LESSONS.find(l => l.id === q.l).d, p = M.picks[id];
     const ok = p != null && isRight(q, p);
     if (p != null) record(id, p, !M.flags[id]);
-    else S.srs[id] = {box:0, due:capDue(GAPS[0])};   // a blank comes back in review like a miss
+    else schedule(id, false);   // a blank comes back in review like a miss
     (dom[d] = dom[d] || [0, 0])[1]++;
     if (ok) { dom[d][0]++; right++; } else if (p != null && !M.flags[id]) sureWrong++;
   }
@@ -80,7 +80,7 @@ function mockView(){
   if (M.list) {
     const blank = M.ids.filter(id => M.picks[id] == null).length, flagged = M.ids.filter(id => M.flags[id]).length;
     return `<div class="card open mock"><div class="body">${head}
-      <h3>Review your answers</h3><p class="muted small">${M.ids.length - blank} answered · ${flagged} flagged · ${blank} blank. Tap a number to go back to it.</p>
+      <h3 tabindex="-1">Review your answers</h3><p class="muted small">${M.ids.length - blank} answered · ${flagged} flagged · ${blank} blank. Tap a number to go back to it.</p>
       <div class="mock-grid">${M.ids.map((id, k) => `<button class="${M.picks[id] != null ? 'done' : 'blank'} ${M.flags[id] ? 'flag' : ''}" data-act="mGo" data-i="${k}"
         aria-label="Question ${k + 1}: ${M.picks[id] != null ? 'answered' : 'blank'}${M.flags[id] ? ', flagged' : ''}">${k + 1}</button>`).join('')}</div>
       <p class="mock-key small muted"><span class="done">1</span> answered <span class="flag">1</span> flagged <span class="blank">1</span> blank</p>
@@ -93,7 +93,7 @@ function mockView(){
   const on = i => many ? Array.isArray(p) && p.includes(i) : p === i;
   return `<div class="card open mock"><div class="body">${head}
     <div class="qhead"><span>Question ${M.i + 1} of ${M.ids.length}</span>${speakBtn(q.q)}</div>
-    <p class="qt">${q.q}</p>${many ? `<p class="muted small choose">Choose ${q.a.length}. ${Array.isArray(p) ? p.length : 0} chosen.</p>` : ''}
+    <p class="qt" tabindex="-1">${q.q}</p>${many ? `<p class="muted small choose">Choose ${q.a.length}. ${Array.isArray(p) ? p.length : 0} chosen.</p>` : ''}
     <div role="${many ? 'group' : 'radiogroup'}" aria-label="Answers">${q.o.map(([t], i) => `<button class="opt ${on(i) ? 'picked' : ''}" data-act="mPick" data-i="${i}"
       role="${many ? 'checkbox' : 'radio'}" aria-checked="${on(i)}"><span class="k">${LETTERS[i]}</span><span>${t}</span></button>`).join('')}</div>
     <div class="mock-nav">
@@ -121,7 +121,7 @@ function mockResult(key){
   ];
   return `<div class="card open mock"><div class="body">
     <div class="finish"><div class="big-check ${pct >= 80 ? 'on' : ''}" aria-hidden="true">${pct >= 80 ? '✓' : pct + '%'}</div>
-    <b>${mockName(R.kind)}: ${R.right} of ${R.n} right (${pct} %)</b>
+    <b tabindex="-1">${mockName(R.kind)}: ${R.right} of ${R.n} right (${pct} %)</b>
     <p class="muted">${fmtDate(isoOf(new Date(R.at)))} · ${R.used} of ${R.mins} min. The real exam passes at ${EXAM.pass} of ${EXAM.scale}. Aim for 80 % here; it is a guide, not a promise.</p></div>
     <h3>By domain</h3>${Object.entries(R.dom).map(([d, [r, n]]) => { const p = Math.round(r / n * 100), met = p >= 70;
       return `<div class="wk"><div class="wk-top"><span>${chip(d)}${r}/${n} right</span><span class="pill ${met ? 'pill-done' : 'pill-late'}">${met ? 'Meets' : 'Needs work'}</span></div>
@@ -141,7 +141,7 @@ function mockCard(){
     <div class="btns"><button class="btn" data-act="mStart" data-v="full">Start a full mock</button></div>
     <p class="muted small" style="margin:10px 0 4px">Or one domain, ${MOCK_MINI} questions:</p>
     <div class="chips">${Object.entries(DOMAINS).map(([d, D]) => `<button class="chipbtn" data-act="mStart" data-v="${d}">${D.short}</button>`).join('')}</div>
-    ${past.length ? `<h3>Past results</h3><ul class="hits">${past.map(([k, m]) => `<li><button class="row-link" data-act="mShow" data-v="${k}">
+    ${past.length ? `<h3>Past results</h3><ul class="hits">${past.map(([k, m]) => `<li><button class="row-link" data-act="mShow" data-v="${esc(k)}">
       <small>${fmtDate(isoOf(new Date(m.at)))}</small><span>${mockName(m.kind)}: ${Math.round(m.right / m.n * 100)} % (${m.right}/${m.n})</span></button></li>`).join('')}</ul>` : ''}
     </div></div>`;
 }

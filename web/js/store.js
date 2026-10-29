@@ -49,7 +49,7 @@ function load(){
   if (typeof s.plan !== 'string') s.plan = ''; else s.plan = s.plan.slice(0, 120);
   for (const k in s.check) if (s.check[k] !== true) delete s.check[k];
   for (const k in s.guess) if (!LESSONS.some(l => l.id === k) || !(s.guess[k] === -1 || Number.isInteger(validPick(s.guess[k])))) delete s.guess[k];   // -1: skipped
-  for (const k in s.mocks) { const m = s.mocks[k]; if (!isObj(m) || !Number.isFinite(m.at) || !Number.isInteger(m.n) || !Number.isInteger(m.right) || !isObj(m.dom)) delete s.mocks[k]; }
+  for (const k in s.mocks) { const m = cleanResult(s.mocks[k], known); if (m && /^m\d+$/.test(k)) s.mocks[k] = m; else delete s.mocks[k]; }
   s.mock = cleanMock(s.mock, known);
   if (s.review !== null) {
     const R = s.review;
@@ -86,13 +86,25 @@ function validPick(p){
   if (Array.isArray(p) && p.length && p.length <= 5 && p.every(one) && new Set(p).size === p.length) return [...p].sort((a, b) => a - b);
   return null;
 }
+const mockKind = k => k === 'full' || (typeof k === 'string' && k in DOMAINS);
+// A past mock result: every field the results screen reads, of the right type, or the result is dropped.
+function cleanResult(m, known){
+  const int = v => Number.isInteger(v) && v >= 0;
+  if (!isObj(m) || !Number.isFinite(m.at) || !mockKind(m.kind) || !int(m.n) || !m.n || !int(m.right) || m.right > m.n
+    || !Array.isArray(m.ids) || !m.ids.every(known) || !isObj(m.dom) || !int(m.used) || !int(m.mins) || !int(m.sureWrong || 0)) return null;
+  for (const d in m.dom) { const v = m.dom[d]; if (!(d in DOMAINS) || !Array.isArray(v) || v.length !== 2 || !int(v[0]) || !int(v[1]) || !v[1]) return null; }
+  const picks = {}, flags = {};
+  if (isObj(m.picks)) for (const k in m.picks) if (m.ids.includes(k) && validPick(m.picks[k]) !== null) picks[k] = validPick(m.picks[k]);
+  if (isObj(m.flags)) for (const k in m.flags) if (m.ids.includes(k) && m.flags[k] === true) flags[k] = true;
+  return {at:m.at, kind:m.kind, n:m.n, right:m.right, used:m.used, mins:m.mins, dom:m.dom, sureWrong:m.sureWrong || 0, ids:m.ids, picks, flags};
+}
 // A mock exam in progress: kept across reloads, dropped if it no longer makes sense.
 function cleanMock(m, known){
-  if (!isObj(m) || !Array.isArray(m.ids) || !m.ids.length || !m.ids.every(known) || !Number.isFinite(m.start) || !(m.mins > 0)) return null;
+  if (!isObj(m) || !Array.isArray(m.ids) || !m.ids.length || !m.ids.every(known) || !Number.isFinite(m.start) || !(m.mins > 0) || !mockKind(m.kind)) return null;
   const picks = isObj(m.picks) ? m.picks : {}, flags = isObj(m.flags) ? m.flags : {};
   for (const k in picks) if (!m.ids.includes(k) || validPick(picks[k]) === null) delete picks[k]; else picks[k] = validPick(picks[k]);
   for (const k in flags) if (!m.ids.includes(k) || flags[k] !== true) delete flags[k];
-  return {ids:m.ids, picks, flags, start:m.start, mins:m.mins, kind:typeof m.kind === 'string' ? m.kind : 'full',
+  return {ids:m.ids, picks, flags, start:m.start, mins:m.mins, kind:m.kind,
     i:Number.isInteger(m.i) && m.i >= 0 && m.i < m.ids.length ? m.i : 0, list:m.list === true, over:m.over === true};
 }
 function save(){
