@@ -133,9 +133,9 @@ const FLOWS = {
   {name:'Security group', say:'The security group checks it at the server: stateful, so the reply goes back out automatically. Allow rules only.', nodes:[{t:'Security group', k:'sec', n:'Instance, stateful'}]},
   {name:'Web server', say:'The web server in the public subnet answers, reading from the database in the private subnet.',
    nodes:[{t:'Web server', k:'compute', n:'Public subnet'}, {t:'Database', k:'db', n:'Private subnet'}]},
-  {name:'Going out', say:'A private server needs updates. It reaches the internet through the NAT gateway; nobody can reach it from outside.', via:'updates',
+  {name:'Going out', say:'A private server needs updates. It goes out through the NAT gateway; nobody outside can reach in.', via:'updates',
    nodes:[{t:'NAT gateway', k:'net', n:'Out only'}]},
-  {name:'The office', say:'The company office joins the VPC with a Site-to-Site VPN, or a private Direct Connect line.',
+  {name:'The office', say:'The office joins the VPC by Site-to-Site VPN, or a private Direct Connect line.',
    nodes:[{t:'Site-to-Site VPN', k:'net', n:'Encrypted, over the internet'}, {t:'Direct Connect', k:'net', n:'Private line'}]}]},
 
  l13:{title:'An order, from code to dashboard', rows:[
