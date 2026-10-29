@@ -484,6 +484,8 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1; ui.mode['l12:1'] = 'how'; flowUi.order.l12 = {seq:[6,5,4,3,2,1,0], run:1};`,
       `S.tab = 'learn'; S.openLesson = null; flowUi.open = 'sec'; flowUi.at.sec = 3;`,
       `S.tab = 'learn'; S.openLesson = 'l3'; S.stage.l3 = 0; ui.mode['l3:0'] = 'scene'; sceneUi.l3 = [0, 2]; pathUi.done['l3:0:points'] = true; pathUi.next = {id:'l3', from:[0, 'scene'], to:[0, 'points']};`,
+      `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 0; ui.mode['l2:0'] = 'points'; pathUi.next = null;`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 0; ui.mode['l12:0'] = 'recap'; recapUi.l12 = ['l3:0'];`,
       `S.tab = 'practice'; pCur = 'q19'; pathUi.next = null;`,
       `S.tab = 'learn'; S.openLesson = null;`
     ];
@@ -492,7 +494,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
       '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag',
       '.num', '.band-meta', '.lesson .pts b', '.colour-key b', '.stage.cur', '.flipcard small', '.flipcard span', '.chipbtn.right', '.chipbtn.wrong', '.game-fb',
-      '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.scene-t', '.scene-q', '.scene-a b', '.scene-a small', '.advance', '.adv-t', '.part-ok', '.mnode', '.mnode small', '.mnode.part.off small', '.mframe span', '.sim-test.ok', '.sim-test.no', '.sim-test.never', '.sim-result', '.sim-result small', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
+      '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.scene-t', '.scene-q', '.scene-a b', '.scene-a small', '.bridge', '.bridge-t', '.part-ok', '.mnode', '.mnode small', '.mnode.part.off small', '.mframe span', '.sim-test.ok', '.sim-test.no', '.sim-test.never', '.sim-result', '.sim-result small', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
       '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
@@ -598,9 +600,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const tall = await q.evaluate(() => {
       const out = [];
       for (const l of LESSONS) for (let k = 0; k < STAGES.length; k++) {
-        for (const mode of k === 0 ? ['scene', 'points', 'cards'] : k === 1 ? ['how', 'how-order', 'look', 'test'] : k === 2 ? ['sim', 'cases'] : ['-']) {
+        for (const mode of k === 0 ? ['recap', 'scene', 'points', 'cards'] : k === 1 ? ['how', 'how-order', 'look', 'test'] : k === 2 ? ['sim', 'cases'] : ['-']) {
           S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; ui.mode[l.id + ':' + k] = mode.replace('-order', ''); (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true);
           if (mode === 'scene') sceneUi[l.id] = SCENES[l.id].items.map((x, i) => i);   // every picture opened
+          if (mode === 'recap') recapUi[l.id] = recapItems(l).map(it => it.key);
           if (mode === 'cards') { const cs = flashCards(l), i = cs.reduce((b, c, j) => c.back.length > cs[b].back.length ? j : b, 0); ui.cards[l.id] = {order:[i], pos:0, flipped:true, got:0, again:[]}; }
           // What if at its tallest: every goal open with its reason (build: all parts off; pick: the last option).
           if (mode === 'sim') { const sm = SIMS[l.id]; if (sm.kind === 'build') simUi.on[l.id] = {}; else simUi.pick[l.id] = sm.options[sm.options.length - 1].id;
@@ -827,7 +830,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const nums = await p.$$eval('.pts .num', ns => ns.map(n => n.textContent));
     ok(['99.999999999 %', '11 nines', '12 hours'].every(x => nums.includes(x)), 'numbers: ' + nums);
     ok(!nums.some(x => /^3$/.test(x)), 'the 3 in S3 was highlighted');
-    ok(await p.$('.colour-key'), 'no colour key');
+    ok(!(await p.$('.colour-key')), 'colour key still shown after lesson 3');
     await p.evaluate(() => { S.openLesson = 'l3'; ui.mode['l3:0'] = 'points'; render(); });
     const n3 = await p.$$eval('.pts .num', ns => ns.map(n => n.textContent));
     ok(!n3.includes('1') && n3.includes('3'), 'eu-central-1 marked, or "at least 3" not: ' + n3);
@@ -1148,55 +1151,64 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(!bad.length, bad.join(', '));
   });
 
-  await check('Picture it: every lesson opens on an everyday scene; tapping shows the AWS idea (U13.1)', async () => {
+  await check('Picture it, and Remember from before: earlier lessons come back first, then today\'s pictures (U13.1, U13.4)', async () => {
     ok(await p.evaluate(() => LESSONS.every(l => SCENES[l.id] && SCENES[l.id].items.length >= 4
       && SCENES[l.id].items.every(it => it.e && it.t && it.aws && it.n) && new Set(SCENES[l.id].items.map(it => it.aws)).size === SCENES[l.id].items.length)), 'a lesson has no scene, a short one, or a repeated idea');
+    ok(await p.evaluate(() => LESSONS.every((l, i) => (SCENES[l.id].builds || []).every(id => LESSONS.findIndex(x => x.id === id) < i)) && LESSONS.slice(1).every(l => hasRecap(l))), 'a lesson builds on a later one, or has nothing to remember');
+    // Lesson 1 has nothing before it: it opens on Picture it.
+    await seed(p, {v:2, tab:'learn', openLesson:'l1'});
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'lesson 1 does not open on Picture it');
+    await p.click('[data-act=sceneTap][data-i="1"]');
+    ok((await text(p, '.scene-item.open')).includes('= The cloud') && await p.getAttribute('[data-act=sceneTap][data-i="1"]', 'aria-expanded') === 'true', 'tap did not show the AWS idea');
+    // Lesson 3 starts by remembering lesson 2's pictures; tapping them all bridges to Picture it.
     await seed(p, {v:2, tab:'learn', openLesson:'l3'});
-    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'Read does not open on Picture it');
-    await p.click('[data-act=sceneTap][data-i="0"]');
-    ok((await text(p, '.scene-item.open')).includes('= Region') && await p.getAttribute('[data-act=sceneTap][data-i="0"]', 'aria-expanded') === 'true', 'tap did not show the AWS idea');
-    await p.waitForFunction(() => document.querySelector('#announce').textContent.includes('Region'));
-  });
-  await check('the path moves on by itself when a part is finished; Stay here and Go now; no bounce back (U13.2, U13.3)', async () => {
-    await seed(p, {v:2, tab:'learn', openLesson:'l3'});
-    const n = await p.evaluate(() => SCENES.l3.items.length);
-    for (let i = 0; i < n; i++) await p.click(`[data-act=sceneTap][data-i="${i}"]`);
-    ok((await text(p, '.advance')).includes('Picture it done') && (await text(p, '.advance')).includes('Next: Key points'), 'no banner after the last picture');
-    // A part that ends on an explanation waits: the last card stays open until Next is tapped.
-    await p.waitForTimeout(2600);
-    ok(await p.$('.advance [data-act=advGo]') && await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'moved on while the explanation was showing');
+    ok((await text(p, '.recap')).includes('From lesson 2') && !(await p.$('[data-act=mode][aria-pressed=true]')), 'lesson 3 does not start with Remember from before');
+    const n = await p.$$eval('[data-act=recapTap]', b => b.length);
+    for (let i = 0; i < n; i++) await p.click(`[data-act=recapTap] >> nth=${i}`);
+    ok((await text(p, '.recap .scene-item.open')).includes('= ') && (await text(p, '.bridge')).includes('You remembered ' + n + ' ideas from lesson 2'), 'no bridge after remembering');
     await p.click('[data-act=advGo]');
-    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'points' && await p.evaluate(() => document.activeElement.dataset.v === 'points'), 'Next did not open Key points with focus on its tab');
-    ok(!(await p.$('.advance')) && (await text(p, '[data-act=mode][data-v=scene]')).includes('✓'), 'did not move to Key points, or no tick on Picture it');
-    // Going back to a finished part and tapping again does not move you on again.
-    await p.click('[data-act=mode][data-v=scene]'); await p.click('[data-act=sceneTap][data-i="0"]');
-    ok(!(await p.$('.advance')), 'bounced forward from a finished part');
-    // Stay here keeps you; Go now moves at once.
-    await p.click('[data-act=mode][data-v=points]'); await p.click('[data-act=partDone]');
-    ok(await p.evaluate(() => S.steps.l3 && S.steps.l3[0] === true), 'I\'ve read these did not tick the Read task');
-    await p.click('[data-act=advStay]');
-    ok(await p.evaluate(() => document.activeElement.dataset.act === 'partDone'), 'focus lost after Stay here');
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'Continue did not open Picture it');
+    // Skip goes straight to today's pictures, and the lesson does not start with remembering again.
+    await seed(p, {v:2, tab:'learn', openLesson:'l12'});
+    await p.click('[data-act=recapSkip]');
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'Skip did not open Picture it');
+  });
+  await check('the path: a bridge card under each finished part, Continue fades the next one in; nothing moves by itself (U13.2, U13.3)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l1'});
+    const n = await p.evaluate(() => SCENES.l1.items.length);
+    for (let i = 0; i < n; i++) await p.click(`[data-act=sceneTap][data-i="${i}"]`);
+    ok((await text(p, '.bridge')).includes('Picture it done') && (await text(p, '.bridge')).includes('key points') && (await text(p, '.bridge [data-act=advGo]')).includes('Key points'), 'no bridge after the last picture');
+    ok((await p.textContent('#advanceBar')).includes('Picture it done'), 'the bridge is not read out');
     await p.waitForTimeout(2600);
-    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'points' && !(await p.$('.advance')), 'Stay here did not stay');
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'moved on by itself');
+    await p.click('[data-act=advGo]');
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'points' && await p.evaluate(() => document.activeElement.dataset.v === 'points'), 'Continue did not open Key points with focus on its tab');
+    ok(await p.$('.stage-body.enter') && !(await p.$('.bridge')) && (await text(p, '[data-act=mode][data-v=scene]')).includes('✓'), 'no fade-in, bridge left, or no tick on Picture it');
+    // Going back to a finished part and tapping again does not offer the bridge again.
+    await p.click('[data-act=mode][data-v=scene]'); await p.click('[data-act=sceneTap][data-i="0"]');
+    ok(!(await p.$('.bridge')), 'offered to move on again from a finished part');
+    // Not now keeps you where you were, with focus back on what you tapped.
+    await p.click('[data-act=mode][data-v=points]'); await p.click('[data-act=partDone]');
+    ok(await p.evaluate(() => S.steps.l1 && S.steps.l1[0] === true) && (await text(p, '.bridge')).includes('flip cards'), 'I\'ve read these did not tick the Read task or bridge to Flip cards');
+    await p.click('[data-act=advStay]');
+    ok(!(await p.$('.bridge')) && await p.evaluate(() => document.activeElement.dataset.act === 'partDone'), 'Not now did not keep focus');
+    // The deck leads to See; the quiz leads to Done, keeping the last explanation on screen until Continue.
     await seed(p, {v:2, tab:'learn', openLesson:'l9'});
-    await p.click('[data-act=mode][data-v=cards]');
+    await p.evaluate(() => { ui.mode['l9:0'] = 'cards'; render(); });
     const cards = await p.evaluate(() => flashCards(LESSONS[8]).length);
     for (let i = 0; i < cards; i++) { await p.click('.flipcard'); await p.click('[data-act=cardGot]'); }
-    ok((await text(p, '.advance')).includes('Next: See'), 'finishing the deck does not lead to See');
+    ok((await text(p, '.bridge [data-act=advGo]')).includes('See: How it works'), 'finishing the deck does not lead to See');
     await p.click('[data-act=advGo]');
-    ok(await p.evaluate(() => S.stage.l9 === 1) && await p.$('.stage-body .flow'), 'Go now did not open See on How it works');
-    // Answering the last quiz question leads to Done.
+    ok(await p.evaluate(() => S.stage.l9 === 1) && await p.$('.stage-body .flow'), 'Continue did not open See on How it works');
     await seed(p, {v:2, tab:'learn', openLesson:'l1', stage:{l1:3}});
     const qs = await p.evaluate(() => qsFor('l1').map(q => q.a));
     for (let i = 0; i < qs.length; i++) {
       await p.click(`.opt[data-i="${qs[i]}"]`);
       if (i < qs.length - 1) await p.click('[data-act=lqNext]');
     }
-    ok((await text(p, '.advance')).includes('Next: Done'), 'finishing the quiz does not lead to Done');
-    await p.waitForTimeout(2600);
-    ok(await p.evaluate(() => S.stage.l1 === 3) && await p.$('.fb'), 'the last answer\'s explanation was taken away');
+    ok((await text(p, '.bridge')).includes('mark the lesson done') && await p.$('.fb'), 'finishing the quiz does not bridge to Done, or hid the explanation');
     await p.click('[data-act=advGo]');
-    ok(await p.evaluate(() => S.stage.l1 === 4), 'Next did not open Done');
+    ok(await p.evaluate(() => S.stage.l1 === 4), 'Continue did not open Done');
   });
 
   await check('the content security policy blocks injected script, from disk and from the website', async () => {

@@ -65,7 +65,8 @@ function lessonView(l){
     <small class="band-meta">${DOMAINS[l.d].name} · ${DOMAINS[l.d].w} % of the exam · Lesson ${lessonNo(l.id)} of ${LESSONS.length} · due ${fmtDate(l.due)}</small>
     <h2 class="lesson-t">${l.t}</h2></div><div class="body">
     <nav class="stages" aria-label="Lesson steps">${strip}</nav>
-    <div class="stage-body">${stageHTML(l, st, qs)}</div>`;
+    <div class="stage-body ${pathUi.enter ? 'enter' : ''}">${stageHTML(l, st, qs)}${bridgeHTML(l)}</div>`;
+  pathUi.enter = false;   // the fade-in plays once, on the move
   if (st < STAGES.length - 1) {
     h += `<div class="btns stage-nav">${st ? `<button class="btn ghost" data-act="stagePrev" data-id="${l.id}">Back</button>` : ''}
       <button class="btn" data-act="stageNext" data-id="${l.id}">Next: ${STAGES[st + 1]}</button></div>`;
@@ -76,10 +77,12 @@ function lessonView(l){
 function stageHTML(l, st, qs){
   if (st === 0) {
     // Picture it (an everyday scene), then the key points, then flip cards: each moves on to the next when done.
-    const mode = modeOf(l, 0, SCENES[l.id] ? 'scene' : 'points');
-    return `${taskHTML(l, 0)}${modeSwitch(l, 0, [...(SCENES[l.id] ? [['scene', 'Picture it']] : []), ['points', 'Key points'], ['cards', 'Flip cards']])}` + (mode === 'cards' ? cardsHTML(l)
-      : mode === 'scene' ? sceneHTML(l)
-      : `<p class="colour-key"><b>Terms to know</b> in this lesson's colour · <span class="num">numbers</span> the exam likes to ask about</p>
+    // A lesson that builds on earlier ones starts by remembering them (no tab of its own: it comes once, first).
+    const recapping = hasRecap(l) && (!partDone(l.id, 0, 'recap') || (pathUi.next && pathUi.next.id === l.id && pathUi.next.from[1] === 'recap'));
+    const mode = modeOf(l, 0, recapping ? 'recap' : SCENES[l.id] ? 'scene' : 'points');
+    return `${taskHTML(l, 0)}${modeSwitch(l, 0, [...(SCENES[l.id] ? [['scene', 'Picture it']] : []), ['points', 'Key points'], ['cards', 'Flip cards']], mode)}` + (mode === 'cards' ? cardsHTML(l)
+      : mode === 'scene' ? sceneHTML(l) : mode === 'recap' ? recapHTML(l)
+      : `${lessonNo(l.id) <= 3 ? `<p class="colour-key"><b>Terms to know</b> in this lesson's colour · <span class="num">numbers</span> the exam likes to ask about</p>` : ''}
          <ul class="pts">${l.pts.map(p => `<li>${markNumbers(p)}</li>`).join('')}</ul>${partDoneBtn(l, 0, 'points', 'I\'ve read these: flip cards next')}`);
   }
   if (st === 1) {

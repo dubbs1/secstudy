@@ -144,12 +144,14 @@ Each lesson is one line of parts: Read (Picture it, Key points, Flip cards), See
 yourself), Try (What if, Situations), Check, Done. Data for the scenes in `web/js/content/scenes.js`.
 - AC13.1 Read opens on "Picture it": an everyday scene (emoji pictures, at least 4 per lesson); tapping a picture
   shows the AWS idea it stands for, with one line linking the two.
-- AC13.2 Finishing a part offers the next one in a banner, read out. Parts with nothing left to read (I've read
-  these, I've looked, the deck done) move on by themselves after a short pause, with a timer bar, Go now and Stay
-  here. Parts that end on an explanation (the last answer, situation, score, What if result or picture) wait for
-  Next, so the explanation is never taken away. Finished means: every picture tapped; "I've read these" (or the Read
-  task ticked); the deck done; the How it works order game done (or the last step, when it has no game); "I've
-  looked"; the game done; every What if goal met (build) or every option tried (pick); every situation opened;
-  every quiz question answered.
-- AC13.3 Each part moves you on once per visit: going back to look again never bounces you forward. Any other tap
+- AC13.2 Nothing moves by itself. Finishing a part shows a bridge card under it: what you just did, how the next
+  part builds on it, and Continue (or Not now). The bridge is read out and brought gently into view. Continue
+  fades the next part in and scrolls gently back to the lesson. Finished means: every picture tapped; "I've read
+  these" (or the Read task ticked); the deck done; the How it works order game done (or the last step, when it has
+  no game); "I've looked"; the game done; every What if goal met (build) or every option tried (pick); every
+  situation opened; every quiz question answered. The explanation on screen stays until Continue.
+- AC13.3 Each part offers its bridge once per visit: going back to look again never bounces you forward. Any other tap
   cancels a waiting move. Finished parts show ✓ on their tab.
+- AC13.4 Remember from before: every lesson after the first starts with 3 to 4 pictures from the lessons it builds
+  on (`builds` in scenes.js), to recall and tap to check, then bridges to Picture it. Skip goes straight there.
+  The colour key is shown in lessons 1 to 3 only.

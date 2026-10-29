@@ -21,8 +21,6 @@ function render(){
   applyTheme();
   document.querySelectorAll('#nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === S.tab));
   renderTop();
-  // The banner is only rewritten when it changes, so it is read out once and its timer bar does not restart.
-  const bh = pathBanner(), bar = $('#advanceBar'); if (bar.dataset.h !== bh) { bar.innerHTML = bh; bar.dataset.h = bh; }
   const views = {today:renderToday, learn:renderLearn, practice:renderPractice, labs:renderLabs};
   $('#main').innerHTML = (views[S.tab] || renderToday)();
   renderTimerButton();
@@ -47,6 +45,9 @@ function render(){
   tapSaid = '';
   if (row) keepInView(row);
   simPlay();   // a What if map test sends its request after the page is drawn
+  // A bridge that just appeared is brought into view gently, so Continue is never out of sight.
+  const br = $('#main .bridge.fresh');
+  if (br) { br.classList.remove('fresh'); const r = br.getBoundingClientRect(); if (r.bottom > innerHeight) br.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'nearest'}); }
 }
 // Scroll only when the row is off screen, so opening a card never makes the page jump needlessly.
 function onScreen(el){ const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }
@@ -130,14 +131,26 @@ document.addEventListener('click', e => {
   switch (act) {
     // The guided path: move on now, or stay; scene taps; "I've read these" style buttons
     case 'advGo': goNextPart(); return;
-    case 'advStay': { const back = pathUi.back; stayHere(); focusTo = back; break; }
+    case 'advStay': {
+      const back = pathUi.back, n = pathUi.next; stayHere(); focusTo = back;
+      if (n && n.from[1] === 'recap') ui.mode[n.id + ':0'] = 'recap';   // Not now keeps the recap on screen
+      break;
+    }
     case 'sceneTap': {
       const seen = sceneUi[id] || (sceneUi[id] = []), i = +b.dataset.i, it = SCENES[id].items[i];
       if (!seen.includes(i)) seen.push(i);
       studied(); announce(`${it.t}: ${it.aws}. ${it.n}`);
-      if (seen.length === SCENES[id].items.length) finishPart(id, [0, 'scene'], false);
+      if (seen.length === SCENES[id].items.length) finishPart(id, [0, 'scene']);
       focusTo = `[data-act=sceneTap][data-i="${i}"]`; reveal = focusTo; break;
     }
+    case 'recapTap': {
+      const seen = recapUi[id] || (recapUi[id] = []), [lid, i] = b.dataset.v.split(':'), it = SCENES[lid].items[+i];
+      if (!seen.includes(b.dataset.v)) seen.push(b.dataset.v);
+      studied(); announce(`${it.t}: ${it.aws}. ${it.n}`); focusTo = `[data-act=recapTap][data-v="${b.dataset.v}"]`;
+      if (seen.length === recapItems(LESSONS.find(l => l.id === id)).length) finishPart(id, [0, 'recap']);
+      break;
+    }
+    case 'recapSkip': pathUi.done[id + ':0:recap'] = true; ui.mode[id + ':0'] = 'scene'; pathUi.enter = true; focusTo = '[data-act=mode][aria-pressed=true]'; break;
     case 'partDone': {
       const stage = +b.dataset.i, part = [stage, b.dataset.v];
       if (stage === 0) { const st = S.steps[id] || []; st[0] = true; S.steps[id] = st; }   // reading the key points is the Read task
@@ -162,7 +175,7 @@ document.addEventListener('click', e => {
     case 'reveal': {
       const sc = SCENARIOS[id][+b.dataset.i];
       revealed[id + ':' + b.dataset.i] = true; focusTo = `#ans-${id}-${b.dataset.i}`; announce(sc.answer + ' ' + sc.why);
-      if (SCENARIOS[id].every((x, i) => revealed[id + ':' + i])) finishPart(id, [2, 'cases'], false);
+      if (SCENARIOS[id].every((x, i) => revealed[id + ':' + i])) finishPart(id, [2, 'cases']);
       render(); return;   // nothing to save
     }
     case 'goLab':       labFromLesson = S.tab === 'learn' && !!S.openLesson; S.tab = 'labs'; S.open = null; S.openLab = id; reveal = `[data-act=openLab][data-id="${id}"]`; break;
@@ -183,7 +196,7 @@ document.addEventListener('click', e => {
       if (ctx === 'l') { live[qid] = i; S.current = QUESTIONS.find(q => q.id === qid).l; } else live[ctx + ':' + qid] = i;
       if (ctx === 'r' && i === QUESTIONS.find(q => q.id === qid).a) S.review.right++;
       const lid = QUESTIONS.find(q => q.id === qid).l, qs = qsFor(lid);
-      if (ctx === 'l' && qs.every(q => S.ans[q.id])) { const st = S.steps[lid] || []; st[LESSONS.find(l => l.id === lid).steps.length - 1] = true; S.steps[lid] = st; finishPart(lid, [3, null], false); }
+      if (ctx === 'l' && qs.every(q => S.ans[q.id])) { const st = S.steps[lid] || []; st[LESSONS.find(l => l.id === lid).steps.length - 1] = true; S.steps[lid] = st; finishPart(lid, [3, null]); }
       announceNext = true; studied();
       break;
     }
@@ -238,11 +251,11 @@ document.addEventListener('click', e => {
       announce(v === q.answer ? 'Right.' : `Not quite. It is ${(q.opts || g.options)[q.answer]}.`);
       focusTo = '[data-act=gNext]'; break;
     }
-    case 'gNext': { const st = gameState({id}); st.cur++; if (st.cur >= gameQuestions(LESSONS.find(l => l.id === id)).qs.length) finishPart(id, [1, 'test'], false); focusTo = '.game .chipbtn:not(:disabled), .game-score .link'; break; }
+    case 'gNext': { const st = gameState({id}); st.cur++; if (st.cur >= gameQuestions(LESSONS.find(l => l.id === id)).qs.length) finishPart(id, [1, 'test']); focusTo = '.game .chipbtn:not(:disabled), .game-score .link'; break; }
     case 'gOrder': {
       const g = gameQuestions(LESSONS.find(l => l.id === id)), st = gameState({id}), it = g.items[+b.dataset.i];
       st.seq.push(+b.dataset.i); studied();
-      if (st.seq.length === g.items.length) finishPart(id, [1, 'test'], false);
+      if (st.seq.length === g.items.length) finishPart(id, [1, 'test']);
       announce(tapSaid = g.ranks[st.seq.length - 1] === it.rank ? `${it.text}: right.` : `${it.text}: not there. It goes at ${goesAt(g, st, +b.dataset.i)}.`);
       focusTo = '.game .chipbtn:not(:disabled), .game-score .link'; break;
     }
@@ -250,7 +263,7 @@ document.addEventListener('click', e => {
     case 'flowNext': case 'flowBack': {
       const f = FLOWS[id], at = Math.max(0, Math.min(f.rows.length - 1, flowAt(id) + (act === 'flowNext' ? 1 : -1)));
       flowUi.at[id] = at; studied();
-      if (LESSONS.some(l => l.id === id) && at === f.rows.length - 1 && !flowHasOrder(id)) finishPart(id, [1, 'how'], false);
+      if (LESSONS.some(l => l.id === id) && at === f.rows.length - 1 && !flowHasOrder(id)) finishPart(id, [1, 'how']);
       announce(`Step ${at + 1} of ${f.rows.length}. ${plain(f.rows[at].say)}`);
       focusTo = `[data-flow="${id}"] [data-act=${act}], [data-flow="${id}"] [data-act=flowOrder], [data-flow="${id}"] [data-act=flowNext]`; break;
     }
@@ -259,7 +272,7 @@ document.addEventListener('click', e => {
     case 'flowPick': {
       const g = flowGame(id), st = flowUi.order[id], it = g.items[+b.dataset.i];
       st.seq.push(+b.dataset.i); studied();
-      if (st.seq.length === g.items.length && LESSONS.some(l => l.id === id)) finishPart(id, [1, 'how'], false);
+      if (st.seq.length === g.items.length && LESSONS.some(l => l.id === id)) finishPart(id, [1, 'how']);
       tapSaid = g.ranks[st.seq.length - 1] === it.rank ? `${it.text}: right.` : `${it.text}: not there. It goes at ${goesAt(g, st, +b.dataset.i)}.`;
       if (st.seq.length < g.items.length) announce(tapSaid);   // the last tap is read out with the score
       focusTo = '.game .chipbtn:not(:disabled), .game-score + .flow-btns .btn'; break;
@@ -272,7 +285,7 @@ document.addEventListener('click', e => {
       studied(); announce(simSay(id, before));
       // What if is done when every goal is met (build) or every option has been tried (pick).
       const sm = SIMS[id];
-      if (sm.kind === 'build' ? sm.goals.every(g => g.never || simGoal(id, g).ok) : sm.options.every(o => simUi.tried[id] && simUi.tried[id][o.id])) finishPart(id, [2, 'sim'], false);
+      if (sm.kind === 'build' ? sm.goals.every(g => g.never || simGoal(id, g).ok) : sm.options.every(o => simUi.tried[id] && simUi.tried[id][o.id])) finishPart(id, [2, 'sim']);
       focusTo = `[data-sim="${id}"] [data-v="${b.dataset.v}"]`; break;
     }
     case 'simWhy': { const i = +b.dataset.i; simUi.open[id] = simUi.open[id] === i && !SIMS[id].map ? null : i; if (SIMS[id].map) simUi.play = {key:id, gi:i}; focusTo = `[data-sim="${id}"] [data-act=simWhy][data-i="${i}"]`; break; }
@@ -280,7 +293,7 @@ document.addEventListener('click', e => {
     case 'gCol': {
       const c = VISUALS[id].cols[+b.dataset.i], v = +b.dataset.v;
       const gs = gameState({id}); gs.cols[b.dataset.i] = v; studied();
-      if (Object.keys(gs.cols).length === VISUALS[id].cols.length) finishPart(id, [1, 'test'], false);
+      if (Object.keys(gs.cols).length === VISUALS[id].cols.length) finishPart(id, [1, 'test']);
       announce(tapSaid = v === c.you ? `${c.title}: right.` : `${c.title}: not quite. You manage the top ${c.you}.`);
       focusTo = '.who button.who-c, .game-score .link'; break;
     }
