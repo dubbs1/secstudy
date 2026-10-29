@@ -112,6 +112,7 @@ const LESSONS = [
   pts:['<b>AWS Budgets</b>: alerts when cost or usage passes (or is forecast to pass) a limit. <b>Cost Explorer</b>: charts and forecasts of spending.',
        '<b>Cost and Usage Report / Data Exports</b>: the most detailed billing data. <b>Cost allocation tags</b>: split costs by project or team.',
        '<b>Consolidated billing</b> (Organizations): one bill for many accounts, combined usage for volume discounts.',
-       'Support plans: <b>Basic</b> (free; docs, forums, core Trusted Advisor checks) → <b>Developer</b> (business-hours email) → <b>Business</b> (24/7 phone/chat, all Trusted Advisor checks, &lt; 1 h for production down) → <b>Enterprise On-Ramp</b> (pool of TAMs, &lt; 30 min business-critical) → <b>Enterprise</b> (designated TAM, &lt; 15 min business-critical).',
+       'Support plans: <b>Basic</b> (free; docs, forums, core Trusted Advisor checks) → <b>Developer</b> (business-hours email) → <b>Business</b> (24/7 phone/chat, all Trusted Advisor checks, &lt; 1 h for production down) → <b>Enterprise On-Ramp</b> (pool of TAMs, &lt; 30 min business-critical) → <b>Enterprise</b> (designated TAM, &lt; 15 min business-critical). These are the plans the exam has tested.',
+       '<b>Changed December 2025:</b> new accounts choose <b>Basic</b>, <b>Business Support+</b>, <b>Enterprise</b> or <b>Unified Operations</b>. Developer, Business and Enterprise On-Ramp take no new sign-ups and end on 1 January 2027. If an exam question names the older plans, answer with the older plans.',
        '<b>TAM</b> = Technical Account Manager. <b>AWS Marketplace</b>: buy third-party software. <b>re:Post</b>: community Q&amp;A.']}
 ];

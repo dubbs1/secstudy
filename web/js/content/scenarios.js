@@ -24,12 +24,12 @@ const SCENARIOS = {
        answer:'S3 Glacier Deep Archive.', why:'The cheapest storage class, with retrieval within 12 hours. A lifecycle rule can move files there automatically.'}],
  l11:[{situation:'A game stores millions of player scores and must fetch any player\'s score by player ID in a few milliseconds.',
        answer:'DynamoDB.', why:'Key-value lookups with single-digit millisecond latency at any scale, and no servers to manage.'}],
- l12:[{situation:'The database must not be reachable from the internet, but it still has to download security updates.',
+ l12:[{situation:'A database running on an EC2 instance must not be reachable from the internet, but it still has to download security updates.',
        answer:'A private subnet, with a NAT gateway in a public subnet for outgoing traffic.', why:'The NAT gateway lets the database reach out without anything reaching in.'}],
  l13:[{situation:'An analyst has CSV files in S3 and wants to run one SQL query today without setting up a database.',
        answer:'Amazon Athena.', why:'Point it at the files in S3 and write SQL. Serverless, you pay for the data scanned.'}],
  l14:[{situation:'A nightly video job can restart if stopped. A web server will run around the clock for the next three years.',
        answer:'Spot for the video job, a Savings Plan (or Reserved Instances) for the web server.', why:'Interruptible work gets the deepest discount; steady long-term work gets a commitment discount.'}],
  l15:[{situation:'A startup runs production on AWS and must be able to phone an engineer at 3 a.m. when the site is down, for the lowest price.',
-       answer:'Business support.', why:'The cheapest plan with 24/7 phone and chat, and under 1 hour response when production is down.'}]
+       answer:'Business support.', why:'The cheapest plan with 24/7 phone and chat, and under 1 hour response when production is down. That is the exam answer; since December 2025 new accounts get Business Support+ instead.'}]
 };

@@ -145,7 +145,7 @@ const QUESTIONS = [
   a:3, x:'Budgets alerts on actual or forecast cost and usage.'},
  {id:'q44', l:'l15', q:'What is the cheapest support plan with 24/7 phone access to Cloud Support Engineers?',
   o:[['Developer','Developer is business-hours email only.'],['Business',''],['Basic','Basic has no technical support cases.'],['Enterprise','Has it, but costs much more.']],
-  a:1, x:'Business is the first plan with 24/7 phone, chat and email technical support.'},
+  a:1, x:'Business is the first plan with 24/7 phone, chat and email technical support. (Exam answer. Since December 2025 new accounts get Business Support+ instead.)'},
  {id:'q45', l:'l15', q:'How do you combine the usage of several AWS accounts to get volume discounts?',
   o:[['Consolidated billing in AWS Organizations',''],['Cost allocation tags','Tags split costs; they don\'t combine accounts.'],['AWS Marketplace','A store for third-party software.'],['AWS Cost Explorer','A cost viewer.']],
   a:0, x:'Consolidated billing gives one bill and adds up usage across accounts for tiered pricing.'}
