@@ -460,7 +460,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'today'; lookupQ = 'nat';`,
       `S.tab = 'learn'; S.openLesson = null; S.stage.l1 = 2;`,
       `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 3; S.ans.q1 = {n:1, wrong:1, pick:1, ok:false, at:Date.now()}; lqi.l1 = 0;`,
-      `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 2; revealed['l1:0'] = true;`,
+      `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 2; ui.mode['l1:2'] = 'cases'; revealed['l1:0'] = true;`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 2; ui.mode['l12:2'] = 'sim'; simUi.on.l12 = {igw:true, sg:true, naclout:false, nat:false}; simUi.open.l12 = 0;`,
+      `S.tab = 'learn'; S.openLesson = 'l14'; S.stage.l14 = 2; ui.mode['l14:2'] = 'sim'; simUi.pick.l14 = 'spot'; simUi.open.l14 = 1;`,
       `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 1; ui.mode['l2:1'] = 'look';`,
       `S.tab = 'learn'; S.openLesson = 'l4'; S.stage.l4 = 1; ui.mode['l4:1'] = 'look';`,
       `S.tab = 'learn'; S.openLesson = 'l5'; S.stage.l5 = 1; ui.mode['l5:1'] = 'look';`,
@@ -485,7 +487,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
       '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag',
       '.num', '.band-meta', '.lesson .pts b', '.colour-key b', '.stage.cur', '.flipcard small', '.flipcard span', '.chipbtn.right', '.chipbtn.wrong', '.game-fb',
-      '.who-c.blank', '.btn.good', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
+      '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
       '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
@@ -559,7 +561,8 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await p.$$eval('[aria-current=step]', b => b.map(x => x.textContent.trim()).join()) === 'Read', 'does not start on Read');
     await p.click('[data-act=stageNext]'); ok(await p.$('.stage-body .flow'), 'Next did not show See (How it works)');
     await p.click('[data-act=mode][data-v=look]'); ok(await p.$('figure.vis'), 'Picture did not show the diagram');
-    await p.click('[data-act=stageNext]'); ok(await p.$('.scenario'), 'Next did not show Try');
+    await p.click('[data-act=stageNext]'); ok(await p.$('.stage-body .sim'), 'Next did not show Try (What if)');
+    await p.click('[data-act=mode][data-v=cases]'); ok(await p.$('.scenario'), 'Situations did not show the worked examples');
     await p.click('[data-act=stagePrev]'); ok(await p.$('figure.vis'), 'Back did not show See as it was left');
     await p.click('[data-act=stage][data-i="3"]'); ok(await p.$('.opt'), 'strip did not jump to Check');
     await p.reload();
@@ -590,9 +593,12 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const tall = await q.evaluate(() => {
       const out = [];
       for (const l of LESSONS) for (let k = 0; k < STAGES.length; k++) {
-        for (const mode of k === 0 ? ['points', 'cards'] : k === 1 ? ['how', 'how-order', 'look', 'test'] : ['-']) {
+        for (const mode of k === 0 ? ['points', 'cards'] : k === 1 ? ['how', 'how-order', 'look', 'test'] : k === 2 ? ['sim', 'cases'] : ['-']) {
           S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; ui.mode[l.id + ':' + k] = mode.replace('-order', ''); (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true);
           if (mode === 'cards') { const cs = flashCards(l), i = cs.reduce((b, c, j) => c.back.length > cs[b].back.length ? j : b, 0); ui.cards[l.id] = {order:[i], pos:0, flipped:true, got:0, again:[]}; }
+          // What if at its tallest: every goal open with its reason (build: all parts off; pick: the last option).
+          if (mode === 'sim') { const sm = SIMS[l.id]; if (sm.kind === 'build') simUi.on[l.id] = {}; else simUi.pick[l.id] = sm.options[sm.options.length - 1].id;
+            simUi.open[l.id] = sm.goals.reduce((bi, g, i) => JSON.stringify(g).length > JSON.stringify(sm.goals[bi]).length ? i : bi, 0); }
           if (mode === 'how') { delete flowUi.order[l.id]; flowUi.at[l.id] = FLOWS[l.id].rows.length - 1; }
           if (mode === 'how-order') flowUi.order[l.id] = {seq:FLOWS[l.id].rows.map((r, j) => j).reverse(), run:1};
           if (mode === 'test') {
@@ -619,7 +625,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
         S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = 1; ui.mode[l.id + ':1'] = 'look'; render();
         const fig = document.querySelector('.stage-body figure.vis');
         if (!fig || !fig.querySelector('figcaption') || fig.querySelector('figcaption').textContent.trim().length < 15) out.push(l.id + ' diagram/caption');
-        S.stage[l.id] = 2; render();
+        S.stage[l.id] = 2; ui.mode[l.id + ':2'] = 'cases'; render();
         const sc = document.querySelectorAll('.scenario');
         if (!sc.length) out.push(l.id + ' no scenario');
         if (document.querySelector('.answer')) out.push(l.id + ' answer shown before asking');
@@ -630,6 +636,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     });
     ok(!probs.length, probs.join(', '));
     await seed(p, {v:2, tab:'learn', openLesson:'l9', stage:{l9:2}});
+    await p.click('[data-act=mode][data-v=cases]');
     await p.focus('[data-act=reveal][data-i="0"]'); await p.keyboard.press('Enter');
     ok((await text(p, '.answer')).startsWith('Lambda'), 'answer not shown');
     ok(await p.evaluate(() => document.activeElement.classList.contains('answer')), 'focus not on the answer');
@@ -747,6 +754,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
   await check('Back from a lab opened in a lesson returns to the lesson; after a relaunch Back still closes the lesson', async () => {
     let q = await backPage({v:2, tab:'learn', openLesson:'l10', stage:{l10:2}});
+    await q.click('[data-act=mode][data-v=cases]');
     await q.click('.handson [data-act=goLab]');
     await back(q);
     ok(!left(q) && await q.evaluate(() => S.tab === 'learn' && S.openLesson === 'l10'), 'Back from the lab did not return to the lesson');
@@ -1062,6 +1070,53 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
           if (!r.nodes.length || r.nodes.length > 3) out.push(`${k} step ${i + 1} nodes`);
           r.nodes.forEach(n => { if (!n.t || !FLOW_ICONS[n.k] || (n.n && n.n.length > 70)) out.push(`${k} step ${i + 1} node ${n.t}`); });
         });
+      }
+      return out;
+    });
+    ok(!bad.length, bad.join(', '));
+  });
+
+  await check('What if: switching parts shows which goals they make possible, with the reason (U12.1, U12.2)', async () => {
+    ok(await p.evaluate(() => LESSONS.every(l => SIMS[l.id] && SIMS[l.id].goals.length >= 3)), 'a lesson has no sandbox, or under 3 goals');
+    await seed(p, {v:2, tab:'learn', openLesson:'l12', stage:{l12:2}});
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'sim', 'Try does not open on What if');
+    const goal = t => p.evaluate(t => [...document.querySelectorAll('.sim-goals li')].find(li => li.textContent.includes(t)).className.trim(), t);
+    ok((await goal('Users reach the web server')).startsWith('ok'), 'default VPC does not reach the web server');
+    await p.click('[data-act=simToggle][data-v=naclout]');
+    ok((await goal('Users reach the web server')).startsWith('no') && (await text(p, '.sim-goals li.no')).includes('stateless'), 'no outbound ACL rule did not explain stateless');
+    ok(await p.getAttribute('[data-act=simToggle][data-v=naclout]', 'aria-pressed') === 'false' && await p.evaluate(() => document.activeElement.dataset.v === 'naclout'), 'switch state or focus wrong');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.includes('Users reach the web server: no'));
+    ok((await text(p, '.sim-goals li.no .sim-needs')).includes('✗ Network ACL: allow replies out'), 'needs list does not mark the missing part');
+    ok((await goal('private database')).includes('never') && !(await goal('private database')).includes('no'), 'a by-design limit is not shown as never');
+    await p.click('[data-act=simToggle][data-v=nat]');
+    ok((await goal('downloads updates')).startsWith('ok'), 'NAT gateway did not let the private server out');
+    // An explicit deny wins over an allow.
+    await seed(p, {v:2, tab:'learn', openLesson:'l6', stage:{l6:2}});
+    ok((await goal('Alice can read')).startsWith('ok'), 'allow alone does not work');
+    await p.click('[data-act=simToggle][data-v=deny]');
+    ok((await goal('Alice can read')).startsWith('no') && (await text(p, '.sim-goals li.no')).includes('deny always wins'), 'deny did not win');
+  });
+  await check('What if: picking an option shows what it can and can\'t do; the data is consistent (U12.3, U12.4)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l10', stage:{l10:2}});
+    ok(!(await p.$('.sim-goals li.ok, .sim-goals li.no')), 'results before picking');
+    await p.click('[data-act=simPick][data-v=store]');
+    const keep = await p.evaluate(() => [...document.querySelectorAll('.sim-goals li')].find(li => li.textContent.includes('Keeps the data')).className);
+    ok(keep.startsWith('no') && (await text(p, '.sim-goals')).includes('lost when the instance stops'), 'instance store keeps data');
+    ok((await text(p, '.sim-sum')).match(/^\d of 5 goals met/), 'no goal count');
+    const bad = await p.evaluate(() => {
+      const out = [];
+      for (const [k, sm] of Object.entries(SIMS)) {
+        const ids = (sm.parts || sm.options).map(x => x.id);
+        if (new Set(ids).size !== ids.length) out.push(k + ' repeats an id');
+        (sm.parts || sm.options).forEach(x => { if (!x.t || !x.does || !FLOW_ICONS[x.k]) out.push(k + ' ' + x.id); });
+        for (const g of sm.goals) {
+          if (sm.kind === 'pick') { if (!g.yes.length || g.yes.some(id => !ids.includes(id)) || !g.why) out.push(k + ' ' + g.t); continue; }
+          if (g.never) continue;
+          if ([...g.needs, ...(g.unless || [])].some(id => !ids.includes(id) || !g.why[id])) out.push(k + ' ' + g.t + ' missing a reason');
+          if (!g.needs.length && !g.ok) out.push(k + ' ' + g.t + ' no text');
+        }
+        // Every part matters to at least one goal, and every option can do at least one thing.
+        ids.forEach(id => { if (!sm.goals.some(g => (g.needs || []).includes(id) || (g.unless || []).includes(id) || (g.yes || []).includes(id))) out.push(k + ' ' + id + ' does nothing'); });
       }
       return out;
     });

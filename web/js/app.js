@@ -237,6 +237,15 @@ document.addEventListener('click', e => {
       if (st.seq.length < g.items.length) announce(tapSaid);   // the last tap is read out with the score
       focusTo = '.game .chipbtn:not(:disabled), .game-score + .flow-btns .btn'; break;
     }
+    // What if: switch a part, or pick an option, and say what changed
+    case 'simToggle': case 'simPick': {
+      const before = SIMS[id].goals.map(g => simGoal(id, g));
+      if (act === 'simToggle') { const on = simOn(id); on[b.dataset.v] = !on[b.dataset.v]; simUi.last = b.dataset.v; }
+      else simUi.pick[id] = b.dataset.v;
+      studied(); announce(simSay(id, before));
+      focusTo = `[data-sim="${id}"] [data-v="${b.dataset.v}"]`; break;
+    }
+    case 'simWhy': { const i = +b.dataset.i; simUi.open[id] = simUi.open[id] === i ? null : i; focusTo = `[data-sim="${id}"] [data-act=simWhy][data-i="${i}"]`; break; }
     case 'domainFlow': flowUi.open = flowUi.open === id ? null : id; if (flowUi.open) { reveal = `[data-act=domainFlow][data-id="${id}"]`; studied(); } break;
     case 'gCol': {
       const c = VISUALS[id].cols[+b.dataset.i], v = +b.dataset.v;

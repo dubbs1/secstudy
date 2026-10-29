@@ -31,6 +31,7 @@ web/js/content/           data only, no logic
     visuals.js            VISUALS: one diagram per lesson (compare, who, nested, scale, tiles), drawn by views/visual.js
     scenarios.js          SCENARIOS: worked examples for each lesson's Try stage
     flows.js              FLOWS: "How it works" step-throughs, one per lesson and one per exam domain
+    sims.js               SIMS: "What if" sandboxes for each lesson's Try stage (build: switch parts; pick: compare options)
 web/js/util.js            DOM and date helpers, toast
 web/js/store.js           saved progress: KEY 'awsCourse1', DEFAULTS, load() (cleans and migrates), save(),
                           export and import
@@ -42,6 +43,7 @@ web/js/views/interact.js  flip cards (from key-point terms) and diagram games (f
                           Practice state is per visit only; it saves nothing except today's study day
 web/js/views/flow.js      "How it works": draws FLOWS one step at a time, the put-in-order game, the job icons,
                           and each domain's "How this section fits together" card in Learn
+web/js/views/sim.js       "What if": draws SIMS, works out each goal from the parts switched on or the option picked
 web/js/views/*.js         one file per screen: header, today, learn, practice, labs. Each returns an HTML
                           string from the current state. They may settle view state while drawing (which
                           lesson is open, which quiz or practice question shows) but never save

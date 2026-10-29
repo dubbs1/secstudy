@@ -120,3 +120,16 @@ step each time you tap Next, with one plain sentence per step. Data in `web/js/c
 - AC11.5 Every service shown has an icon for its job (compute, storage, database, network, security, money,
   monitoring, AI and so on), drawn for this app, not AWS artwork. Icons use the lesson's domain colour.
 - AC11.6 Every step fits within 1.4 screens at 390 x 844 with all steps shown and after the order game.
+
+### U12. What if: see what each part makes possible, and what can't be done
+Each lesson's Try step opens on "What if", a small sandbox (data in `web/js/content/sims.js`). Situations
+(the worked examples and the lab link) is the other mode.
+- AC12.1 Build sandboxes: switch parts on and off (a VPC's gateways and rules, IAM allow/deny/MFA, security
+  services, AZs and Regions). Each goal shows ✓ or ✗ at once; open, it lists the parts it needs, each marked
+  on or off, and says why, naming the missing part (or the part that blocks it, such as an explicit deny).
+- AC12.2 Limits by design (the internet reaching a private subnet) show as "By design", not as a failure.
+- AC12.3 Pick sandboxes: choose one option (storage, databases, pricing, support plans, service models);
+  each goal shows ✓ or ✗ for it, and, open, which options can do it and why.
+- AC12.4 Every part or option matters to at least one goal; every missing part has its own reason.
+- AC12.5 After a tap the goal it changed opens with its reason, and the change is read out. Focus stays on the switch.
+- AC12.6 Fits 1.4 screens at 390 x 844 with the longest reason open.

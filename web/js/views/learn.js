@@ -93,15 +93,19 @@ function stageHTML(l, st, qs){
 }
 
 function tryHTML(l){
-  let h = '<p class="muted lead">Read the situation. Decide your answer before you open it.</p>';
-  (SCENARIOS[l.id] || []).forEach((s, i) => {
+  // What if: a sandbox to switch parts on and off (or pick one) and see what works, and why. Situations: worked examples.
+  const sim = SIMS[l.id] && modeOf(l, 2, 'sim') === 'sim';
+  let h = SIMS[l.id] ? modeSwitch(l, 2, [['sim', 'What if'], ['cases', 'Situations']]) : '';
+  if (sim) h += simHTML(l.id);
+  else h += '<p class="muted lead">Read the situation. Decide your answer before you open it.</p>';
+  if (!sim) (SCENARIOS[l.id] || []).forEach((s, i) => {
     const open = revealed[l.id + ':' + i];
     h += `<div class="scenario"><small class="task-tag">Situation</small><p>${s.situation}</p>
       ${open ? `<div class="answer" id="ans-${l.id}-${i}" tabindex="-1"><b>${s.answer}</b> ${s.why}</div>`
              : `<button class="btn ghost small" data-act="reveal" data-id="${l.id}" data-i="${i}">Show answer</button>`}</div>`;
   });
   h += taskHTML(l, 1);
-  const labs = LABS.filter(x => x.lessons.includes(l.id));
+  const labs = sim ? [] : LABS.filter(x => x.lessons.includes(l.id));   // the lab links sit under Situations
   if (labs.length) h += `<div class="handson"><small class="task-tag">Hands-on in the AWS console</small>${labs.map(x =>
     `<button class="row-link" data-act="goLab" data-id="${x.id}"><b>${x.t}</b><small>about ${x.min} min · ${x.cost}</small></button>`).join('')}</div>`;
   return h;
