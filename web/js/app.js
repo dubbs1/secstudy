@@ -233,7 +233,8 @@ document.addEventListener('click', e => {
     case 'flowPick': {
       const g = flowGame(id), st = flowUi.order[id], it = g.items[+b.dataset.i];
       st.seq.push(+b.dataset.i); studied();
-      announce(tapSaid = g.ranks[st.seq.length - 1] === it.rank ? `${it.text}: right.` : `${it.text}: not there. It goes at ${goesAt(g, st, +b.dataset.i)}.`);
+      tapSaid = g.ranks[st.seq.length - 1] === it.rank ? `${it.text}: right.` : `${it.text}: not there. It goes at ${goesAt(g, st, +b.dataset.i)}.`;
+      if (st.seq.length < g.items.length) announce(tapSaid);   // the last tap is read out with the score
       focusTo = '.game .chipbtn:not(:disabled), .game-score + .flow-btns .btn'; break;
     }
     case 'domainFlow': flowUi.open = flowUi.open === id ? null : id; if (flowUi.open) { reveal = `[data-act=domainFlow][data-id="${id}"]`; studied(); } break;

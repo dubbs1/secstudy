@@ -1,6 +1,7 @@
 // "How it works": one step-through picture per lesson and one per exam domain, drawn by web/js/views/flow.js.
 // Data only. Each row is one step: tapping Next adds the row, says `say`, and links it to the row above
 // with an arrow (labelled `via` when given). `name` is the step's short name for the put-in-order game.
+// rank: steps with the same rank may go in either order in the game (default: the step's position).
 // Nodes: t = title, k = kind (picks the icon), n = one-line note, lesson = opens that lesson (domain flows).
 // Kinds: user, onprem, compute, storage, db, net, sec, money, watch, ai, place, doc, code, help.
 const FLOWS = {
@@ -9,7 +10,7 @@ const FLOWS = {
    nodes:[{t:'Your own data center', k:'onprem', n:'Buy servers up front'}, {t:'AWS Cloud', k:'compute', n:'Rent them when you need them'}]},
   {name:'Get started', say:'Your own servers take weeks to order and cost money up front (CapEx). In the cloud they start in minutes and you pay as you go (OpEx).',
    nodes:[{t:'Weeks, paid up front', k:'onprem'}, {t:'Minutes, pay as you go', k:'money'}]},
-  {name:'Busy day', say:'Traffic jumps. Your data center is stuck with what you bought. In the cloud, more servers are added for you: that is elasticity.', via:'more users',
+  {name:'Busy day', say:'Traffic jumps. Your data center is stuck with what you bought. In the cloud, Auto Scaling adds servers as demand grows: that is elasticity.', via:'more users',
    nodes:[{t:'Stuck at what you bought', k:'onprem'}, {t:'Grows with demand', k:'compute', n:'Elasticity'}]},
   {name:'Quiet day', say:'Traffic drops. Idle servers in your data center still cost money. In the cloud they are removed and you stop paying for them.', via:'fewer users',
    nodes:[{t:'Idle servers still paid for', k:'onprem'}, {t:'Shrinks, you pay less', k:'money'}]},
@@ -31,7 +32,7 @@ const FLOWS = {
   {name:'User in Berlin', say:'You open a website from Berlin.', nodes:[{t:'You in Berlin', k:'user'}]},
   {name:'Edge location', say:'CloudFront answers from an edge location near you. If it has a cached copy, you get it fast and the request stops here.',
    nodes:[{t:'Edge location', k:'net', n:'Many more of them than Regions'}]},
-  {name:'Region', say:'No cached copy? The request goes to the Region that runs the app: eu-central-1, Frankfurt.', via:'not cached',
+  {name:'Region', say:'No cached copy? The edge location fetches it from the app\'s Region, eu-central-1 (Frankfurt), keeps a copy for the next user, and sends it to you.', via:'not cached',
    nodes:[{t:'Region eu-central-1', k:'place', n:'Chosen for law, latency, services, price'}]},
   {name:'Two AZs', say:'The app runs in two Availability Zones. Each AZ is one or more separate data centers.',
    nodes:[{t:'AZ a: server', k:'compute'}, {t:'AZ b: server', k:'compute'}]},
@@ -46,7 +47,7 @@ const FLOWS = {
   {name:'Pick a strategy', say:'Pick one of the 7 Rs for each app. For example: rehost a server as it is, replatform a database onto RDS, retire an app nobody uses.',
    nodes:[{t:'Rehost', k:'compute', n:'Lift and shift'}, {t:'Replatform', k:'db', n:'Lift, tinker, shift'}, {t:'Retire', k:'onprem', n:'Switch it off'}]},
   {name:'Move the data', say:'Move databases with AWS DMS while they keep running. Huge amounts of data go offline on an AWS Snow family device.',
-   nodes:[{t:'AWS DMS', k:'db', n:'Databases, little downtime'}, {t:'Snow family', k:'storage', n:'Large offline transfers'}]},
+   nodes:[{t:'AWS DMS', k:'db', n:'Databases, little downtime'}, {t:'Snow family', k:'storage', n:'Large offline transfers (exam answer)'}]},
   {name:'Review', say:'Once running, review it against the Well-Architected Framework\'s 6 pillars and improve.',
    nodes:[{t:'Well-Architected review', k:'watch', n:'Checks it against the 6 pillars'}]}]},
 
@@ -75,11 +76,11 @@ const FLOWS = {
    nodes:[{t:'Attacker', k:'user'}, {t:'Shield', k:'sec', n:'DDoS protection'}]},
   {name:'Bad requests', say:'Some requests try SQL injection. WAF blocks them before they reach the app.',
    nodes:[{t:'WAF', k:'sec', n:'Web attacks, layer 7'}]},
-  {name:'The servers', say:'Inspector scans the EC2 servers and container images for known software flaws.',
+  {name:'The servers', rank:2, say:'Inspector scans the EC2 servers and container images for known software flaws.',
    nodes:[{t:'EC2 servers', k:'compute'}, {t:'Inspector', k:'sec', n:'Vulnerabilities'}]},
-  {name:'The data', say:'Macie finds personal data stored in S3. KMS holds the keys that encrypt it.',
+  {name:'The data', rank:2, say:'Macie finds personal data stored in S3. KMS holds the keys that encrypt it.',
    nodes:[{t:'Macie', k:'sec', n:'Personal data in S3'}, {t:'KMS', k:'sec', n:'Encryption keys'}]},
-  {name:'Watching logs', say:'GuardDuty reads the logs and spots threats with machine learning.',
+  {name:'Watching logs', rank:2, say:'GuardDuty reads the logs and spots threats with machine learning.',
    nodes:[{t:'GuardDuty', k:'watch', n:'Threat detection'}]},
   {name:'One view', say:'Security Hub collects all the findings in one place. Detective helps find the root cause.',
    nodes:[{t:'Security Hub', k:'watch', n:'All findings'}, {t:'Detective', k:'watch', n:'Root cause'}]}]},
@@ -110,26 +111,26 @@ const FLOWS = {
   {name:'After 30 days', say:'After 30 days it is rarely viewed. A lifecycle rule moves it to S3 Standard-IA: cheaper to keep, small fee to read.', via:'30 days',
    nodes:[{t:'S3 Standard-IA', k:'storage', n:'Infrequent access'}]},
   {name:'After a year', say:'After a year it is kept only for the record. It moves to S3 Glacier Deep Archive: the cheapest, back within 12 hours.', via:'1 year',
-   nodes:[{t:'Glacier Deep Archive', k:'storage', n:'Cheapest, back within 12 hours'}]},
-  {name:'Server disk', say:'The web server itself keeps its files on an EBS volume, a disk in one AZ.',
+   nodes:[{t:'Glacier Deep Archive', k:'storage', n:'Cheapest, standard retrieval within 12 hours'}]},
+  {name:'Server disk', rank:3, say:'The web server itself keeps its files on an EBS volume, a disk in one AZ.',
    nodes:[{t:'EC2', k:'compute'}, {t:'EBS', k:'storage', n:'Block disk, one AZ'}]},
-  {name:'Shared files', say:'Many servers need the same files at once: they mount one EFS file system.',
+  {name:'Shared files', rank:3, say:'Many servers need the same files at once: they mount one EFS file system.',
    nodes:[{t:'EFS', k:'storage', n:'Shared Linux file system'}]}]},
 
  l11:{title:'Where an online shop keeps its data', rows:[
   {name:'The app', say:'Shoppers use the web app.', nodes:[{t:'Web app', k:'compute'}]},
-  {name:'Cache', say:'Product pages read the same data again and again. ElastiCache answers them from memory.', nodes:[{t:'ElastiCache', k:'db', n:'In-memory cache'}]},
-  {name:'Orders', say:'Orders go into tables in RDS or Aurora. Multi-AZ keeps a standby copy in a second AZ that takes over if the first fails.',
+  {name:'Cache', rank:1, say:'Product pages read the same data again and again. ElastiCache answers them from memory.', nodes:[{t:'ElastiCache', k:'db', n:'In-memory cache'}]},
+  {name:'Orders', rank:1, say:'Orders go into tables in RDS or Aurora. Multi-AZ keeps a standby copy in a second AZ that takes over if the first fails.',
    nodes:[{t:'RDS primary, AZ a', k:'db'}, {t:'Standby, AZ b', k:'db', n:'Multi-AZ failover'}]},
-  {name:'Shopping carts', say:'Millions of shopping carts, looked up by key in milliseconds: DynamoDB.', nodes:[{t:'DynamoDB', k:'db', n:'NoSQL key-value'}]},
+  {name:'Shopping carts', rank:1, say:'Millions of shopping carts, looked up by key in milliseconds: DynamoDB.', nodes:[{t:'DynamoDB', k:'db', n:'NoSQL key-value'}]},
   {name:'Reports', say:'Each night the data is copied to Redshift for SQL reports over years of sales.', via:'every night',
    nodes:[{t:'Redshift', k:'db', n:'Data warehouse'}]}]},
 
  l12:{title:'A request into a VPC and back out', rows:[
   {name:'DNS', say:'The user types the shop\'s name. Route 53 returns its address.', nodes:[{t:'User', k:'user'}, {t:'Route 53', k:'net', n:'DNS'}]},
   {name:'Internet gateway', say:'The request enters the VPC through the internet gateway.', nodes:[{t:'Internet gateway', k:'net'}]},
-  {name:'Network ACL', say:'The network ACL checks it at the subnet edge: stateless, allow and deny rules.', nodes:[{t:'Network ACL', k:'sec', n:'Subnet, stateless'}]},
-  {name:'Security group', say:'The security group checks it at the server: stateful, allow rules only.', nodes:[{t:'Security group', k:'sec', n:'Instance, stateful'}]},
+  {name:'Network ACL', say:'The network ACL checks it at the subnet edge: stateless, so the reply also needs an outbound rule. Allow and deny rules.', nodes:[{t:'Network ACL', k:'sec', n:'Subnet, stateless'}]},
+  {name:'Security group', say:'The security group checks it at the server: stateful, so the reply goes back out automatically. Allow rules only.', nodes:[{t:'Security group', k:'sec', n:'Instance, stateful'}]},
   {name:'Web server', say:'The web server in the public subnet answers, reading from the database in the private subnet.',
    nodes:[{t:'Web server', k:'compute', n:'Public subnet'}, {t:'Database', k:'db', n:'Private subnet'}]},
   {name:'Going out', say:'A private server needs updates. It reaches the internet through the NAT gateway; nobody can reach it from outside.', via:'updates',
@@ -149,18 +150,18 @@ const FLOWS = {
 
  l14:{title:'Choosing how to pay for one app', rows:[
   {name:'Estimate', say:'Before building, estimate the cost with the Pricing Calculator.', nodes:[{t:'Pricing Calculator', k:'money'}]},
-  {name:'Steady base', say:'Servers that run all day, every day: commit with a Savings Plan or Reserved Instances for 1 or 3 years.',
+  {name:'Steady base', rank:1, say:'Servers that run all day, every day: commit with a Savings Plan or Reserved Instances for 1 or 3 years.',
    nodes:[{t:'Savings Plans', k:'money'}, {t:'Reserved Instances', k:'money'}]},
-  {name:'Daily peaks', say:'Extra servers for a few busy hours: On-Demand, no commitment.', nodes:[{t:'On-Demand', k:'money'}]},
-  {name:'Batch jobs', say:'Night jobs that can stop and restart: Spot, up to 90 % off, with a 2-minute warning before it is taken back.',
+  {name:'Daily peaks', rank:1, say:'Extra servers for a few busy hours: On-Demand, no commitment.', nodes:[{t:'On-Demand', k:'money'}]},
+  {name:'Batch jobs', rank:1, say:'Night jobs that can stop and restart: Spot, up to 90 % off, with a 2-minute warning before it is taken back.',
    nodes:[{t:'Spot Instances', k:'money', n:'Can be interrupted'}]},
-  {name:'Licences', say:'Software licensed per physical core: Dedicated Hosts, a whole server for you.', nodes:[{t:'Dedicated Hosts', k:'money'}]},
-  {name:'Data transfer', say:'Data coming in is generally free; data going out to the internet costs money.',
+  {name:'Licences', rank:1, say:'Software licensed per physical core: Dedicated Hosts, a whole server for you.', nodes:[{t:'Dedicated Hosts', k:'money'}]},
+  {name:'Data transfer', rank:1, say:'Data coming in is generally free; data going out to the internet costs money.',
    nodes:[{t:'In: free', k:'net'}, {t:'Out: paid', k:'net'}]}]},
 
  l15:{title:'A month of AWS bills, and getting help', rows:[
   {name:'Budget', say:'Set a budget. AWS Budgets alerts you when spending passes it, or is forecast to.', nodes:[{t:'AWS Budgets', k:'money'}]},
-  {name:'Tags', say:'Tag each resource with its project. Cost allocation tags split the bill by team.', nodes:[{t:'Cost allocation tags', k:'money'}]},
+  {name:'Tags', say:'Tag each resource with its project, then turn the tags on as cost allocation tags in Billing: the bill splits by team.', nodes:[{t:'Cost allocation tags', k:'money'}]},
   {name:'Alert', say:'Halfway through the month an alert arrives. Cost Explorer shows which service grew.', via:'over budget',
    nodes:[{t:'Cost Explorer', k:'watch', n:'Charts and forecasts'}]},
   {name:'Detail', say:'For line-by-line detail, open the Cost and Usage Report (Data Exports).', nodes:[{t:'Cost and Usage Report', k:'doc'}]},
@@ -177,14 +178,14 @@ const FLOWS = {
   {name:'How', say:'How to do it well and move there: Well-Architected, CAF and the 7 Rs.', nodes:[{t:'Well-Architected and migration', k:'doc', lesson:'l4'}]}]},
  sec:{title:'Security: who does what, and how it is proved', rows:[
   {name:'Split', say:'First the split: AWS secures the cloud, you secure what you put in it.', nodes:[{t:'Shared responsibility', k:'sec', lesson:'l5'}]},
-  {name:'Identity', say:'Then who may do what: users, roles, policies and MFA.', nodes:[{t:'IAM', k:'user', lesson:'l6'}]},
-  {name:'Protect', say:'Services that detect and block threats.', nodes:[{t:'Security services', k:'sec', lesson:'l7'}]},
+  {name:'Identity', rank:1, say:'Then who may do what: users, roles, policies and MFA.', nodes:[{t:'IAM', k:'user', lesson:'l6'}]},
+  {name:'Protect', rank:1, say:'Services that detect and block threats.', nodes:[{t:'Security services', k:'sec', lesson:'l7'}]},
   {name:'Prove', say:'Logs, settings checks and reports that prove it to an auditor.', nodes:[{t:'Compliance and governance', k:'doc', lesson:'l8'}]}]},
  tech:{title:'Technology: the parts of one app', rows:[
-  {name:'Compute', say:'Something runs the code.', nodes:[{t:'Compute', k:'compute', lesson:'l9'}]},
-  {name:'Storage and data', say:'It keeps files and data.', nodes:[{t:'Storage', k:'storage', lesson:'l10'}, {t:'Databases', k:'db', lesson:'l11'}]},
-  {name:'Network', say:'A network connects it to users, safely.', nodes:[{t:'Networking', k:'net', lesson:'l12'}]},
-  {name:'Run and learn', say:'Tools build it, connect its parts and learn from its data.', nodes:[{t:'Management, analytics, AI', k:'watch', lesson:'l13'}]}]},
+  {name:'Compute', rank:0, say:'Something runs the code.', nodes:[{t:'Compute', k:'compute', lesson:'l9'}]},
+  {name:'Storage and data', rank:0, say:'It keeps files and data.', nodes:[{t:'Storage', k:'storage', lesson:'l10'}, {t:'Databases', k:'db', lesson:'l11'}]},
+  {name:'Network', rank:0, say:'A network connects it to users, safely.', nodes:[{t:'Networking', k:'net', lesson:'l12'}]},
+  {name:'Run and learn', rank:0, say:'Tools build it, connect its parts and learn from its data.', nodes:[{t:'Management, analytics, AI', k:'watch', lesson:'l13'}]}]},
  bill:{title:'Billing: choose, watch, get help', rows:[
   {name:'Choose', say:'Choose how to pay for each workload.', nodes:[{t:'Pricing models', k:'money', lesson:'l14'}]},
   {name:'Watch and help', say:'Watch the bill and know which support plan to call.', nodes:[{t:'Billing and support', k:'help', lesson:'l15'}]}]}

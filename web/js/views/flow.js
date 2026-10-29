@@ -39,20 +39,30 @@ function flowHTML(key){
     <div class="flow-row ${i === at ? 'cur' : 'past'}" style="--n:${r.nodes.length}">${r.nodes.map(flowNode).join('')}</div>`).join('');
   return `<div class="flow" data-flow="${key}"><b class="flow-t">${f.title}</b>
     <div class="flow-say" id="say-${key}"><small>Step ${at + 1} of ${f.rows.length}</small>${markNumbers(f.rows[at].say)}</div>
-    <div class="flow-pic" role="img" aria-label="${esc(f.rows.slice(0, at + 1).map(r => r.nodes.map(n => n.t).join(' and ')).join(', then '))}">${rows}</div>
+    <div class="flow-pic" role="${f.rows.some(r => r.nodes.some(n => n.lesson)) ? 'group' : 'img'}" aria-label="${esc(flowText(f, at))}">${rows}</div>
     <div class="btns flow-btns">
       ${at ? `<button class="btn ghost small" data-act="flowBack" data-id="${key}">‹ Previous step</button>` : ''}
-      ${last ? `<button class="btn small" data-act="flowOrder" data-id="${key}">Put the steps in order</button>
+      ${last && flowHasOrder(key) ? `<button class="btn small" data-act="flowOrder" data-id="${key}">Put the steps in order</button>
                <button class="link" data-act="flowRestart" data-id="${key}">Watch again</button>`
+             : last ? `<button class="btn small" data-act="flowRestart" data-id="${key}">Watch again</button>`
              : `<button class="btn small" data-act="flowNext" data-id="${key}">Next step ›</button>`}
     </div></div>`;
 }
 
-// The flow's steps, shuffled, to tap back into order. Reuses the diagram order game's checks and answer list.
-function flowGame(key){
-  const steps = FLOWS[key].rows.map((r, i) => ({text:r.name, rank:i}));
-  return {kind:'order', items:shuffled(steps, 'flow' + key), ranks:steps.map(s => s.rank), steps, left:[]};
+// What the picture shows so far, in words: each part with its note, and what links the steps.
+function flowText(f, at){
+  return f.rows.slice(0, at + 1).map((r, i) => (i && r.via ? r.via + ': ' : '') + r.nodes.map(n => n.t + (n.n ? ` (${n.n})` : '')).join(' and ')).join(', then ');
 }
+// The flow's steps, shuffled, to tap back into order. Steps with the same rank may swap. Reuses the diagram
+// order game's checks and answer list. Never starts in the right order.
+function flowGame(key){
+  const steps = FLOWS[key].rows.map((r, i) => ({text:r.name, rank:r.rank != null ? r.rank : i}));
+  const items = shuffled(steps, 'flow' + key);
+  if (items.every((it, i) => it.rank === steps[i].rank)) items.push(items.shift());
+  return {kind:'order', items, ranks:steps.map(s => s.rank), steps, left:[]};
+}
+// A game only when there is an order to find (at least three different places).
+function flowHasOrder(key){ return new Set(FLOWS[key].rows.map((r, i) => r.rank != null ? r.rank : i)).size >= 3; }
 function flowOrderHTML(key){
   const g = flowGame(key), st = flowUi.order[key], n = g.items.length, finished = st.seq.length === n;
   let right = 0;

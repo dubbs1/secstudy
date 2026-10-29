@@ -992,7 +992,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok((await text(p, '.flow-say small')) === `Step 2 of ${n}` && await p.$$eval('.flow-row', r => r.length) === 2 && await p.$('.flow-row.past') && await p.$('.flow-row.cur'), 'Next did not add a step');
     ok(await p.evaluate(() => document.activeElement.dataset.act === 'flowNext'), 'focus left Next');
     await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Step 2 of'));
-    ok((await p.getAttribute('.flow-pic', 'aria-label')).includes('Internet gateway'), 'picture has no text for screen readers');
+    ok((await p.getAttribute('.flow-pic', 'aria-label')).includes('Internet gateway') && (await p.getAttribute('.flow-pic', 'aria-label')).includes('Route 53 (DNS)'), 'picture has no text for screen readers, or no notes');
     await p.click('[data-act=flowBack]'); ok(await p.$$eval('.flow-row', r => r.length) === 1, 'Back did not remove a step');
     for (let i = 1; i < n; i++) await p.click('[data-act=flowNext]');
     ok(await p.$('[data-act=flowOrder]') && !(await p.$('[data-act=flowNext]')), 'last step does not offer the order game');
@@ -1014,12 +1014,32 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok((await text(p, '.game-score')).startsWith(`${order.length} of ${order.length} right`), 'perfect order not full marks');
     // Every flow's steps have distinct names, so the order game has one right answer.
     ok(await p.evaluate(() => Object.values(FLOWS).every(f => new Set(f.rows.map(r => r.name)).size === f.rows.length)), 'two steps share a name');
+    // Ranks never go down, no game starts already solved, and tied steps score in either order.
+    const r = await p.evaluate(() => {
+      const out = [];
+      for (const [k, f] of Object.entries(FLOWS)) {
+        const rk = f.rows.map((x, i) => x.rank != null ? x.rank : i);
+        if (rk.some((x, i) => i && x < rk[i - 1])) out.push(k + ' ranks go down');
+        if (!flowHasOrder(k)) continue;
+        const g = flowGame(k);
+        if (g.items.every((it, i) => it.rank === g.ranks[i])) out.push(k + ' starts solved');
+      }
+      // Estimate first, then the five tied steps in reverse of their listed order: still all right.
+      const l14 = flowGame('l14'), byRank = l14.items.map((it, i) => i).sort((a, b) => l14.items[a].rank - l14.items[b].rank);
+      flowUi.order.l14 = {seq:[byRank[0], ...byRank.slice(1).reverse()], run:99};
+      const div = document.createElement('div'); div.innerHTML = flowOrderHTML('l14'); delete flowUi.order.l14;
+      if (!div.querySelector('.game-score b').textContent.startsWith('6 of 6')) out.push('l14 ties not accepted: ' + div.querySelector('.game-score b').textContent);
+      if (flowHasOrder('tech')) out.push('tech has a game with no real order');
+      return out;
+    });
+    ok(!r.length, r.join(', '));
   });
   await check('How this section fits together: one per domain in Learn, links to its lessons, Back folds it (U11.4)', async () => {
     await seed(p, {v:2, tab:'learn'});
     ok(await p.$$eval('[data-act=domainFlow]', b => b.length) === 4, 'not one per domain');
     await p.click('[data-act=domainFlow][data-id=tech]');
     ok(await p.$('.dflow.open .flow') && await p.getAttribute('[data-act=domainFlow][data-id=tech]', 'aria-expanded') === 'true', 'did not open');
+    ok(await p.getAttribute('.dflow.open .flow-pic', 'role') === 'group', 'lesson links sit inside an image role');
     await p.click('[data-act=domainFlow][data-id=cc]');
     ok(await p.$$eval('.dflow.open', d => d.length) === 1, 'more than one open');
     const links = await p.evaluate(() => Object.keys(DOMAINS).every(d => FLOWS[d].rows.flatMap(r => r.nodes).every(n => LESSONS.some(l => l.id === n.lesson && l.d === d))
