@@ -23,7 +23,7 @@ const LOOKALIKES = [
    {q:'A news site expects large DDoS attacks on election night. It wants 24/7 help from an AWS response team and protection from the extra scaling costs.', a:'AWS Shield', x:'Shield Advanced adds the Shield Response Team and cost protection. WAF filters web requests but is not the DDoS service with a response team.'},
    {q:'A web app behind an Application Load Balancer must block SQL injection attempts.', a:'AWS WAF', x:'WAF inspects web requests at layer 7. Network Firewall filters VPC traffic and is not the usual answer for web attacks like SQL injection.'},
    {q:'A security team wants the same WAF rules and security group rules applied in all 40 accounts of its Organization, including accounts added later.', a:'AWS Firewall Manager', x:'Firewall Manager sets the rules once and applies them across the Organization. WAF alone is set up app by app.'},
-   {q:'Traffic from one known bad IP address must be explicitly denied for every instance in a subnet.', a:'Network ACL', x:'Network ACLs work at the subnet and support deny rules. Security groups have allow rules only, so they cannot deny one address.'}]},
+   {q:'Traffic from one known bad IP address must be explicitly denied for every instance in a subnet, using a free, built-in VPC feature with a simple rule.', a:'Network ACL', x:'Network ACLs work at the subnet, support deny rules and cost nothing. Security groups have allow rules only. Network Firewall could also do it, but it is a paid service for filtering a whole VPC.'}]},
 
  {id:'keys', t:'Keys, certificates or secrets?', items:[
    {n:'AWS Key Management Service (KMS)', cue:'Creates and manages encryption keys, built into most AWS services'},
@@ -72,7 +72,7 @@ const LOOKALIKES = [
    {q:'An app slowed down. The team wants to know whether AWS has a problem or scheduled maintenance affecting its instances.', a:'AWS Health Dashboard', x:'The Health Dashboard shows AWS-side events for your account. Trusted Advisor checks your own setup, not AWS outages.'},
    {q:'An architect wants to review a new workload against AWS best practices, pillar by pillar, and keep a list of improvements.', a:'AWS Well-Architected Tool', x:'The Well-Architected Tool guides a review against the six pillars. Trusted Advisor runs automatic checks but is not a pillar-by-pillar review.'}]},
 
- {id:'support', t:'Which support plan? (the five plans the exam uses)', items:[
+ {id:'support', t:'Which support plan?', note:'The five plans the exam uses. AWS changed its plans in December 2025: see lesson 15.', items:[
    {n:'Basic', cue:'Free: billing help, re:Post, core Trusted Advisor checks'},
    {n:'Developer', cue:'Business-hours email support, for testing and early development'},
    {n:'Business', cue:'24/7 phone, chat and email, all Trusted Advisor checks, under 1 hour for production system down'},
@@ -105,7 +105,7 @@ const LOOKALIKES = [
    {n:'Security', cue:'Keep data and workloads confidential, intact and available'},
    {n:'Operations', cue:'Run cloud services at agreed service levels'}],
   qs:[
-   {q:'A finance director wants to be sure cloud spending speeds up business goals and wants a business case for the move.', a:'Business', x:'Linking cloud investment to business outcomes is the Business perspective. Governance manages risk and spending once the program runs.'},
+   {q:'Company leaders want to be sure the cloud investment speeds up business goals, and want a business case and strategy for the move.', a:'Business', x:'Linking cloud investment to business outcomes is the Business perspective. Governance manages risk and spending once the program runs.'},
    {q:'Staff need new cloud skills, so the company plans training and changes to job roles.', a:'People', x:'Skills, training, culture and roles belong to the People perspective. Operations is about running the services.'},
    {q:'A program office tracks the benefits of the move, manages risk and keeps cloud spending under control.', a:'Governance', x:'Program management, risk and cloud financial management are in Governance. Business sets the goals; Governance steers the program.'},
    {q:'Engineers design the landing zone and the standard patterns teams will use to build new apps.', a:'Platform', x:'Architecture and the cloud platform belong to the Platform perspective. Operations runs and supports workloads afterwards.'}]},

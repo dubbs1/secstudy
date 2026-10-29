@@ -31,7 +31,7 @@ function drillView(){
   const x = D.set[D.i], opts = drillOpts(x), a = drillAnswer(x), p = D.picks[D.i], answered = p != null;
   const g = D.kind === 'look' ? LOOKALIKES.find(y => y.id === x.g) : null;
   let h = `<div class="card open drill"><div class="body"><div class="qhead"><span>${title} · ${D.i + 1} of ${D.set.length}</span><button class="link" data-act="dClose">Stop</button></div>
-    ${g && !D.group ? `<small class="task-tag">${g.t}</small>` : ''}<p class="qt">${x.q.q}</p><div>`;
+    ${g && !D.group ? `<small class="task-tag">${g.t}</small>` : ''}${g && g.note ? `<p class="muted small">${g.note}</p>` : ''}<p class="qt">${x.q.q}</p><div>`;
   opts.forEach((t, i) => {
     const cls = 'opt' + (answered ? (i === a ? ' right' : i === p ? ' wrong' : ' dim') : '');
     const why = answered && i === p && i !== a && D.kind === 'key' ? `<small class="why">${x.q.o[i][1]}</small>` : '';
