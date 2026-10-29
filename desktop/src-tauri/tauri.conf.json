@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AWS CP Study",
+  "mainBinaryName": "aws-cp-study",
+  "version": "1.0.0",
+  "identifier": "app.secstudy.awscp",
+  "build": {
+    "frontendDist": "../dist",
+    "beforeBuildCommand": "node prepare.js"
+  },
+  "app": {
+    "windows": [
+      { "title": "AWS CP Study", "width": 760, "height": 900, "minWidth": 380, "minHeight": 560 }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "shortDescription": "AWS Cloud Practitioner study tool",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "windows": {
+      "nsis": { "installMode": "currentUser" }
+    }
+  }
+}

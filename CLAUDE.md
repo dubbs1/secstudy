@@ -1,6 +1,8 @@
 # Notes for Claude Code
 
-AWS Cloud Practitioner study tool. One file, `index.html`: no build step, no dependencies.
+AWS Cloud Practitioner study tool. The app is one file, `index.html` (no build step, no dependencies).
+It also ships as an installable website (`manifest.webmanifest`, `sw.js`, `icons/`, GitHub Pages) and a
+Windows app (`desktop/`, Tauri 2, NSIS per-user installer on the Releases page). See README.md.
 
 ## Working rule: do it all automatically
 
@@ -10,6 +12,7 @@ push → open a pull request → wait for the GitHub `test` check to go green �
 Never merge with a failing or missing check. If a failure can't be fixed, stop and explain it in plain words.
 Explain results step by step, in plain words.
 No personal details (names, emails, chat or session links) in files, commit messages or pull requests: the repo is public.
+No AI attribution or filler: no "Generated with" or co-author lines, no cheerful asides, no em-dash flourishes. Plain, short text.
 
 ## Never break
 
@@ -33,11 +36,16 @@ Lessons follow this: 4 / 4 / 5 / 2.
 
 `cd tests && npm ci && npm test` (Playwright, pinned in `tests/package.json`; in a Claude Code cloud
 session the preinstalled Chromium is used, elsewhere run `npx playwright install chromium` once).
-One PASS/FAIL line per check. `.github/workflows/test.yml` runs the same on every push and pull request.
-Add a check for every new feature.
+One PASS/FAIL line per check. Add a check for every new feature.
+
+`.github/workflows/test.yml`: `browser` (the checks) → `windows` (build the installer, silent install,
+`tests/exe.test.js` against the running app through WebView2's debug port, restart, uninstall) →
+on main: `release` (when the version has no release) and `pages` (needs Settings > Pages > Source: GitHub Actions).
+Rust: `cargo check --release --target x86_64-pc-windows-msvc` in `desktop/src-tauri` after `node desktop/prepare.js`
+catches most Windows build errors from Linux. Pinned: @tauri-apps/cli 2.12.3, tauri 2.12.4, tauri-build 2.7.3.
+The service worker is registered only on https or localhost, so it stays off in the Windows app and in file:// use.
 
 ## Known next tasks
 
 1. 65-question, 90-minute timed mock weighted ~16/20/22/8 (needs ~40 more questions).
-2. Manifest + icon (home-screen shortcut shows a generic icon) and offline use.
-3. Deploy: private repo → Cloudflare Pages or Netlify. A private repo does not make a GitHub Pages site private.
+2. Code signing for the Windows installer (removes the SmartScreen prompt; needs a paid certificate).

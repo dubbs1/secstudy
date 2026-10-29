@@ -157,7 +157,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const r = await p.evaluate(() => [S.srs.q2.box, S.srs.q2.due === addDays(todayISO(), 3)]);
     ok(r[0] === 1 && r[1], 'right answer not pushed to 3 days: ' + r);
     await p.click('[data-act=rvClose]');
-    ok((await text(p, '#main .card')).includes('all caught up'), 'caught-up card missing');
+    ok((await text(p, '#main .card')).includes('Review: nothing due'), 'nothing-due card missing');
     // a miss comes back tomorrow
     await p.click('#nav [data-tab=practice]');
     await p.click('[data-act=pMode][data-v=all]');
@@ -248,6 +248,39 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       await q.context().close();
     });
   }
+
+  await check('installable app: manifest, icons, works offline', async () => {
+    const http = require('http');
+    const root = path.resolve(__dirname, '..');
+    const types = {'.html':'text/html', '.js':'text/javascript', '.png':'image/png', '.webmanifest':'application/manifest+json'};
+    const server = http.createServer((req, res) => {
+      const f = path.join(root, decodeURIComponent(req.url.split('?')[0]) === '/' ? 'index.html' : decodeURIComponent(req.url.split('?')[0]));
+      if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end(); }
+      res.writeHead(200, {'Content-Type':types[path.extname(f)] || 'application/octet-stream'}); fs.createReadStream(f).pipe(res);
+    });
+    await new Promise(r => server.listen(0, '127.0.0.1', r));
+    const base = `http://localhost:${server.address().port}/`;
+    const ctx = await browser.newContext({viewport:{width:390, height:800}});
+    try {
+      const q = await ctx.newPage();
+      q.on('pageerror', e => errors.push(e.message));
+      await q.goto(base);
+      const m = await q.evaluate(async () => {
+        const href = document.querySelector('link[rel=manifest]').href;
+        const man = await (await fetch(href)).json();
+        const icons = await Promise.all(man.icons.concat([{src:'icons/apple-touch-icon.png'}]).map(async i => (await fetch(new URL(i.src, href))).status));
+        await Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(() => no(new Error('offline cache (service worker) never started')), 10000))]);
+        return {man, icons};
+      });
+      ok(m.man.display === 'standalone' && m.man.start_url && m.man.icons.some(i => i.sizes === '512x512' && i.purpose === 'maskable'), 'manifest incomplete');
+      ok(m.icons.every(s => s === 200), 'missing icon: ' + m.icons);
+      await q.reload();   // let the service worker control the page and fill its cache
+      await q.waitForFunction(() => navigator.serviceWorker.controller);
+      await ctx.setOffline(true);
+      await q.reload();
+      ok((await text(q, '#main')).includes('Exam facts'), 'app did not load offline');
+    } finally { await ctx.close(); server.close(); }
+  });
 
   await check('no script errors anywhere above', async () => { ok(!errors.length, errors.join(' | ')); });
 

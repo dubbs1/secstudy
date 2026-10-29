@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#6D4AFF">
 <title>AWS CP Study</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="AWS CP Study">
 <style>
 :root{
   --brand:#6D4AFF;--brand-hover:#7C5CFF;--brand-press:#6243E6;--brand-soft:#F0EDFF;--on-brand:#fff;
@@ -145,6 +149,7 @@ table.facts td:last-child{text-align:right;font-weight:600}
     <button class="link" data-act="export">Export</button> ·
     <button class="link" data-act="import">Import</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <span id="installWrap" hidden> · <button class="link" data-act="install">Install app</button></span>
   </div>
 </div>
 
@@ -190,8 +195,8 @@ const LESSONS = [
        'Large offline transfers: the <b>AWS Snow family</b>. Database moves: <b>AWS DMS</b>.']},
  {id:'l5', d:'sec', due:'2026-11-06', t:'The shared responsibility model',
   steps:['Read the key points (5 min)','Write two columns, "AWS" and "Me", and sort these into them: data center guards, guest OS patches, hypervisor, security group rules, IAM users, hardware disposal (5 min)','Answer the 3 questions (5 min)'],
-  pts:['<b>AWS: security OF the cloud</b> — facilities, hardware, network, the virtualization layer, and the software that runs managed services.',
-       '<b>You: security IN the cloud</b> — your data, IAM, guest OS on EC2, apps, security groups, encryption choices.',
+  pts:['<b>AWS: security OF the cloud</b>: facilities, hardware, network, the virtualization layer, and the software that runs managed services.',
+       '<b>You: security IN the cloud</b>: your data, IAM, guest OS on EC2, apps, security groups, encryption choices.',
        'The split moves with the service: on <b>EC2</b> you patch the OS; on <b>RDS</b> AWS patches the OS and database engine; on <b>Lambda</b> AWS runs almost everything below your code.',
        '<b>Always yours</b>, whatever the service: your data, who can access it, and how you configure it.',
        'Shared controls: patch management, configuration management, awareness and training (each side for its own part).']},
@@ -209,13 +214,13 @@ const LESSONS = [
        '<b>Inspector</b>: scans EC2, container images and Lambda for software vulnerabilities.',
        '<b>Macie</b>: finds sensitive data (PII) in S3.',
        '<b>Shield</b>: DDoS protection. Standard is free and automatic; Advanced is paid with a response team.',
-       '<b>WAF</b>: web application firewall — blocks SQL injection, cross-site scripting, bad IPs at layer 7.',
+       '<b>WAF</b>: web application firewall. Blocks SQL injection, cross-site scripting, bad IPs at layer 7.',
        '<b>Security Hub</b>: one dashboard of security findings. <b>Detective</b>: investigates the root cause of findings.',
        '<b>KMS</b>: encryption keys. <b>Secrets Manager</b>: stores and rotates passwords and API keys. <b>ACM</b>: free TLS certificates.']},
  {id:'l8', d:'sec', due:'2026-11-11', t:'Compliance and governance',
   steps:['Read the key points (5 min)','Write one sentence on the difference between CloudTrail, CloudWatch and Config (5 min)','Answer the 3 questions (5 min)'],
   pts:['<b>AWS Artifact</b>: download AWS\'s compliance reports (SOC, ISO, PCI) and agreements.',
-       '<b>CloudTrail</b>: logs every API call — who did what, when, from where. Think "audit".',
+       '<b>CloudTrail</b>: logs every API call: who did what, when, from where. Think "audit".',
        '<b>CloudWatch</b>: metrics, logs and alarms for performance. Think "monitoring".',
        '<b>Config</b>: records resource configuration over time and checks it against rules. Think "is it set up right?"',
        '<b>Organizations</b>: manage many accounts; <b>service control policies (SCPs)</b> set the maximum permissions for accounts in it.',
@@ -225,7 +230,7 @@ const LESSONS = [
   pts:['<b>EC2</b>: virtual servers. Families: general purpose, compute optimized, memory optimized, storage optimized, accelerated computing.',
        '<b>Auto Scaling</b>: adds and removes instances to match demand. <b>Elastic Load Balancing</b>: spreads traffic across them.',
        '<b>Lambda</b>: run code without servers, pay per request and duration, up to 15 minutes per run.',
-       '<b>ECS / EKS</b>: run containers (EKS = Kubernetes). <b>Fargate</b>: serverless engine for them — no servers to manage. <b>ECR</b>: stores container images.',
+       '<b>ECS / EKS</b>: run containers (EKS = Kubernetes). <b>Fargate</b>: serverless engine for them, no servers to manage. <b>ECR</b>: stores container images.',
        '<b>Elastic Beanstalk</b>: upload code, AWS sets up the servers (PaaS). <b>Lightsail</b>: simple fixed-price servers for small sites.']},
  {id:'l10', d:'tech', due:'2026-11-15', t:'Storage',
   steps:['Read the key points (5 min)','List the S3 storage classes from most expensive to cheapest storage, with one use for each (7 min)','Answer the 3 questions (5 min)'],
@@ -241,7 +246,7 @@ const LESSONS = [
        '<b>DynamoDB</b>: serverless NoSQL key-value, single-digit millisecond latency at any scale.',
        '<b>Redshift</b>: data warehouse for analytics on large data with SQL.',
        '<b>ElastiCache</b>: in-memory cache (Redis / Memcached-compatible). <b>Neptune</b>: graph. <b>DocumentDB</b>: MongoDB-compatible.',
-       '<b>DMS</b>: Database Migration Service — move databases to AWS with little downtime.']},
+       '<b>DMS</b>: Database Migration Service. Moves databases to AWS with little downtime.']},
  {id:'l12', d:'tech', due:'2026-11-18', t:'Networking and content delivery',
   steps:['Read the key points (5 min)','Draw a VPC box with a public subnet, a private subnet, an internet gateway and a NAT gateway. Label which subnet holds the web server and which the database (8 min)','Answer the 3 questions (5 min)'],
   pts:['<b>VPC</b>: your private network in a Region. <b>Subnets</b> live in one AZ; public subnets route to an <b>internet gateway</b>.',
@@ -263,7 +268,7 @@ const LESSONS = [
        '<b>Savings Plans</b>: commit to $/hour for 1 or 3 years. <b>Compute Savings Plans</b> apply across instance families, Regions, Fargate and Lambda.',
        '<b>Reserved Instances</b>: commit to a specific instance setup for 1 or 3 years.',
        '<b>Spot Instances</b>: spare capacity up to 90 % off, can be taken back with a 2-minute warning. Only for work that can be interrupted.',
-       '<b>Dedicated Hosts</b>: a whole physical server for you — for licences tied to physical cores or strict compliance.',
+       '<b>Dedicated Hosts</b>: a whole physical server for you, for licences tied to physical cores or strict compliance.',
        'Data <b>in</b> to AWS is generally free; data <b>out</b> to the internet costs money. Pay less by using more (tiered pricing).',
        '<b>Pricing Calculator</b>: estimate before you build.']},
  {id:'l15', d:'bill', due:'2026-11-24', t:'Billing tools and support plans',
@@ -533,7 +538,7 @@ function load(){
   return s;
 }
 function save(){
-  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { toast('Could not save — storage is blocked or full'); }
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { toast('Could not save. Storage is blocked or full.'); }
 }
 
 /* ---------- helpers ---------- */
@@ -565,7 +570,7 @@ function renderTop(){
   const right = QUESTIONS.filter(q => S.ans[q.id] && S.ans[q.id].ok).length;
   const labsDone = LABS.filter(l => (S.labs[l.id] || []).filter(Boolean).length === l.steps.length).length;
   const left = daysUntil(EXAM_DATE);
-  const examTxt = left > 1 ? `${left} days to go` : left === 1 ? 'tomorrow' : left === 0 ? 'today — good luck' : 'done';
+  const examTxt = left > 1 ? `${left} days to go` : left === 1 ? 'tomorrow' : left === 0 ? 'today' : 'done';
   const pct = Math.round((done / LESSONS.length * 0.6 + right / QUESTIONS.length * 0.3 + labsDone / LABS.length * 0.1) * 100);
   const t = timerLeft();
   $('#top').innerHTML = `
@@ -582,7 +587,7 @@ function renderTop(){
 }
 
 /* ---------- question ---------- */
-// ctx: where the question is shown — 'l' lesson quiz, 'p' practice, 'r' review
+// ctx: where the question is shown: 'l' lesson quiz, 'p' practice, 'r' review
 function qHTML(q, pick, ctx){
   const answered = pick != null;
   let h = `<p class="qt">${q.q}</p><div>`;
@@ -631,7 +636,7 @@ function reviewCard(){
     if (!Object.keys(S.srs).length) return '';
     if (!due.length) {
       const nx = nextDue();
-      return `<div class="card"><div class="row" style="cursor:default"><span class="n done">✓</span><span class="t"><b>Review: all caught up</b>
+      return `<div class="card"><div class="row" style="cursor:default"><span class="n done">✓</span><span class="t"><b>Review: nothing due</b>
         <small>${nx ? `Next: ${nx.n} question${nx.n > 1 ? 's' : ''} on ${fmtDate(nx.date)}` : 'Nothing scheduled'}</small></span></div></div>`;
     }
     const n = Math.min(due.length, REVIEW_MAX);
@@ -769,7 +774,7 @@ function renderPractice(){
       <button data-act="pMode" data-v="todo" aria-selected="${S.pMode === 'todo'}">Not right yet</button>
       <button data-act="pMode" data-v="all" aria-selected="${S.pMode === 'all'}">All questions</button></div>`;
   const set = practiceSet();
-  if (!set.length) return h + `<div class="card"><div class="body" style="padding-top:16px">Nothing left here — every question in this set is right. Switch to <b>All questions</b> to go round again.</div></div>`;
+  if (!set.length) return h + `<div class="card"><div class="body" style="padding-top:16px">Every question in this set is right. Switch to <b>All questions</b> to go round again.</div></div>`;
   if (!pCur || !set.find(q => q.id === pCur)) pCur = set[0].id;
   const q = set.find(x => x.id === pCur), pos = set.indexOf(q);
   const l = LESSONS.find(x => x.id === q.l);
@@ -787,13 +792,13 @@ function renderPractice(){
 function renderLabs(){
   const fOpen = S.open === 'free';
   let h = `<div class="card ${fOpen ? 'open' : ''}"><button class="row" data-act="toggleFree" aria-expanded="${fOpen}">
-    <span class="n">$</span><span class="t"><b>Read first: the Free plan</b><small>Changed July 2025 — most tutorials are out of date</small></span><span class="chev">›</span></button>`;
+    <span class="n">$</span><span class="t"><b>The AWS Free plan</b><small>New rules since July 2025</small></span><span class="chev">›</span></button>`;
   if (fOpen) h += `<div class="body"><ul class="pts">
       <li>New accounts choose a <b>Free</b> or <b>Paid</b> plan at sign-up. These labs assume the <b>Free plan</b>.</li>
       <li>You get <b>$100 in credits</b>, and up to <b>$200</b> in total by doing activities in the console.</li>
       <li>The Free plan ends after <b>6 months</b> or when the credits run out, whichever comes first.</li>
-      <li>On the Free plan, overruns use up credits — they don't hit your card.</li>
-      <li>Still: clean up at the end of every lab so the credits last.</li></ul></div>`;
+      <li>On the Free plan, overruns use up credits, not your card.</li>
+      <li>Clean up at the end of every lab so the credits last.</li></ul></div>`;
   h += '</div>';
   LABS.forEach((lab, idx) => {
     const st = S.labs[lab.id] || [], n = st.filter(Boolean).length, all = n === lab.steps.length;
@@ -842,8 +847,7 @@ function renderTimer(){
     <div class="btns" style="justify-content:center">
       <button class="btn" data-act="tGo" style="min-width:120px">${running ? 'Pause' : (T.left != null ? 'Resume' : 'Start')}</button>
       <button class="btn ghost" data-act="tReset">Reset</button></div>
-    <p class="muted center" style="font-size:13.5px;margin:14px 0 0">One task, one timer. When it rings, stand up for a minute.</p>
-    </div></div>`;
+        </div></div>`;
 }
 function startTick(){
   clearInterval(tick);
@@ -860,7 +864,7 @@ function finishTimer(){
   clearInterval(tick);
   S.timer.end = null; S.timer.left = null; save();
   beep(); if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-  toast("Time's up — nice work");
+  toast("Time's up");
   render();
 }
 function beep(){
@@ -941,6 +945,7 @@ document.addEventListener('click', e => {
     case 'tReset': S.timer.end = null; S.timer.left = null; break;
     case 'export': exportProgress(); return;
     case 'import': $('#importFile').click(); return;
+    case 'install': if (installPrompt) { installPrompt.prompt(); installPrompt = null; $('#installWrap').hidden = true; } return;
     default: return;
   }
   save(); render();
@@ -984,6 +989,12 @@ function importProgress(file){
 }
 
 window.addEventListener('visibilitychange', () => { if (!document.hidden && S.timer.end && timerLeft() <= 0) finishTimer(); });
+/* ---------- installable app (only when served over https, or localhost for tests) ---------- */
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; $('#installWrap').hidden = false; });
+window.addEventListener('appinstalled', () => { $('#installWrap').hidden = true; });
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
+
 S = load();
 render();
 </script>

@@ -3,6 +3,7 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+
 jobs:
   browser:
     runs-on: ubuntu-latest
@@ -18,3 +19,106 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm test
+
+  # Builds the Windows installer, installs it, and tests the real app.
+  windows:
+    needs: browser
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+      - name: Build installer
+        working-directory: desktop
+        run: |
+          npm ci
+          npx tauri build
+      - name: Install test tools
+        working-directory: tests
+        run: npm ci
+      - name: Install, run and test the app
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = Get-ChildItem desktop/src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          Write-Host "Installer: $($setup.Name) ($([math]::Round($setup.Length / 1MB, 1)) MB)"
+          $p = Start-Process $setup.FullName -ArgumentList '/S' -PassThru
+          if (-not $p.WaitForExit(180000)) { throw 'installer did not finish in 3 minutes' }
+          $dir = Join-Path $env:LOCALAPPDATA 'AWS CP Study'
+          $exe = Join-Path $dir 'aws-cp-study.exe'
+          if (-not (Test-Path $exe)) { Get-ChildItem $env:LOCALAPPDATA -Recurse -Filter aws-cp-study.exe -ErrorAction SilentlyContinue | Select-Object -First 3 | Out-Host; throw "app not found at $exe" }
+          Get-Process aws-cp-study -ErrorAction SilentlyContinue | Stop-Process -Force
+          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
+          foreach ($phase in 'first', 'restart') {
+            $app = Start-Process $exe -PassThru
+            Push-Location tests
+            node exe.test.js $phase
+            $code = $LASTEXITCODE
+            Pop-Location
+            if ($app.HasExited) { throw "app closed by itself during '$phase'" }
+            Stop-Process -Id $app.Id -Force
+            Start-Sleep -Seconds 3
+            if ($code -ne 0) { throw "app checks failed ($phase)" }
+          }
+          $u = Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '/S' -PassThru
+          if (-not $u.WaitForExit(120000)) { throw 'uninstaller did not finish' }
+          Start-Sleep -Seconds 5
+          if (Test-Path $exe) { throw 'uninstall left the app behind' }
+          Write-Host 'Install, run, restart and uninstall all worked.'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+
+  # Publishes the installer on the Releases page when main gets a new version number.
+  release:
+    needs: [browser, windows]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: out
+      - name: Publish if this version has no release yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
+          if gh release view "v$v" >/dev/null 2>&1; then echo "v$v already released"; exit 0; fi
+          cp out/*-setup.exe "AWS-CP-Study-Setup-$v.exe"
+          sha256sum "AWS-CP-Study-Setup-$v.exe" > "AWS-CP-Study-Setup-$v.exe.sha256"
+          gh release create "v$v" "AWS-CP-Study-Setup-$v.exe" "AWS-CP-Study-Setup-$v.exe.sha256" \
+            --title "AWS CP Study $v" \
+            --notes "Windows installer. Download AWS-CP-Study-Setup-$v.exe and run it. If Windows says it protected your PC, choose More info, then Run anyway (the app is not code-signed)."
+
+  # Publishes the web app (installable on phone and desktop) to GitHub Pages.
+  pages:
+    needs: browser
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect site files
+        run: |
+          mkdir _site
+          cp -r index.html manifest.webmanifest sw.js icons _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+      - id: deploy
+        uses: actions/deploy-pages@v4
