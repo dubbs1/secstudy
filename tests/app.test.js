@@ -668,6 +668,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(!left(q) && await q.evaluate(() => S.tab === 'learn' && !S.openLesson), 'Back from a lesson did not return to the list');
     await back(q);
     ok(!left(q) && await q.evaluate(() => S.tab === 'today'), 'Back from Learn did not go to Today');
+    await q.click('[data-act=toggleFacts]');
+    await back(q);
+    ok(!left(q) && await q.evaluate(() => !S.open), 'Back did not fold the exam facts card first');
     await back(q);
     ok(left(q), 'Back on Today with nothing open did not leave the app');
     await q.context().close();

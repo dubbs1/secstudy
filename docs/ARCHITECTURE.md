@@ -65,6 +65,10 @@ Adding things:
   that control went away), an opened card is scrolled into view, and a new answer is announced through
   the permanent `#announce` status region.
 - Events are delegated: one click, change and input handler for the whole page, keyed on `data-act`.
+- Back button: one spare history entry is added on the first tap or key press (browsers skip entries added
+  before any interaction, so Back before the first tap leaves the app; the open lesson comes back on the
+  next launch). Back closes what is on screen, folds an expanded card, returns to Today, and only then leaves.
+  Close buttons never touch history. The URL never changes.
 
 ### Saved data (`awsCourse1`, version 2)
 

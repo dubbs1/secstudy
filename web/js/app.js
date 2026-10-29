@@ -81,6 +81,7 @@ function backOneStep(){
   }
   else if (S.tab === 'labs' && labFromLesson && S.openLesson) { S.tab = 'learn'; reveal = '#lessonTop'; }
   else if (S.tab === 'today' && S.review) { S.review = null; reveal = '#nextUpBtn'; }
+  else if (S.open) { S.open = null; }   // an expanded card (exam facts, weak spots, Free plan) folds first
   else if (S.tab !== 'today') { S.tab = 'today'; window.scrollTo(0, 0); }
   else return false;
   return true;
@@ -184,7 +185,7 @@ document.addEventListener('click', e => {
     case 'theme': S.theme = THEMES[(THEMES.indexOf(S.theme) + 1) % THEMES.length]; break;
     case 'export': exportProgress(); return;
     case 'import': $('#importFile').click(); return;
-    case 'importYes': finishImport(true); render(); window.scrollTo(0, 0); $('#top h1').focus({preventScroll:true}); return;
+    case 'importYes': finishImport(true); lessonFrom = null; labFromLesson = false; render(); window.scrollTo(0, 0); $('#top h1').focus({preventScroll:true}); return;
     case 'importNo': finishImport(false); return;
     case 'install': if (installPrompt) { installPrompt.prompt(); installPrompt = null; $('#installWrap').hidden = true; } return;
     default: return;
