@@ -21,6 +21,7 @@ function render(){
   applyTheme();
   document.querySelectorAll('#nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === S.tab));
   renderTop();
+  $('#advanceBar').innerHTML = pathBanner();
   const views = {today:renderToday, learn:renderLearn, practice:renderPractice, labs:renderLabs};
   $('#main').innerHTML = (views[S.tab] || renderToday)();
   renderTimerButton();
@@ -117,13 +118,29 @@ document.addEventListener('keydown', e => {
 document.addEventListener('click', e => {
   const tabBtn = e.target.closest('#nav button');
   if (tabBtn) {
-    labFromLesson = false;
+    labFromLesson = false; stayHere();
     if (S.tab === 'learn' && tabBtn.dataset.tab === 'learn') { S.openLesson = null; lessonFrom = null; }   // Learn again: back to the list
     S.tab = tabBtn.dataset.tab; save(); render(); window.scrollTo(0, 0); return;
   }
   const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return;
   const {act, id} = b.dataset;
+  if (pathUi.next && act !== 'advGo' && act !== 'advStay') stayHere();   // any other tap keeps you where you are
   switch (act) {
+    // The guided path: move on now, or stay; scene taps; "I've read these" style buttons
+    case 'advGo': goNextPart(); return;
+    case 'advStay': stayHere(); break;
+    case 'sceneTap': {
+      const seen = sceneUi[id] || (sceneUi[id] = []), i = +b.dataset.i, it = SCENES[id].items[i];
+      if (!seen.includes(i)) seen.push(i);
+      studied(); announce(`${it.t}: ${it.aws}. ${it.n}`);
+      if (seen.length === SCENES[id].items.length) finishPart(id, [0, 'scene']);
+      focusTo = `[data-act=sceneTap][data-i="${i}"]`; break;
+    }
+    case 'partDone': {
+      const stage = +b.dataset.i;
+      if (stage === 0) { const st = S.steps[id] || []; st[0] = true; S.steps[id] = st; }   // reading the key points is the Read task
+      studied(); finishPart(id, [stage, b.dataset.v]); break;
+    }
     case 'toggleFacts': S.open = S.open === 'facts' ? null : 'facts'; if (S.open) reveal = '[data-act=toggleFacts]'; break;
     case 'toggleFree':  S.open = S.open === 'free' ? null : 'free'; if (S.open) reveal = '[data-act=toggleFree]'; break;
     case 'toggleWeak':  S.open = S.open === 'weak' ? null : 'weak'; if (S.open) reveal = '[data-act=toggleWeak]'; break;
@@ -141,6 +158,7 @@ document.addEventListener('click', e => {
     case 'reveal': {
       const sc = SCENARIOS[id][+b.dataset.i];
       revealed[id + ':' + b.dataset.i] = true; focusTo = `#ans-${id}-${b.dataset.i}`; announce(sc.answer + ' ' + sc.why);
+      if (SCENARIOS[id].every((x, i) => revealed[id + ':' + i])) finishPart(id, [2, 'cases']);
       render(); return;   // nothing to save
     }
     case 'goLab':       labFromLesson = S.tab === 'learn' && !!S.openLesson; S.tab = 'labs'; S.open = null; S.openLab = id; reveal = `[data-act=openLab][data-id="${id}"]`; break;
@@ -161,7 +179,7 @@ document.addEventListener('click', e => {
       if (ctx === 'l') { live[qid] = i; S.current = QUESTIONS.find(q => q.id === qid).l; } else live[ctx + ':' + qid] = i;
       if (ctx === 'r' && i === QUESTIONS.find(q => q.id === qid).a) S.review.right++;
       const lid = QUESTIONS.find(q => q.id === qid).l, qs = qsFor(lid);
-      if (ctx === 'l' && qs.every(q => S.ans[q.id])) { const st = S.steps[lid] || []; st[LESSONS.find(l => l.id === lid).steps.length - 1] = true; S.steps[lid] = st; }
+      if (ctx === 'l' && qs.every(q => S.ans[q.id])) { const st = S.steps[lid] || []; st[LESSONS.find(l => l.id === lid).steps.length - 1] = true; S.steps[lid] = st; finishPart(lid, [3, null]); }
       announceNext = true; studied();
       break;
     }
@@ -206,7 +224,8 @@ document.addEventListener('click', e => {
       const c = ui.cards[id];
       const card = c.order[c.pos], first = !c.again.includes(card);
       if (act === 'cardGot') { if (first) c.got++; } else { if (first) c.again.push(card); c.order.push(card); }
-      c.pos++; c.flipped = false; focusTo = '.flipcard, .deck-done .btn'; break;
+      c.pos++; c.flipped = false; if (c.pos >= c.order.length) finishPart(id, [0, 'cards']);
+      focusTo = '.flipcard, .deck-done .btn'; break;
     }
     case 'cardsRestart': delete ui.cards[id]; focusTo = '.flipcard'; break;
     case 'gPick': {
@@ -215,10 +234,11 @@ document.addEventListener('click', e => {
       announce(v === q.answer ? 'Right.' : `Not quite. It is ${(q.opts || g.options)[q.answer]}.`);
       focusTo = '[data-act=gNext]'; break;
     }
-    case 'gNext': { gameState({id}).cur++; focusTo = '.game .chipbtn:not(:disabled), .game-score .link'; break; }
+    case 'gNext': { const st = gameState({id}); st.cur++; if (st.cur >= gameQuestions(LESSONS.find(l => l.id === id)).qs.length) finishPart(id, [1, 'test']); focusTo = '.game .chipbtn:not(:disabled), .game-score .link'; break; }
     case 'gOrder': {
       const g = gameQuestions(LESSONS.find(l => l.id === id)), st = gameState({id}), it = g.items[+b.dataset.i];
       st.seq.push(+b.dataset.i); studied();
+      if (st.seq.length === g.items.length) finishPart(id, [1, 'test']);
       announce(tapSaid = g.ranks[st.seq.length - 1] === it.rank ? `${it.text}: right.` : `${it.text}: not there. It goes at ${goesAt(g, st, +b.dataset.i)}.`);
       focusTo = '.game .chipbtn:not(:disabled), .game-score .link'; break;
     }
@@ -226,6 +246,7 @@ document.addEventListener('click', e => {
     case 'flowNext': case 'flowBack': {
       const f = FLOWS[id], at = Math.max(0, Math.min(f.rows.length - 1, flowAt(id) + (act === 'flowNext' ? 1 : -1)));
       flowUi.at[id] = at; studied();
+      if (LESSONS.some(l => l.id === id) && at === f.rows.length - 1 && !flowHasOrder(id)) finishPart(id, [1, 'how']);
       announce(`Step ${at + 1} of ${f.rows.length}. ${plain(f.rows[at].say)}`);
       focusTo = `[data-flow="${id}"] [data-act=${act}], [data-flow="${id}"] [data-act=flowOrder], [data-flow="${id}"] [data-act=flowNext]`; break;
     }
@@ -234,6 +255,7 @@ document.addEventListener('click', e => {
     case 'flowPick': {
       const g = flowGame(id), st = flowUi.order[id], it = g.items[+b.dataset.i];
       st.seq.push(+b.dataset.i); studied();
+      if (st.seq.length === g.items.length && LESSONS.some(l => l.id === id)) finishPart(id, [1, 'how']);
       tapSaid = g.ranks[st.seq.length - 1] === it.rank ? `${it.text}: right.` : `${it.text}: not there. It goes at ${goesAt(g, st, +b.dataset.i)}.`;
       if (st.seq.length < g.items.length) announce(tapSaid);   // the last tap is read out with the score
       focusTo = '.game .chipbtn:not(:disabled), .game-score + .flow-btns .btn'; break;
@@ -242,15 +264,19 @@ document.addEventListener('click', e => {
     case 'simToggle': case 'simPick': {
       const before = SIMS[id].goals.map(g => simGoal(id, g));
       if (act === 'simToggle') { const on = simOn(id); on[b.dataset.v] = !on[b.dataset.v]; simUi.last = b.dataset.v; simUi.lastKey = id; }
-      else simUi.pick[id] = b.dataset.v;
+      else { simUi.pick[id] = b.dataset.v; (simUi.tried[id] = simUi.tried[id] || {})[b.dataset.v] = true; }
       studied(); announce(simSay(id, before));
+      // What if is done when every goal is met (build) or every option has been tried (pick).
+      const sm = SIMS[id];
+      if (sm.kind === 'build' ? sm.goals.every(g => g.never || simGoal(id, g).ok) : sm.options.every(o => simUi.tried[id] && simUi.tried[id][o.id])) finishPart(id, [2, 'sim']);
       focusTo = `[data-sim="${id}"] [data-v="${b.dataset.v}"]`; break;
     }
     case 'simWhy': { const i = +b.dataset.i; simUi.open[id] = simUi.open[id] === i && !SIMS[id].map ? null : i; if (SIMS[id].map) simUi.play = {key:id, gi:i}; focusTo = `[data-sim="${id}"] [data-act=simWhy][data-i="${i}"]`; break; }
     case 'domainFlow': flowUi.open = flowUi.open === id ? null : id; if (flowUi.open) { reveal = `[data-act=domainFlow][data-id="${id}"]`; studied(); } break;
     case 'gCol': {
       const c = VISUALS[id].cols[+b.dataset.i], v = +b.dataset.v;
-      gameState({id}).cols[b.dataset.i] = v; studied();
+      const gs = gameState({id}); gs.cols[b.dataset.i] = v; studied();
+      if (Object.keys(gs.cols).length === VISUALS[id].cols.length) finishPart(id, [1, 'test']);
       announce(tapSaid = v === c.you ? `${c.title}: right.` : `${c.title}: not quite. You manage the top ${c.you}.`);
       focusTo = '.who button.who-c, .game-score .link'; break;
     }
@@ -272,7 +298,9 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (t.dataset.act === 'step') {
     const st = S.steps[t.dataset.id] || []; st[+t.dataset.i] = t.checked; S.steps[t.dataset.id] = st;
-    S.current = t.dataset.id; studied(); save(); render();
+    S.current = t.dataset.id; studied();
+    if (t.checked && +t.dataset.i === 0) finishPart(t.dataset.id, [0, 'points']);   // ticking "Read the key points"
+    save(); render();
   } else if (t.dataset.act === 'labStep') {
     const st = S.labs[t.dataset.id] || []; st[+t.dataset.i] = t.checked; S.labs[t.dataset.id] = st;
     studied(); save(); render();

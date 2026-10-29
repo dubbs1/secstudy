@@ -75,17 +75,19 @@ function lessonView(l){
 
 function stageHTML(l, st, qs){
   if (st === 0) {
-    const cards = modeOf(l, 0, 'points') === 'cards';
-    return `${taskHTML(l, 0)}${modeSwitch(l, 0, [['points', 'Key points'], ['cards', 'Flip cards']])}` + (cards ? cardsHTML(l)
+    // Picture it (an everyday scene), then the key points, then flip cards: each moves on to the next when done.
+    const mode = modeOf(l, 0, SCENES[l.id] ? 'scene' : 'points');
+    return `${taskHTML(l, 0)}${modeSwitch(l, 0, [...(SCENES[l.id] ? [['scene', 'Picture it']] : []), ['points', 'Key points'], ['cards', 'Flip cards']])}` + (mode === 'cards' ? cardsHTML(l)
+      : mode === 'scene' ? sceneHTML(l)
       : `<p class="colour-key"><b>Terms to know</b> in this lesson's colour · <span class="num">numbers</span> the exam likes to ask about</p>
-         <ul class="pts">${l.pts.map(p => `<li>${markNumbers(p)}</li>`).join('')}</ul>`);
+         <ul class="pts">${l.pts.map(p => `<li>${markNumbers(p)}</li>`).join('')}</ul>${partDoneBtn(l, 0, 'points', 'I\'ve read these: flip cards next')}`);
   }
   if (st === 1) {
     // How it works (a picture that builds up step by step), the lesson's diagram, and its game.
     const mode = modeOf(l, 1, 'how');
     return modeSwitch(l, 1, [['how', 'How it works'], ['look', 'Picture'], ['test', 'Test yourself']])
       + (mode === 'test' ? gameHTML(l) : mode === 'how' ? flowHTML(l.id)
-      : `<p class="muted lead">Look at the picture for a minute, then say what it shows in your own words. Then tap Test yourself.</p>${markNumbers(visualHTML(VISUALS[l.id]))}`);
+      : `<p class="muted lead">Look at the picture for a minute, then say what it shows in your own words.</p>${markNumbers(visualHTML(VISUALS[l.id]))}${partDoneBtn(l, 1, 'look', 'I\'ve looked: test me')}`);
   }
   if (st === 2) return tryHTML(l);
   if (st === 3) return `${taskHTML(l, 2)}${quizHTML(l, qs)}`;

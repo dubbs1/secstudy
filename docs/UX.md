@@ -138,3 +138,16 @@ Each lesson's Try step opens on "What if", a small sandbox (data in `web/js/cont
   a dot along its path; it stops with ✗ at the first missing or blocking part, with ✓ at a defence doing its job
   (WAF, MFA), or arrives. Test buttons carry the full goal name for screen readers; motion is skipped when
   reduced motion is asked for.
+
+### U13. A guided path, and Picture it
+Each lesson is one line of parts: Read (Picture it, Key points, Flip cards), See (How it works, Picture, Test
+yourself), Try (What if, Situations), Check, Done. Data for the scenes in `web/js/content/scenes.js`.
+- AC13.1 Read opens on "Picture it": an everyday scene (emoji pictures, at least 4 per lesson); tapping a picture
+  shows the AWS idea it stands for, with one line linking the two.
+- AC13.2 Finishing a part moves on to the next by itself after a short pause, shown in a banner with a timer
+  bar, Go now and Stay here, and read out. Finished means: every picture tapped; "I've read these" (or the Read
+  task ticked); the deck done; the How it works order game done (or the last step, when it has no game); "I've
+  looked"; the game done; every What if goal met (build) or every option tried (pick); every situation opened;
+  every quiz question answered.
+- AC13.3 Each part moves you on once per visit: going back to look again never bounces you forward. Any other tap
+  cancels a waiting move. Finished parts show ✓ on their tab.

@@ -3,7 +3,7 @@
 // pick:  choose one option and see what it can and can't do. Per-visit state only.
 // A build sandbox with a `map` draws the real setup: its parts are switched on the map, and each goal is a test
 // that sends a request along its path (a moving dot) until it arrives or is stopped.
-const simUi = {on:{}, pick:{}, open:{}, play:null};   // parts on, option picked, open goal, test to animate next
+const simUi = {on:{}, pick:{}, open:{}, play:null, tried:{}};   // parts on, option picked, open goal, test to animate next
 
 function simOn(key){
   const sim = SIMS[key];
