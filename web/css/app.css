@@ -461,3 +461,4 @@ button.fnode{width:100%;font:inherit;font-size:13.5px}
 .adv-t{flex:1 1 160px;font-size:14.5px}
 .adv-bar{position:absolute;left:0;bottom:0;height:4px;width:100%;background:var(--ok);transform-origin:left;animation:advBar linear forwards}
 @keyframes advBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+body:has(#advanceBar .advance) .wrap{padding-bottom:150px}   /* the banner never hides the end of the page */

@@ -1,5 +1,5 @@
 // "Picture it": an everyday scene per lesson, opened at the start of Read. Each thing in the scene is a picture
-// (an emoji) of something familiar; tapping it shows the AWS idea it stands for. Data only, drawn by views/scene.js.
+// (an emoji) of something familiar; tapping it shows the AWS idea it stands for. Data only, drawn by views/path.js.
 // e = picture, t = the everyday thing, aws = what it stands for, n = one line that links the two.
 const SCENES = {
  l1:{title:'Getting around town', items:[
@@ -51,9 +51,9 @@ const SCENES = {
   {e:'🌡️', t:'A thermostat with an alarm', aws:'CloudWatch', n:'Metrics, logs and alarms.'},
   {e:'📁', t:'The landlord\'s safety certificates', aws:'AWS Artifact', n:'AWS\'s own compliance reports, such as SOC and ISO.'},
   {e:'📏', t:'House rules for every flat', aws:'Organizations SCPs', n:'The most any member account may do.'},
-  {e:'🧑‍🔧', t:'An advisor who walks round and suggests fixes', aws:'Trusted Advisor', n:'Checks for cost, security, performance and limits.'}]},
+  {e:'🧑‍🔧', t:'An advisor who walks round and suggests fixes', aws:'Trusted Advisor', n:'Checks for cost, security, performance, fault tolerance and service limits.'}]},
  l9:{title:'A busy restaurant kitchen', items:[
-  {e:'🖥️', t:'Renting a computer by the hour', aws:'EC2', n:'Virtual servers you choose and run.'},
+  {e:'🖥️', t:'Renting a computer for as long as you need it', aws:'EC2', n:'Virtual servers you choose and run.'},
   {e:'🚦', t:'A host seating guests at free tables', aws:'Elastic Load Balancing', n:'Spreads requests across servers.'},
   {e:'👩‍🍳', t:'Calling in more cooks when it gets busy', aws:'Auto Scaling', n:'Adds and removes servers to match demand.'},
   {e:'🧞', t:'A genie who does one task, then vanishes', aws:'Lambda', n:'Code runs when asked, up to 15 minutes; no server to manage.'},
@@ -75,7 +75,7 @@ const SCENES = {
   {e:'⛩️', t:'The main gate to the street', aws:'Internet gateway', n:'The door between the VPC and the internet.'},
   {e:'👮', t:'A guard at the corner who checks both ways', aws:'Network ACL', n:'On the subnet. Stateless: replies are checked again.'},
   {e:'🔒', t:'The lock on each house, which remembers who went out', aws:'Security group', n:'On the instance. Stateful: replies are let back in.'},
-  {e:'📮', t:'A post box: letters go out, nobody walks in', aws:'NAT gateway', n:'Private servers reach out; nothing reaches them.'},
+  {e:'📮', t:'A post box: letters go out, nobody walks in', aws:'NAT gateway', n:'Private servers start connections out and get the replies; nobody outside can start one in.'},
   {e:'📖', t:'The phone book', aws:'Route 53', n:'DNS: turns a name into an address.'}]},
  l13:{title:'Running a deli', items:[
   {e:'📐', t:'A blueprint you build from again and again', aws:'CloudFormation', n:'Infrastructure as code, from templates.'},

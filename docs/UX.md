@@ -144,8 +144,10 @@ Each lesson is one line of parts: Read (Picture it, Key points, Flip cards), See
 yourself), Try (What if, Situations), Check, Done. Data for the scenes in `web/js/content/scenes.js`.
 - AC13.1 Read opens on "Picture it": an everyday scene (emoji pictures, at least 4 per lesson); tapping a picture
   shows the AWS idea it stands for, with one line linking the two.
-- AC13.2 Finishing a part moves on to the next by itself after a short pause, shown in a banner with a timer
-  bar, Go now and Stay here, and read out. Finished means: every picture tapped; "I've read these" (or the Read
+- AC13.2 Finishing a part offers the next one in a banner, read out. Parts with nothing left to read (I've read
+  these, I've looked, the deck done) move on by themselves after a short pause, with a timer bar, Go now and Stay
+  here. Parts that end on an explanation (the last answer, situation, score, What if result or picture) wait for
+  Next, so the explanation is never taken away. Finished means: every picture tapped; "I've read these" (or the Read
   task ticked); the deck done; the How it works order game done (or the last step, when it has no game); "I've
   looked"; the game done; every What if goal met (build) or every option tried (pick); every situation opened;
   every quiz question answered.

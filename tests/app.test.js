@@ -1162,7 +1162,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const n = await p.evaluate(() => SCENES.l3.items.length);
     for (let i = 0; i < n; i++) await p.click(`[data-act=sceneTap][data-i="${i}"]`);
     ok((await text(p, '.advance')).includes('Picture it done') && (await text(p, '.advance')).includes('Next: Key points'), 'no banner after the last picture');
-    await p.waitForFunction(() => document.querySelector('[data-act=mode][aria-pressed=true]').dataset.v === 'points', null, {timeout:5000});
+    // A part that ends on an explanation waits: the last card stays open until Next is tapped.
+    await p.waitForTimeout(2600);
+    ok(await p.$('.advance [data-act=advGo]') && await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'scene', 'moved on while the explanation was showing');
+    await p.click('[data-act=advGo]');
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'points' && await p.evaluate(() => document.activeElement.dataset.v === 'points'), 'Next did not open Key points with focus on its tab');
     ok(!(await p.$('.advance')) && (await text(p, '[data-act=mode][data-v=scene]')).includes('✓'), 'did not move to Key points, or no tick on Picture it');
     // Going back to a finished part and tapping again does not move you on again.
     await p.click('[data-act=mode][data-v=scene]'); await p.click('[data-act=sceneTap][data-i="0"]');
@@ -1171,6 +1175,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('[data-act=mode][data-v=points]'); await p.click('[data-act=partDone]');
     ok(await p.evaluate(() => S.steps.l3 && S.steps.l3[0] === true), 'I\'ve read these did not tick the Read task');
     await p.click('[data-act=advStay]');
+    ok(await p.evaluate(() => document.activeElement.dataset.act === 'partDone'), 'focus lost after Stay here');
     await p.waitForTimeout(2600);
     ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'points' && !(await p.$('.advance')), 'Stay here did not stay');
     await seed(p, {v:2, tab:'learn', openLesson:'l9'});
@@ -1188,7 +1193,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       if (i < qs.length - 1) await p.click('[data-act=lqNext]');
     }
     ok((await text(p, '.advance')).includes('Next: Done'), 'finishing the quiz does not lead to Done');
-    await p.waitForFunction(() => S.stage.l1 === 4, null, {timeout:5000});
+    await p.waitForTimeout(2600);
+    ok(await p.evaluate(() => S.stage.l1 === 3) && await p.$('.fb'), 'the last answer\'s explanation was taken away');
+    await p.click('[data-act=advGo]');
+    ok(await p.evaluate(() => S.stage.l1 === 4), 'Next did not open Done');
   });
 
   await check('the content security policy blocks injected script, from disk and from the website', async () => {

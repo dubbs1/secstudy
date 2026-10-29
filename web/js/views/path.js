@@ -14,22 +14,28 @@ function nextPart(part){
   const i = PATH.findIndex(p => p[0] === part[0] && p[1] === part[1]);
   return i >= 0 ? PATH[i + 1] || null : null;
 }
-// Called when a tap finishes a part: marks it, then (the first time only) queues the move to the next part.
-function finishPart(lid, part){
+// Called when a tap finishes a part: marks it, then (the first time only) offers the move to the next part.
+// auto: move by itself after a pause. Parts that end on feedback (an answer, a score) pass false: the banner then
+// waits for Next, so the explanation stays on screen until it has been read.
+function finishPart(lid, part, auto = true){
   const k = `${lid}:${part[0]}:${part[1]}`;
   if (pathUi.done[k]) return;
   pathUi.done[k] = true;
   const to = nextPart(part); if (!to) return;
   pathUi.next = {id:lid, from:part, to};
-  clearTimeout(pathUi.timer); pathUi.timer = setTimeout(goNextPart, ADVANCE_MS);
+  pathUi.back = controlKey(document.activeElement);   // where focus returns after Stay here
+  clearTimeout(pathUi.timer); pathUi.timer = auto ? setTimeout(goNextPart, ADVANCE_MS) : null;
 }
-function stayHere(){ clearTimeout(pathUi.timer); pathUi.next = null; }
+function stayHere(){ clearTimeout(pathUi.timer); pathUi.timer = null; pathUi.next = null; }
 function goNextPart(){
   const n = pathUi.next; stayHere();
   if (!n || S.tab !== 'learn' || S.openLesson !== n.id) { render(); return; }
   S.stage[n.id] = n.to[0]; S.current = n.id;
   if (n.to[1]) ui.mode[n.id + ':' + n.to[0]] = n.to[1];
-  reveal = '#lessonTop'; focusTo = '[data-act=stage][aria-current=step]';
+  // Within a stage focus goes to the part's tab; to a new stage, to the stage strip. Either way it is said.
+  const sameStage = n.to[0] === n.from[0];
+  reveal = '#lessonTop'; focusTo = sameStage ? '[data-act=mode][aria-pressed=true]' : '[data-act=stage][aria-current=step]';
+  announce(`Now: ${sameStage || !n.to[1] ? '' : STAGES[n.to[0]] + ', '}${partLabel(n.to)}.`);
   save(); render();
 }
 // The banner at the bottom of the screen while a move is waiting.
@@ -37,8 +43,9 @@ function pathBanner(){
   const n = pathUi.next; if (!n) return '';
   return `<div class="advance"><span class="adv-check" aria-hidden="true">✓</span>
     <span class="adv-t"><b>${partLabel(n.from)} done.</b> Next: ${n.to[0] !== n.from[0] && n.to[1] ? `${STAGES[n.to[0]]} · ` : ''}${partLabel(n.to)}</span>
-    <button class="btn small" data-act="advGo">Go now</button><button class="link" data-act="advStay">Stay here</button>
-    <i class="adv-bar" style="animation-duration:${ADVANCE_MS}ms" aria-hidden="true"></i></div>`;
+    ${pathUi.timer ? `<button class="btn small" data-act="advGo">Go now</button><button class="link" data-act="advStay">Stay here</button>
+    <i class="adv-bar" style="animation-duration:${ADVANCE_MS}ms" aria-hidden="true"></i>`
+      : `<button class="btn small" data-act="advGo">Next ›</button><button class="link" data-act="advStay">Not yet</button>`}</div>`;
 }
 
 /* Picture it: tap each everyday thing to see the AWS idea it stands for */
