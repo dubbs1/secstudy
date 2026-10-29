@@ -33,6 +33,7 @@ function lessonList(){
   for (const [d, D] of Object.entries(DOMAINS)) {
     const ls = LESSONS.filter(l => l.d === d), n = ls.filter(l => S.done[l.id]).length;
     h += `<section class="group"><h2 class="group-h">${chip(d)}${D.name}<small>${D.w} % of the exam · ${n}/${ls.length} done</small></h2>`;
+    if (FLOWS[d]) h += domainFlowHTML(d);
     for (const l of ls) {
       const s = lessonStatus(l), done = !!S.done[l.id];
       h += `<div class="card"><button class="row" data-act="openLesson" data-id="${l.id}">
@@ -80,8 +81,10 @@ function stageHTML(l, st, qs){
          <ul class="pts">${l.pts.map(p => `<li>${markNumbers(p)}</li>`).join('')}</ul>`);
   }
   if (st === 1) {
-    const test = modeOf(l, 1, 'look') === 'test';
-    return modeSwitch(l, 1, [['look', 'Look'], ['test', 'Test yourself']]) + (test ? gameHTML(l)
+    // How it works (a picture that builds up step by step), the lesson's diagram, and its game.
+    const mode = modeOf(l, 1, 'how');
+    return modeSwitch(l, 1, [['how', 'How it works'], ['look', 'Picture'], ['test', 'Test yourself']])
+      + (mode === 'test' ? gameHTML(l) : mode === 'how' ? flowHTML(l.id)
       : `<p class="muted lead">Look at the picture for a minute, then say what it shows in your own words. Then tap Test yourself.</p>${markNumbers(visualHTML(VISUALS[l.id]))}`);
   }
   if (st === 2) return tryHTML(l);

@@ -88,6 +88,7 @@ function backOneStep(){
   }
   else if (S.tab === 'labs' && labFromLesson && S.openLesson) { S.tab = 'learn'; reveal = '#lessonTop'; }
   else if (S.tab === 'today' && S.review) { S.review = null; reveal = '#nextUpBtn'; }
+  else if (S.tab === 'learn' && flowUi.open) { reveal = `[data-act=domainFlow][data-id="${flowUi.open}"]`; flowUi.open = null; }
   else if (S.open) { S.open = null; }   // an expanded card (exam facts, weak spots, Free plan) folds first
   else if (S.tab !== 'today') { S.tab = 'today'; window.scrollTo(0, 0); }
   else return false;
@@ -220,6 +221,22 @@ document.addEventListener('click', e => {
       announce(tapSaid = g.ranks[st.seq.length - 1] === it.rank ? `${it.text}: right.` : `${it.text}: not there. It goes at ${goesAt(g, st, +b.dataset.i)}.`);
       focusTo = '.game .chipbtn:not(:disabled), .game-score .link'; break;
     }
+    // How it works: step through a flow, then put its steps in order
+    case 'flowNext': case 'flowBack': {
+      const f = FLOWS[id], at = Math.max(0, Math.min(f.rows.length - 1, flowAt(id) + (act === 'flowNext' ? 1 : -1)));
+      flowUi.at[id] = at; studied();
+      announce(`Step ${at + 1} of ${f.rows.length}. ${plain(f.rows[at].say)}`);
+      focusTo = `[data-flow="${id}"] [data-act=${act}], [data-flow="${id}"] [data-act=flowOrder], [data-flow="${id}"] [data-act=flowNext]`; break;
+    }
+    case 'flowRestart': delete flowUi.order[id]; flowUi.at[id] = 0; focusTo = `[data-flow="${id}"] [data-act=flowNext]`; break;
+    case 'flowOrder': flowUi.order[id] = {seq:[], run:++gameRuns}; focusTo = '.game .chipbtn'; break;
+    case 'flowPick': {
+      const g = flowGame(id), st = flowUi.order[id], it = g.items[+b.dataset.i];
+      st.seq.push(+b.dataset.i); studied();
+      announce(tapSaid = g.ranks[st.seq.length - 1] === it.rank ? `${it.text}: right.` : `${it.text}: not there. It goes at ${goesAt(g, st, +b.dataset.i)}.`);
+      focusTo = '.game .chipbtn:not(:disabled), .game-score + .flow-btns .btn'; break;
+    }
+    case 'domainFlow': flowUi.open = flowUi.open === id ? null : id; if (flowUi.open) { reveal = `[data-act=domainFlow][data-id="${id}"]`; studied(); } break;
     case 'gCol': {
       const c = VISUALS[id].cols[+b.dataset.i], v = +b.dataset.v;
       gameState({id}).cols[b.dataset.i] = v; studied();

@@ -106,3 +106,17 @@ It now sits at the right of the sticky tab bar on every screen and opens a small
 
 Saved progress (`awsCourse1`, version 2, older data backed up), one thing open at a time, 15/5 minute timer,
 wrong answers explaining themselves, each lesson's own quiz, Proton look, all three ways of running the app.
+
+### U11. How it works: pictures that build up step by step
+Each lesson's See step opens on "How it works": a picture of how the topic works in practice (a request
+travelling through a VPC, a photo moving through S3 storage classes, IAM deciding yes or no) that adds one
+step each time you tap Next, with one plain sentence per step. Data in `web/js/content/flows.js`.
+- AC11.1 Every lesson and every exam domain has a step-through of at least 2 steps (lessons at least 4).
+- AC11.2 It starts with one step; Next adds a step, Previous removes one; the current step is outlined and
+  read out to screen readers, and the picture has a text description. Focus stays on the button.
+- AC11.3 After the last step, "Put the steps in order" checks each tap at once, then shows the right order and a score.
+- AC11.4 The Learn list has "How this section fits together" for each domain, one open at a time; each part
+  opens its lesson, and Back folds it.
+- AC11.5 Every service shown has an icon for its job (compute, storage, database, network, security, money,
+  monitoring, AI and so on), drawn for this app, not AWS artwork. Icons use the lesson's domain colour.
+- AC11.6 Every step fits within 1.4 screens at 390 x 844 with all steps shown and after the order game.

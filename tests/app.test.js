@@ -461,11 +461,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = null; S.stage.l1 = 2;`,
       `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 3; S.ans.q1 = {n:1, wrong:1, pick:1, ok:false, at:Date.now()}; lqi.l1 = 0;`,
       `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 2; revealed['l1:0'] = true;`,
-      `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 1;`,
-      `S.tab = 'learn'; S.openLesson = 'l4'; S.stage.l4 = 1;`,
-      `S.tab = 'learn'; S.openLesson = 'l5'; S.stage.l5 = 1;`,
-      `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 1;`,
-      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 1; ui.mode['l2:1'] = 'look';`,
+      `S.tab = 'learn'; S.openLesson = 'l4'; S.stage.l4 = 1; ui.mode['l4:1'] = 'look';`,
+      `S.tab = 'learn'; S.openLesson = 'l5'; S.stage.l5 = 1; ui.mode['l5:1'] = 'look';`,
+      `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 1; ui.mode['l10:1'] = 'look';`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1; ui.mode['l12:1'] = 'look';`,
       `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = [true];`,
       `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 0; ui.mode['l10:0'] = 'points';`,
       `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 0; ui.mode['l7:0'] = 'cards'; ui.cards.l7 = {order:[0,1,2], pos:0, flipped:true, got:0, again:[]};`,
@@ -474,6 +474,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = 'l14'; S.stage.l14 = 1; ui.mode['l14:1'] = 'test'; ui.game.l14 = {picks:{}, cur:0, seq:[3,2,1,0], cols:{}, run:1};`,
       `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 1; ui.mode['l7:1'] = 'test'; ui.game.l7 = {picks:{0:(gameQuestions(LESSONS[6]).qs[0].answer + 1) % 3}, cur:0, seq:[], cols:{}, run:1};`,
       `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 1; ui.mode['l2:1'] = 'test'; ui.game.l2 = {picks:{}, cur:0, seq:[], cols:{0:7, 1:2}, run:1};`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1; ui.mode['l12:1'] = 'how'; flowUi.at.l12 = 5; delete flowUi.order.l12;`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1; ui.mode['l12:1'] = 'how'; flowUi.order.l12 = {seq:[6,5,4,3,2,1,0], run:1};`,
+      `S.tab = 'learn'; S.openLesson = null; flowUi.open = 'sec'; flowUi.at.sec = 3;`,
       `S.tab = 'practice'; pCur = 'q19';`,
       `S.tab = 'learn'; S.openLesson = null;`
     ];
@@ -482,7 +485,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
       '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag',
       '.num', '.band-meta', '.lesson .pts b', '.colour-key b', '.stage.cur', '.flipcard small', '.flipcard span', '.chipbtn.right', '.chipbtn.wrong', '.game-fb',
-      '.who-c.blank', '.btn.good', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
+      '.who-c.blank', '.btn.good', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
       '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
@@ -554,9 +557,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await seed(p, {v:2, tab:'learn', openLesson:'l2'});
     ok(await p.$$eval('[data-act=stage]', b => b.length) === 5 && (await p.$$('.stage-body')).length === 1, 'not five stages with one body');
     ok(await p.$$eval('[aria-current=step]', b => b.map(x => x.textContent.trim()).join()) === 'Read', 'does not start on Read');
-    await p.click('[data-act=stageNext]'); ok(await p.$('figure.vis'), 'Next did not show See');
+    await p.click('[data-act=stageNext]'); ok(await p.$('.stage-body .flow'), 'Next did not show See (How it works)');
+    await p.click('[data-act=mode][data-v=look]'); ok(await p.$('figure.vis'), 'Picture did not show the diagram');
     await p.click('[data-act=stageNext]'); ok(await p.$('.scenario'), 'Next did not show Try');
-    await p.click('[data-act=stagePrev]'); ok(await p.$('figure.vis'), 'Back did not show See');
+    await p.click('[data-act=stagePrev]'); ok(await p.$('figure.vis'), 'Back did not show See as it was left');
     await p.click('[data-act=stage][data-i="3"]'); ok(await p.$('.opt'), 'strip did not jump to Check');
     await p.reload();
     ok(await p.$('.opt') && await text(p, '.lesson-t') === 'Service and deployment models', 'stage not kept after reload');
@@ -586,9 +590,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const tall = await q.evaluate(() => {
       const out = [];
       for (const l of LESSONS) for (let k = 0; k < STAGES.length; k++) {
-        for (const mode of k === 0 ? ['points', 'cards'] : k === 1 ? ['look', 'test'] : ['-']) {
-          S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; ui.mode[l.id + ':' + k] = mode; (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true);
+        for (const mode of k === 0 ? ['points', 'cards'] : k === 1 ? ['how', 'how-order', 'look', 'test'] : ['-']) {
+          S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; ui.mode[l.id + ':' + k] = mode.replace('-order', ''); (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true);
           if (mode === 'cards') { const cs = flashCards(l), i = cs.reduce((b, c, j) => c.back.length > cs[b].back.length ? j : b, 0); ui.cards[l.id] = {order:[i], pos:0, flipped:true, got:0, again:[]}; }
+          if (mode === 'how') { delete flowUi.order[l.id]; flowUi.at[l.id] = FLOWS[l.id].rows.length - 1; }
+          if (mode === 'how-order') flowUi.order[l.id] = {seq:FLOWS[l.id].rows.map((r, j) => j).reverse(), run:1};
           if (mode === 'test') {
             const g = gameQuestions(l); delete ui.game[l.id]; const st = gameState(l);
             if (g.kind === 'pick') { const i = g.qs.reduce((b, x, j) => (x.text + (x.sub || '')).length > (g.qs[b].text + (g.qs[b].sub || '')).length ? j : b, 0); st.cur = i; st.picks[i] = (g.qs[i].answer + 1) % (g.qs[i].opts || g.options).length; }
@@ -610,7 +616,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const probs = await p.evaluate(() => {
       const out = [];
       for (const l of LESSONS) {
-        S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = 1; render();
+        S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = 1; ui.mode[l.id + ':1'] = 'look'; render();
         const fig = document.querySelector('.stage-body figure.vis');
         if (!fig || !fig.querySelector('figcaption') || fig.querySelector('figcaption').textContent.trim().length < 15) out.push(l.id + ' diagram/caption');
         S.stage[l.id] = 2; render();
@@ -811,7 +817,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(!n3.includes('1') && n3.includes('3'), 'eu-central-1 marked, or "at least 3" not: ' + n3);
     const odd = await p.evaluate(() => [...new DOMParser().parseFromString(markNumbers('a 2-minute warning, 24/7 phone, until 1 January 2027, since December 2025, 5G'), 'text/html').querySelectorAll('.num')].map(n => n.textContent));
     ok(JSON.stringify(odd) === JSON.stringify(['2-minute', '24/7', '1 January 2027', 'December 2025']), 'hyphen, 24/7 or dates: ' + odd);
-    await p.evaluate(() => { S.openLesson = 'l15'; S.stage.l15 = 1; render(); });
+    await p.evaluate(() => { S.openLesson = 'l15'; S.stage.l15 = 1; ui.mode['l15:1'] = 'look'; render(); });
     ok((await p.$$eval('figure.vis .num', ns => ns.map(n => n.textContent))).includes('24/7'), 'diagram numbers not highlighted');
     ok(await p.evaluate(() => { const h = markNumbers('<code>port 22</code> and <a href="x1">5 min</a> &#39;'); return h.includes('<code>port 22</code>') && h.includes('href="x1"') && h.includes('&#39;') && h.includes('<span class="num">5 min</span>'); }), 'markNumbers touched code, an attribute or an entity');
   });
@@ -974,6 +980,72 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const after = await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('awsCourse1')); const d = s.days; delete s.days; s.stage.l10 = 1; return [JSON.stringify(s), d[todayISO()] === true]; });
     ok(after[0] === before, 'saved progress changed by practising');
     ok(after[1], 'today not marked as a study day');
+  });
+
+  await check('How it works: every lesson and domain has a step-through that builds up one step at a time (U11.1, U11.2)', async () => {
+    ok(await p.evaluate(() => LESSONS.every(l => FLOWS[l.id] && FLOWS[l.id].rows.length >= 4) && Object.keys(DOMAINS).every(d => FLOWS[d])), 'a lesson or domain has no flow, or under 4 steps');
+    await seed(p, {v:2, tab:'learn', openLesson:'l12', stage:{l12:1}});
+    ok(await p.$eval('[data-act=mode][aria-pressed=true]', b => b.dataset.v) === 'how', 'See does not open on How it works');
+    const n = await p.evaluate(() => FLOWS.l12.rows.length);
+    ok((await text(p, '.flow-say small')) === `Step 1 of ${n}` && await p.$$eval('.flow-row', r => r.length) === 1, 'does not start with one step');
+    await p.focus('[data-act=flowNext]'); await p.keyboard.press('Enter');
+    ok((await text(p, '.flow-say small')) === `Step 2 of ${n}` && await p.$$eval('.flow-row', r => r.length) === 2 && await p.$('.flow-row.past') && await p.$('.flow-row.cur'), 'Next did not add a step');
+    ok(await p.evaluate(() => document.activeElement.dataset.act === 'flowNext'), 'focus left Next');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Step 2 of'));
+    ok((await p.getAttribute('.flow-pic', 'aria-label')).includes('Internet gateway'), 'picture has no text for screen readers');
+    await p.click('[data-act=flowBack]'); ok(await p.$$eval('.flow-row', r => r.length) === 1, 'Back did not remove a step');
+    for (let i = 1; i < n; i++) await p.click('[data-act=flowNext]');
+    ok(await p.$('[data-act=flowOrder]') && !(await p.$('[data-act=flowNext]')), 'last step does not offer the order game');
+    const say = await p.evaluate(() => [...new DOMParser().parseFromString(flowHTML('l14').replace(/^/, ''), 'text/html').querySelectorAll('.flow-say')].length);
+    ok(say === 1, 'flow has no step text');
+  });
+  await check('How it works: put the steps in order, checked at each tap, right order shown (U11.3)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l9', stage:{l9:1}});
+    await p.evaluate(() => { flowUi.at.l9 = FLOWS.l9.rows.length - 1; delete flowUi.order.l9; render(); });
+    await p.click('[data-act=flowOrder]');
+    const order = await p.evaluate(() => { const g = flowGame('l9'); return g.ranks.map(r => g.items.findIndex(i => i.rank === r)); });
+    await p.click(`[data-act=flowPick][data-i="${order[1]}"]`);
+    ok((await text(p, '.game.order li.no')).includes('goes at 2'), 'wrong tap not checked at once');
+    await p.click(`[data-act=flowPick][data-i="${order[0]}"]`);
+    for (const i of order.slice(2)) await p.click(`[data-act=flowPick][data-i="${i}"]`);
+    ok((await text(p, '.game-score')).startsWith(`${order.length - 2} of ${order.length} right`) && await p.$$eval('.answer-order li', l => l.length) === order.length, 'score or right order missing: ' + await text(p, '.game-score'));
+    await p.waitForFunction(() => / right\.$/.test(document.querySelector('#announce').textContent));
+    await p.click('[data-act=flowOrder]'); for (const i of order) await p.click(`[data-act=flowPick][data-i="${i}"]`);
+    ok((await text(p, '.game-score')).startsWith(`${order.length} of ${order.length} right`), 'perfect order not full marks');
+    // Every flow's steps have distinct names, so the order game has one right answer.
+    ok(await p.evaluate(() => Object.values(FLOWS).every(f => new Set(f.rows.map(r => r.name)).size === f.rows.length)), 'two steps share a name');
+  });
+  await check('How this section fits together: one per domain in Learn, links to its lessons, Back folds it (U11.4)', async () => {
+    await seed(p, {v:2, tab:'learn'});
+    ok(await p.$$eval('[data-act=domainFlow]', b => b.length) === 4, 'not one per domain');
+    await p.click('[data-act=domainFlow][data-id=tech]');
+    ok(await p.$('.dflow.open .flow') && await p.getAttribute('[data-act=domainFlow][data-id=tech]', 'aria-expanded') === 'true', 'did not open');
+    await p.click('[data-act=domainFlow][data-id=cc]');
+    ok(await p.$$eval('.dflow.open', d => d.length) === 1, 'more than one open');
+    const links = await p.evaluate(() => Object.keys(DOMAINS).every(d => FLOWS[d].rows.flatMap(r => r.nodes).every(n => LESSONS.some(l => l.id === n.lesson && l.d === d))
+      && LESSONS.filter(l => l.d === d).every(l => FLOWS[d].rows.some(r => r.nodes.some(n => n.lesson === l.id)))));
+    ok(links, 'a domain flow misses a lesson or links outside its domain');
+    await p.click('.dflow.open .fnode[data-act=openLesson]');
+    ok(await text(p, '.lesson-t') === 'Why companies use the cloud', 'node did not open its lesson');
+    await p.click('[data-act=closeLesson]');
+    ok(await p.$('.dflow.open'), 'domain picture closed after visiting a lesson');
+    await p.evaluate(() => { backOneStep(); render(); });
+    ok(!(await p.$('.dflow.open')), 'Back did not fold it');
+  });
+  await check('flows: every step text, name and node is filled in and short enough for a phone', async () => {
+    const bad = await p.evaluate(() => {
+      const out = [];
+      for (const [k, f] of Object.entries(FLOWS)) {
+        if (!f.title) out.push(k + ' no title');
+        f.rows.forEach((r, i) => {
+          if (!r.say || r.say.length > 200 || !r.name || r.name.length > 24) out.push(`${k} step ${i + 1} text`);
+          if (!r.nodes.length || r.nodes.length > 3) out.push(`${k} step ${i + 1} nodes`);
+          r.nodes.forEach(n => { if (!n.t || !FLOW_ICONS[n.k] || (n.n && n.n.length > 70)) out.push(`${k} step ${i + 1} node ${n.t}`); });
+        });
+      }
+      return out;
+    });
+    ok(!bad.length, bad.join(', '));
   });
 
   await check('the content security policy blocks injected script, from disk and from the website', async () => {
