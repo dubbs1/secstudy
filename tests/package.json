@@ -1,0 +1,7 @@
+{
+  "name": "secstudy-tests",
+  "private": true,
+  "description": "Browser checks for index.html (the app itself has no dependencies)",
+  "scripts": { "test": "node app.test.js" },
+  "devDependencies": { "playwright": "1.63.0" }
+}

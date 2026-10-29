@@ -502,7 +502,13 @@ function load(){
     }
   }
   if (!isObj(s.timer) || typeof s.timer.len !== 'number') s.timer = {...DEFAULTS.timer};
-  if (s.review !== null && !(isObj(s.review) && Array.isArray(s.review.ids))) s.review = null;
+  if (s.review !== null && !(isObj(s.review) && Array.isArray(s.review.ids) && typeof s.review.i === 'number')) s.review = null;
+  if (s.review) { s.review.ids = s.review.ids.filter(id => QUESTIONS.some(q => q.id === id)); s.review.right = +s.review.right || 0; }
+  if (typeof s.pFilter !== 'string') s.pFilter = 'all';
+  for (const qid in s.srs) {   // an imported file could carry broken entries
+    const e = s.srs[qid];
+    if (!isObj(e) || typeof e.box !== 'number' || !/^\d{4}-\d\d-\d\d$/.test(e.due)) delete s.srs[qid];
+  }
   // Answers given before smart review existed: misses are due now, right answers a week after they were given.
   for (const qid in s.ans) {
     const r = s.ans[qid];
@@ -874,7 +880,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return;
   const {act, id} = b.dataset;
   switch (act) {
-    case 'toggleFacts': S.open = S.open === 'facts' ? null : 'facts'; if (S.open) S.openLesson = ''; break;
+    case 'toggleFacts': S.open = S.open === 'facts' ? null : 'facts'; S.openLesson = S.open ? '' : null; break;
     case 'toggleFree':  S.open = S.open === 'free' ? null : 'free'; break;
     case 'openLesson':  S.open = null; S.openLesson = S.openLesson === id ? '' : id; break;
     case 'openLab':     S.open = null; S.openLab = S.openLab === id ? null : id; break;

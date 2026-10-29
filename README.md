@@ -12,6 +12,8 @@ Proton's own packages (@proton/atoms, @proton/components) live in the GPLv3 Prot
 
 Deploy later: private repo -> Cloudflare Pages or Netlify. A private repo does not make a GitHub Pages site private.
 
+Tests: `cd tests && npm ci && npm test` (also run by GitHub on every push).
+
 Smart review: every answered question is scheduled. A miss comes back the next day; each right answer on a due
 question waits longer (1, 3, 7, 14 days). Up to 10 due questions per sitting. Weak spots (Practice tab) show
 accuracy per exam domain and the lessons with the most misses.
