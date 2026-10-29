@@ -40,7 +40,7 @@ function flashCards(l){
         let rest = p.slice(m.index + m[0].length, i + 1 < ms.length ? ms[i + 1].index : p.length);
         // Before a "<b>Lex</b> (chatbots)" style term, stop at the end of the sentence, not mid-list.
         if (i + 1 < ms.length && !ms[i + 1][3] && rest.includes('. ')) rest = rest.slice(0, rest.lastIndexOf('. ') + 1);
-        back = tidy(plain(rest));
+        back = tidy((m[2] ? `(${m[2]}) ` : '') + plain(rest));
       } else back = tidy(plain(m[2]));
       if (back) { terms.push(term); add(term, back, 'term'); }
     });
@@ -122,11 +122,19 @@ function gameQuestions(l){
 }
 let gameRuns = 0;
 function gameState(l){ return ui.game[l.id] || (ui.game[l.id] = {picks:{}, cur:0, seq:[], cols:{}, run:++gameRuns}); }
-// The right order, with tied steps on one line.
+// Where an item goes: for tied steps, the first of their places not already taken by a right tap.
+function goesAt(g, st, ii){
+  const it = g.items[ii], slots = g.ranks.map((r, p) => r === it.rank ? p : -1).filter(p => p >= 0);
+  const free = slots.find(p => { const o = st.seq[p]; return o == null || o === ii || g.items[o].rank !== it.rank; });
+  return (free != null ? free : slots[0]) + 1;
+}
+// The right order, numbered by place, with tied steps on one line ("2-3").
 function orderAnswer(g){
   const groups = [];
   g.steps.forEach(s => { const last = groups[groups.length - 1]; if (last && last.rank === s.rank) last.names.push(s.text); else groups.push({rank:s.rank, names:[s.text]}); });
-  return `<div class="answer-order"><b>The order:</b><ol>${groups.map(gr => `<li>${gr.names.join(' or ')}${gr.names.length > 1 ? ' <small>(either order)</small>' : ''}</li>`).join('')}</ol>
+  let at = 0;
+  return `<div class="answer-order"><b>The order:</b><ul>${groups.map(gr => { const from = at + 1; at += gr.names.length;
+    return `<li><span class="ord-n">${from === at ? from : `${from}-${at}`}.</span> ${gr.names.join(' or ')}${gr.names.length > 1 ? ' <small>(either order)</small>' : ''}</li>`; }).join('')}</ul>
     ${g.left.length ? `<p class="muted small">${g.left.join(', ')} is left out: it has no fixed place on this scale.</p>` : ''}</div>`;
 }
 function gameHTML(l){
@@ -153,7 +161,7 @@ function gameHTML(l){
     const n = g.items.length; finished = st.seq.length === n; total = n;
     h += '<ol class="game order">' + g.items.map((it, ii) => {
       const at = st.seq.indexOf(ii), placed = at >= 0, ok = placed && g.ranks[at] === it.rank; if (ok) right++;
-      const goes = g.ranks.indexOf(it.rank) + 1;
+      const goes = goesAt(g, st, ii);
       return `<li class="${placed ? (ok ? 'ok' : 'no') : ''}"><button class="chipbtn wide ${placed ? 'picked' : ''}" data-act="gOrder" data-id="${l.id}" data-i="${ii}" ${placed ? 'disabled' : ''}>
         <span class="ord">${placed ? at + 1 : '?'}</span>${it.text}${placed ? (ok ? ' ✓' : ` ✗ <small>goes at ${goes}</small>`) : ''}</button></li>`;
     }).join('') + '</ol>';

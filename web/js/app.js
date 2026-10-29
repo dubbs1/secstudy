@@ -4,7 +4,7 @@
 let reveal = null;     // selector of a card row to bring into view after the next render
 let announceNext = false;   // read the answer feedback to screen readers after the next render
 let focusTo = null;    // selector to focus after the next render, when an action names one
-let lastScore = '';   // which game's final score has been read out (lesson and run)
+let lastScore = '', tapSaid = '';   // which game's final score has been read out (lesson and run)
 let lessonFrom = null; // the tab a lesson was opened from, so Back can return there
 let labFromLesson = false;   // the lab was opened from a lesson: Back returns to the lesson
 
@@ -40,7 +40,9 @@ function render(){
   }
   if (announceNext) { announceNext = false; const fb = $('#main .fb'); if (fb) announce(fb.innerText); }
   const score = $('#main .game-score');
-  if (score && score.dataset.k !== lastScore) { lastScore = score.dataset.k; announce(score.querySelector('b').textContent); }
+  // The last tap's feedback and the score are read together, so the score never cuts the feedback off.
+  if (score && score.dataset.k !== lastScore) { lastScore = score.dataset.k; announce((tapSaid ? tapSaid + ' ' : '') + score.querySelector('b').textContent); }
+  tapSaid = '';
   if (row) keepInView(row);
 }
 // Scroll only when the row is off screen, so opening a card never makes the page jump needlessly.
@@ -215,13 +217,13 @@ document.addEventListener('click', e => {
     case 'gOrder': {
       const g = gameQuestions(LESSONS.find(l => l.id === id)), st = gameState({id}), it = g.items[+b.dataset.i];
       st.seq.push(+b.dataset.i); studied();
-      announce(g.ranks[st.seq.length - 1] === it.rank ? `${it.text}: right.` : `${it.text}: not there. It goes at ${g.ranks.indexOf(it.rank) + 1}.`);
+      announce(tapSaid = g.ranks[st.seq.length - 1] === it.rank ? `${it.text}: right.` : `${it.text}: not there. It goes at ${goesAt(g, st, +b.dataset.i)}.`);
       focusTo = '.game .chipbtn:not(:disabled), .game-score .link'; break;
     }
     case 'gCol': {
       const c = VISUALS[id].cols[+b.dataset.i], v = +b.dataset.v;
       gameState({id}).cols[b.dataset.i] = v; studied();
-      announce(v === c.you ? `${c.title}: right.` : `${c.title}: not quite. You manage the top ${c.you}.`);
+      announce(tapSaid = v === c.you ? `${c.title}: right.` : `${c.title}: not quite. You manage the top ${c.you}.`);
       focusTo = '.who button.who-c, .game-score .link'; break;
     }
     case 'gameReset': delete ui.game[id]; focusTo = '.game .chipbtn, button.who-c'; break;

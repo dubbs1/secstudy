@@ -839,9 +839,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       if (!back('l12', 'Security group').includes('stateful') || !back('l12', 'Network ACL').includes('stateless')) out.push('stateful/stateless lost');
       if (!back('l8', 'Organizations').includes('SCPs')) out.push('SCPs lost');
       if (!back('l12', 'VPC').includes('internet gateway')) out.push('VPC cut');
+      if (!back('l9', 'Fargate').includes('containers') || !back('l10', 'One Zone-IA').includes('one AZ')) out.push('Fargate or One Zone-IA lost its fact');
+      if (!back('l15', 'Cost and Usage Report').includes('Data Exports') || !back('l15', 'Consolidated billing').includes('Organizations')) out.push('a (note) before the colon was dropped');
       for (const t of ['Enterprise On-Ramp', 'Enterprise', 'TAM']) if (!card('l15', t)) out.push('l15 no ' + t);
       for (const t of ['User', 'Group', 'Role', 'Policy']) if (!card('l6', t)) out.push('l6 no ' + t);
-      for (const t of ['Glacier Deep Archive', 'S3 Standard-IA', 'Lex', 'Amazon Q']) if (!card(t === 'Lex' || t === 'Amazon Q' ? 'l13' : 'l10', t)) out.push('no ' + t);
+      for (const t of ['Glacier Deep Archive', 'Standard-IA', 'Lex', 'Amazon Q']) if (!card(t === 'Lex' || t === 'Amazon Q' ? 'l13' : 'l10', t)) out.push('no ' + t);
       if (back('l13', 'Transcribe') !== 'speech to text') out.push('Transcribe: ' + back('l13', 'Transcribe'));
       if (!flashCards(LESSONS[8]).some(c => c.kind === 'gap' && c.front.includes('up to ____ per run') && c.back === '15 minutes')) out.push('no gap card for 15 minutes');
       for (const l of LESSONS) {
@@ -878,6 +880,14 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       });
     });
     ok(tie.every(t => t === '4 of 4 right.'), 'tied steps: ' + tie);
+    // A wrong tap on a tied step points to the free place, numbered like the answer list.
+    const goes = await p.evaluate(() => {
+      const l = LESSONS.find(x => x.id === 'l14'), g = gameQuestions(l), name = t => g.items.findIndex(i => i.text === t);
+      delete ui.game.l14; gameState(l).seq = ['On-Demand', 'Savings Plans', 'Spot', 'Reserved Instances'].map(name);
+      const div = document.createElement('div'); div.innerHTML = gameHTML(l); delete ui.game.l14;
+      return [...div.querySelectorAll('.game.order li.no')].map(li => li.textContent.replace(/\s+/g, ' ').trim()).join(' | ') + ' || ' + div.querySelector('.answer-order').textContent.replace(/\s+/g, ' ');
+    });
+    ok(goes.includes('Spot ✗ goes at 4') && goes.includes('Reserved Instances ✗ goes at 3') && goes.includes('2-3. Savings Plans or Reserved Instances') && goes.includes('4. Spot'), 'tied places: ' + goes);
   });
   await check('every game answer agrees with the diagram it comes from (U10.2)', async () => {
     // Checked against VISUALS directly, not against the game's own answer key.
@@ -934,7 +944,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok((await text(p, '.game.order li.no')).includes('goes at 5'), 'order tap not checked at once');
     await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Lambda: not there'));
     for (let k = 0; k < 4; k++) await p.click('.game .chipbtn:not(:disabled)');
-    ok((await text(p, '.answer-order')).includes('EC2') && await p.$$eval('.answer-order li', ls => ls.length) === 5, 'right order not shown');
+    ok((await text(p, '.answer-order')).includes('3-4. Elastic Beanstalk or Fargate') && await p.$$eval('.answer-order li', ls => ls.length) === 4, 'right order not shown: ' + await text(p, '.answer-order'));
     // Who manages what: one tap per column, checked at once, labelled for screen readers.
     await seed(p, {v:2, tab:'learn', openLesson:'l2', stage:{l2:1}});
     await p.click('[data-act=mode][data-v=test]');
@@ -945,10 +955,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await p.$$eval('.who-c.no', cs => cs.every(c => /wrong/.test(c.getAttribute('aria-label')) && c.textContent.includes('✗'))), 'wrong cells not labelled');
     ok(!(await p.$('.game-score')), 'score before every column is set');
     await p.click('[data-act=gCol][data-i="0"][data-v="7"]'); await p.click('[data-act=gCol][data-i="3"][data-v="1"]');
-    await p.waitForFunction(() => document.querySelector('#announce').textContent === '3 of 4 right.');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.endsWith(' 3 of 4 right.'));
     await p.click('[data-act=gameReset]'); await p.click('[data-act=gCol][data-i="0"][data-v="7"]');
     for (const [i, v] of [[1, 4], [2, 2], [3, 1]]) await p.click(`[data-act=gCol][data-i="${i}"][data-v="${v}"]`);
-    await p.waitForFunction(() => document.querySelector('#announce').textContent === '4 of 4 right.');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent === 'SaaS: right. 4 of 4 right.');
   });
   await check('cards and games change no saved progress except today as a study day; they restart (U10.4)', async () => {
     await seed(p, {v:2, tab:'learn', openLesson:'l10', stage:{l10:1}});
