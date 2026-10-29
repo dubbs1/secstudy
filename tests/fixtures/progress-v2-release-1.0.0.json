@@ -1,0 +1,74 @@
+{
+  "saved": {
+    "done": {
+      "l1": true
+    },
+    "steps": {
+      "l1": [
+        true,
+        null,
+        true
+      ]
+    },
+    "ans": {
+      "q1": {
+        "n": 1,
+        "wrong": 0,
+        "pick": 0,
+        "ok": true,
+        "at": 1793245943823
+      },
+      "q2": {
+        "n": 1,
+        "wrong": 1,
+        "pick": 3,
+        "ok": false,
+        "at": 1793245943921
+      },
+      "q3": {
+        "n": 1,
+        "wrong": 0,
+        "pick": 3,
+        "ok": true,
+        "at": 1793245944022
+      }
+    },
+    "labs": {
+      "lab1": [
+        true
+      ]
+    },
+    "srs": {
+      "q1": {
+        "box": 2,
+        "due": "2026-11-05"
+      },
+      "q2": {
+        "box": 0,
+        "due": "2026-10-30"
+      },
+      "q3": {
+        "box": 2,
+        "due": "2026-11-05"
+      }
+    },
+    "review": null,
+    "tab": "learn",
+    "openLesson": "l2",
+    "openLab": "lab1",
+    "open": null,
+    "pFilter": "all",
+    "pMode": "todo",
+    "timer": {
+      "len": 5,
+      "end": null,
+      "left": null,
+      "task": "Lesson 2 table"
+    },
+    "v": 2
+  },
+  "shown": {
+    "stats": "Lessons 1/15 Questions right 2/45 Labs 0/6",
+    "open": "Service and deployment models"
+  }
+}

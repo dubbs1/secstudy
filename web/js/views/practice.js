@@ -36,12 +36,12 @@ function practiceSet(){
 }
 function renderPractice(){
   const lf = LESSONS.find(l => l.id === S.pFilter);
-  let h = weakCard() + `<div class="seg small" role="tablist">${[['all', 'All']].concat(Object.entries(DOMAINS).map(([k, d]) => [k, d.short])).map(([k, n]) =>
-    `<button data-act="pFilter" data-v="${k}" aria-selected="${S.pFilter === k}">${n}</button>`).join('')}
-    ${lf ? `<button data-act="pFilter" data-v="all" aria-selected="true" title="Show all lessons">Lesson ${lessonNo(lf.id)} ✕</button>` : ''}</div>
-    <div class="seg small" role="tablist">
-      <button data-act="pMode" data-v="todo" aria-selected="${S.pMode === 'todo'}">Not right yet</button>
-      <button data-act="pMode" data-v="all" aria-selected="${S.pMode === 'all'}">All questions</button></div>`;
+  let h = weakCard() + `<div class="seg small" role="group">${[['all', 'All']].concat(Object.entries(DOMAINS).map(([k, d]) => [k, d.short])).map(([k, n]) =>
+    `<button data-act="pFilter" data-v="${k}" aria-pressed="${S.pFilter === k}">${n}</button>`).join('')}
+    ${lf ? `<button data-act="pFilter" data-v="all" aria-pressed="true" title="Show all lessons">Lesson ${lessonNo(lf.id)} ✕</button>` : ''}</div>
+    <div class="seg small" role="group">
+      <button data-act="pMode" data-v="todo" aria-pressed="${S.pMode === 'todo'}">Not right yet</button>
+      <button data-act="pMode" data-v="all" aria-pressed="${S.pMode === 'all'}">All questions</button></div>`;
   const set = practiceSet();
   if (!set.length) return h + `<div class="card"><div class="body" style="padding-top:16px">Every question in this set is right. Switch to <b>All questions</b> to go round again.</div></div>`;
   if (!pCur || !set.find(q => q.id === pCur)) pCur = set[0].id;

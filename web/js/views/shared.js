@@ -18,7 +18,7 @@ function qHTML(q, pick, ctx){
   h += '</div>';
   if (answered) {
     const ok = pick === q.a;
-    h += `<div class="fb ${ok ? 'ok' : 'no'}"><b>${ok ? 'Right.' : 'The answer is ' + 'ABCD'[q.a] + '.'}</b> ${q.x}</div>`;
+    h += `<div class="fb ${ok ? 'ok' : 'no'}" tabindex="-1"><b>${ok ? 'Right.' : 'The answer is ' + 'ABCD'[q.a] + '.'}</b> ${q.x}</div>`;
   }
   return h;
 }

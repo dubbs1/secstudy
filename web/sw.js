@@ -1,8 +1,16 @@
 // Offline copy of the app. Network first, so a new version shows up as soon as you're online;
 // the cached copy is used when there is no connection.
-const CACHE = 'secstudy-v1';
-const FILES = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png',
-               './icons/maskable-512.png', './icons/apple-touch-icon.png'];
+importScripts('js/version.js');
+const CACHE = 'secstudy-' + APP_VERSION;
+// Every file in web/ except this one. tests/structure.test.js fails when this list and the folder differ.
+const FILES = [
+  './', './index.html', './manifest.webmanifest', './css/app.css',
+  './js/version.js', './js/util.js', './js/store.js', './js/course.js', './js/app.js',
+  './js/content/exam.js', './js/content/lessons.js', './js/content/questions.js', './js/content/labs.js',
+  './js/views/shared.js', './js/views/header.js', './js/views/learn.js', './js/views/practice.js',
+  './js/views/labs.js', './js/views/timer.js',
+  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-1024.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

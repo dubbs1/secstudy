@@ -21,13 +21,22 @@
     <button role="tab" data-tab="timer">Timer</button>
   </nav>
   <main id="main"></main>
+  <div class="card importbar" id="importBar" hidden>
+    <div class="body">
+      <b>Replace your progress here with <span id="importName"></span>?</b>
+      <p class="muted">Your current progress is kept as a backup in this browser.</p>
+      <div class="btns"><button class="btn" data-act="importYes">Replace</button><button class="btn ghost" data-act="importNo">Cancel</button></div>
+    </div>
+  </div>
   <div class="foot">
     Progress is saved in this browser only.
     <button class="link" data-act="export">Export</button> ·
     <button class="link" data-act="import">Import</button>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
     <span id="installWrap" hidden> · <button class="link" data-act="install">Install app</button></span>
+    <div class="ver" id="ver"></div>
   </div>
+  <div class="sr" role="status" aria-live="polite" id="announce"></div>
 </div>
 
 <!-- Classic scripts, not modules: modules do not load from file://. Order: data, helpers, views, app. -->

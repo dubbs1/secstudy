@@ -5,8 +5,7 @@
   "version": "1.0.0",
   "identifier": "app.secstudy.awscp",
   "build": {
-    "frontendDist": "../dist",
-    "beforeBuildCommand": "node prepare.js"
+    "frontendDist": "../../web"
   },
   "app": {
     "windows": [],

@@ -38,15 +38,15 @@ function renderLearn(){
   // exam facts (collapsed by default)
   const fOpen = S.open === 'facts';
   h += `<div class="card ${fOpen ? 'open' : ''}"><button class="row" data-act="toggleFacts" aria-expanded="${fOpen}">
-      <span class="n">i</span><span class="t"><b>Exam facts</b><small>CLF-C02 · 65 questions · 90 min · pass 700</small></span><span class="chev">›</span></button>`;
+      <span class="n">i</span><span class="t"><b>Exam facts</b><small>${EXAM.code} · ${EXAM.questions} questions · ${EXAM.minutes} min · pass ${EXAM.pass}</small></span><span class="chev">›</span></button>`;
   if (fOpen) h += `<div class="body"><table class="facts">
-      <tr><td>Exam</td><td>CLF-C02</td></tr><tr><td>Date</td><td>${fmtDate(EXAM_DATE)} 2026</td></tr>
-      <tr><td>Questions</td><td>65 (50 scored, 15 unscored)</td></tr><tr><td>Time</td><td>90 minutes</td></tr>
-      <tr><td>Pass mark</td><td>700 / 1000</td></tr><tr><td>Cost</td><td>$100</td></tr><tr><td>Retake</td><td>after 14 days</td></tr></table>
+      <tr><td>Exam</td><td>${EXAM.code}</td></tr><tr><td>Date</td><td>${fmtDateYear(EXAM.date)}</td></tr>
+      <tr><td>Questions</td><td>${EXAM.questions} (${EXAM.scored} scored, ${EXAM.questions - EXAM.scored} unscored)</td></tr><tr><td>Time</td><td>${EXAM.minutes} minutes</td></tr>
+      <tr><td>Pass mark</td><td>${EXAM.pass} / ${EXAM.scale}</td></tr><tr><td>Cost</td><td>${EXAM.cost}</td></tr><tr><td>Retake</td><td>after ${EXAM.retakeDays} days</td></tr></table>
       <h3>Domain weights</h3><table class="facts">${Object.entries(DOMAINS).map(([k, d]) => `<tr><td>${chip(k)}${d.name}</td><td>${d.w}%</td></tr>`).join('')}</table>
-      <p class="muted" style="font-size:13.5px">Lessons follow these weights: 4 concepts, 4 security, 5 technology, 2 billing.</p></div>`;
+      <p class="muted" style="font-size:13.5px">Lessons follow these weights: ${Object.entries(DOMAINS).map(([k, d]) => `${LESSONS.filter(l => l.d === k).length} ${d.short.toLowerCase()}`).join(', ')}.</p></div>`;
   h += '</div>';
-  if (!nl) h += `<div class="note">All 15 lessons done. Use Practice for the questions you haven't got right yet.</div>`;
+  if (!nl) h += `<div class="note">All ${LESSONS.length} lessons done. Use Practice for the questions you haven't got right yet.</div>`;
   LESSONS.forEach((l, idx) => {
     const open = S.openLesson === l.id && !fOpen && !S.review;
     const done = !!S.done[l.id];
@@ -54,7 +54,7 @@ function renderLearn(){
     const late = !done && daysUntil(l.due) < 0;
     h += `<div class="card ${open ? 'open' : ''}"><button class="row" data-act="openLesson" data-id="${l.id}" aria-expanded="${open}">
       <span class="n ${done ? 'done' : ''}">${done ? '✓' : idx + 1}</span>
-      <span class="t"><b>${l.t}</b><small>${chip(l.d)}<span class="${late ? 'late' : ''}">due ${fmtDate(l.due)}</span> · quiz ${qRight}/${qs.length}${l === nl && !open ? ' · <b style="display:inline;color:var(--brand)">up next</b>' : ''}</small></span>
+      <span class="t"><b>${l.t}</b><small>${chip(l.d)}<span class="${late ? 'late' : ''}">due ${fmtDate(l.due)}</span> · quiz ${qRight}/${qs.length}${l === nl && !open ? ' · <b style="display:inline;color:var(--brand-text)">up next</b>' : ''}</small></span>
       <span class="chev">›</span></button>`;
     if (open) h += lessonBody(l, qs);
     h += '</div>';

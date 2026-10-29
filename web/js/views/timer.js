@@ -15,9 +15,9 @@ function suggestTask(){
 function renderTimer(){
   const T = S.timer, ms = timerLeft(), running = !!T.end, pct = 100 - ms / (T.len * 600);
   return `<div class="card"><div class="body" style="padding-top:16px">
-    <div class="seg small" role="tablist">
-      <button data-act="tLen" data-v="15" aria-selected="${T.len === 15}">15 min focus</button>
-      <button data-act="tLen" data-v="5" aria-selected="${T.len === 5}">5 min</button></div>
+    <div class="seg small" role="group">
+      <button data-act="tLen" data-v="15" aria-pressed="${T.len === 15}">15 min focus</button>
+      <button data-act="tLen" data-v="5" aria-pressed="${T.len === 5}">5 min</button></div>
     <div class="clock" id="clock" aria-live="off">${mmss(ms)}</div>
     <div class="ring"><i id="ring" style="width:${pct}%"></i></div>
     <label class="muted" style="font-size:13px" for="task">Working on</label>

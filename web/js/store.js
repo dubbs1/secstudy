@@ -1,6 +1,7 @@
 // Saved progress: localStorage key awsCourse1. load() is the only way data gets in.
 const KEY = 'awsCourse1';
-const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, review:null, tab:'learn', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', timer:{len:15, end:null, left:null, task:''}};
+const THEMES = ['system', 'light', 'dark'];
+const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, review:null, tab:'learn', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', theme:'system', timer:{len:15, end:null, left:null, task:''}};
 let S;   // loaded just before the first render, once the helpers below exist
 
 function load(){
@@ -40,6 +41,7 @@ function load(){
     s.review = fine && Number.isInteger(R.i) && R.i >= 0 && R.i <= R.ids.length ? {ids:R.ids, i:R.i, right:Math.max(0, Math.floor(+R.right) || 0)} : null;
   }
   if (typeof s.pFilter !== 'string') s.pFilter = 'all';
+  if (!THEMES.includes(s.theme)) s.theme = 'system';
   // Answers given before smart review existed: misses are due now, right answers a week after they were given.
   for (const qid in s.ans) {
     const r = s.ans[qid];
@@ -61,14 +63,32 @@ function exportProgress(){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-function importProgress(file){
+// Import asks in the page, not with confirm(): browser dialogs are unreliable in the Windows app.
+let pendingImport = null;   // {data, name} while the Replace / Cancel bar is showing
+function readImport(file){
   const r = new FileReader();
   r.onload = () => {
-    let data; try { data = JSON.parse(r.result); } catch(e) { toast('That file isn\'t a progress backup'); return; }
+    let data; try { data = JSON.parse(r.result); } catch(e) { data = null; }
     if (!isObj(data)) { toast('That file isn\'t a progress backup'); return; }
-    if (!confirm('Replace the progress in this browser with the one from the file?')) return;
-    try { localStorage.setItem(KEY + '_beforeImport', JSON.stringify(S)); localStorage.setItem(KEY, JSON.stringify(data)); } catch(e) {}
-    S = load(); save(); render(); toast('Progress imported');
+    pendingImport = {data, name:file.name};
+    showImportBar();
   };
   r.readAsText(file);
+}
+function showImportBar(){
+  const bar = $('#importBar');
+  bar.hidden = !pendingImport;
+  if (!pendingImport) return;
+  $('#importName').textContent = pendingImport.name;
+  bar.scrollIntoView({block:'nearest'});
+  $('[data-act=importYes]').focus({preventScroll:true});
+}
+function finishImport(replace){
+  if (replace && pendingImport) {
+    try { localStorage.setItem(KEY + '_beforeImport', JSON.stringify(S)); localStorage.setItem(KEY, JSON.stringify(pendingImport.data)); } catch(e) {}
+    S = load(); save();
+    toast('Progress imported');
+  }
+  pendingImport = null;
+  showImportBar();
 }
