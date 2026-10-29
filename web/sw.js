@@ -7,7 +7,7 @@ const FILES = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/version.js', './js/theme-boot.js', './js/util.js', './js/store.js', './js/course.js', './js/app.js',
   './js/content/exam.js', './js/content/lessons.js', './js/content/questions.js', './js/content/labs.js',
-  './js/content/visuals.js', './js/content/scenarios.js', './js/views/visual.js', './js/views/today.js',
+  './js/content/visuals.js', './js/content/scenarios.js', './js/views/visual.js', './js/views/today.js', './js/views/interact.js',
   './js/views/shared.js', './js/views/header.js', './js/views/learn.js', './js/views/practice.js',
   './js/views/labs.js', './js/views/timer.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-1024.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'

@@ -4,6 +4,7 @@
 let reveal = null;     // selector of a card row to bring into view after the next render
 let announceNext = false;   // read the answer feedback to screen readers after the next render
 let focusTo = null;    // selector to focus after the next render, when an action names one
+let lastScore = false;   // a game's final score has been read out
 let lessonFrom = null; // the tab a lesson was opened from, so Back can return there
 let labFromLesson = false;   // the lab was opened from a lesson: Back returns to the lesson
 
@@ -38,6 +39,8 @@ function render(){
     target.focus({preventScroll:true});
   }
   if (announceNext) { announceNext = false; const fb = $('#main .fb'); if (fb) announce(fb.innerText); }
+  const score = $('#main .game-score'); if (score && !lastScore) { lastScore = true; announce(score.querySelector('b').textContent); }
+  if (!score) lastScore = false;
   if (row) keepInView(row);
 }
 // Scroll only when the row is off screen, so opening a card never makes the page jump needlessly.
@@ -192,6 +195,29 @@ document.addEventListener('click', e => {
       break;
     }
     case 'tReset': S.timer.end = null; S.timer.left = null; break;
+    // practice: flip cards and diagram games (visit-only state; only today's study day is saved)
+    case 'mode': ui.mode[id + ':' + b.dataset.i] = b.dataset.v; break;
+    case 'flip': { const c = ui.cards[id]; c.flipped = !c.flipped; studied(); break; }
+    case 'cardGot': case 'cardAgain': {
+      const c = ui.cards[id];
+      if (act === 'cardGot') c.got++; else { c.again++; c.order.push(c.order[c.pos]); }
+      c.pos++; c.flipped = false; focusTo = '.flipcard, .deck-done .btn'; break;
+    }
+    case 'cardsRestart': delete ui.cards[id]; focusTo = '.flipcard'; break;
+    case 'gPick': {
+      const g = gameQuestions(LESSONS.find(l => l.id === id)), q = g.qs[+b.dataset.i], v = +b.dataset.v;
+      gameState({id}).picks[b.dataset.i] = v; studied();
+      announce(v === q.answer ? 'Right.' : `Not quite. It is ${(q.opts || g.options)[q.answer]}.`);
+      focusTo = '[data-act=gNext]'; break;
+    }
+    case 'gNext': { gameState({id}).cur++; focusTo = '.game .chipbtn:not(:disabled), .game-score .link'; break; }
+    case 'gOrder': {
+      const st = gameState({id}); st.seq.push(+b.dataset.i); studied();
+      focusTo = '.game .chipbtn:not(:disabled), .game-score .link'; break;
+    }
+    case 'gCell': { const st = gameState({id}), k = b.dataset.v; st.cells[k] = st.cells[k] === 'you' ? 'them' : 'you'; break; }
+    case 'gCheck': { gameState({id}).checked = true; studied(); focusTo = '.game-score .link'; break; }
+    case 'gameReset': delete ui.game[id]; focusTo = '.game .chipbtn, .who-c'; break;
     case 'focusToggle': focusOpen = !focusOpen; focusTo = focusOpen ? '#focusPanel [data-act=tGo]' : '#timerBtn'; render(); return;
     case 'focusClose':  focusOpen = false; focusTo = '#timerBtn'; render(); return;
     case 'theme': S.theme = THEMES[(THEMES.indexOf(S.theme) + 1) % THEMES.length]; break;

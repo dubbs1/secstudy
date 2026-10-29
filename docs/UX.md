@@ -79,6 +79,24 @@ It now sits at the right of the sticky tab bar on every screen and opens a small
 - AC8.3 A running or paused timer survives reloads and tab switches. A saved Timer tab opens Today.
 - AC8.4 The bar and panel fit at 320 px wide; the panel never covers the tab bar.
 
+### U9. Colour coding you can follow
+- AC9.1 Each exam domain has one colour, used for its chip, lesson numbers in the list, the lesson's header band,
+  the key terms inside the lesson, its progress bar on Today, and the question card in Practice.
+- AC9.2 Each lesson stage has its own colour and icon in the stage strip: Read, See, Try, Check, Done.
+- AC9.3 Numbers in key points (times, percentages, limits) are highlighted in one colour, and the Read stage
+  shows a colour key.
+- AC9.4 Colour is never the only signal (text or a symbol goes with it), and all coloured text keeps 4.5:1
+  contrast in light and dark.
+
+### U10. Practise with your hands, not only your eyes
+- AC10.1 Read has a Points / Flip cards switch. Cards come from the lesson's own terms (at least 2 per
+  lesson), flip on tap, Enter or Space, and offer Got it / Again with a count.
+- AC10.2 See has a Look / Test yourself switch. Every lesson's diagram has a game: sort items into columns,
+  fill in who manages each layer, put a scale in order, match clues to services, or place items in boxes.
+- AC10.3 Feedback is instant, shown with colour, a symbol (✓ or ✗) and words, and read out to screen readers.
+- AC10.4 Cards and games can be restarted, and change no saved progress except marking today as a study day.
+- AC10.5 Every stage still fits within 1.4 phone screens in every mode.
+
 ## Kept as they were
 
 Saved progress (`awsCourse1`, version 2, older data backed up), one thing open at a time, 15/5 minute timer,

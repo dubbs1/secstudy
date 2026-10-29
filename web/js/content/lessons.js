@@ -109,10 +109,10 @@ const LESSONS = [
        '<b>Pricing Calculator</b>: estimate before you build.']},
  {id:'l15', d:'bill', due:'2026-11-24', t:'Billing tools and support plans',
   steps:['Read the key points (5 min)','Write the 5 support plans in order and the one thing you get when moving up each step (6 min)','Answer the 3 questions (5 min)'],
-  pts:['<b>AWS Budgets</b>: alerts when cost or usage passes (or is forecast to pass) a limit. <b>Cost Explorer</b>: charts and forecasts of spending.',
+  pts:['<b>AWS Budgets</b>: alerts when cost or usage passes, or is forecast to pass, a limit. <b>Cost Explorer</b>: charts and forecasts of spending.',
        '<b>Cost and Usage Report / Data Exports</b>: the most detailed billing data. <b>Cost allocation tags</b>: split costs by project or team.',
        '<b>Consolidated billing</b> (Organizations): one bill for many accounts, combined usage for volume discounts.',
-       'Support plans: <b>Basic</b> (free; docs, forums, core Trusted Advisor checks) → <b>Developer</b> (business-hours email) → <b>Business</b> (24/7 phone/chat, all Trusted Advisor checks, &lt; 1 h for production down) → <b>Enterprise On-Ramp</b> (pool of TAMs, &lt; 30 min business-critical) → <b>Enterprise</b> (designated TAM, &lt; 15 min business-critical). These are the plans the exam has tested.',
-       '<b>Changed December 2025:</b> new accounts choose <b>Basic</b>, <b>Business Support+</b>, <b>Enterprise</b> or <b>Unified Operations</b>. Developer, Business and Enterprise On-Ramp take no new sign-ups and end on 1 January 2027. If an exam question names the older plans, answer with the older plans.',
+       'Support plans as the exam tests them: <b>Basic</b> (free, core Trusted Advisor checks) → <b>Developer</b> (business-hours email) → <b>Business</b> (24/7 phone, all Trusted Advisor checks, &lt; 1 h production down) → <b>Enterprise On-Ramp</b> (pool of TAMs, &lt; 30 min) → <b>Enterprise</b> (own TAM, &lt; 15 min business-critical).',
+       '<b>Since December 2025</b> new accounts get Basic, Business Support+, Enterprise or Unified Operations; the older plans end 1 January 2027. If a question names the older plans, answer with them.',
        '<b>TAM</b> = Technical Account Manager. <b>AWS Marketplace</b>: buy third-party software. <b>re:Post</b>: community Q&amp;A.']}
 ];

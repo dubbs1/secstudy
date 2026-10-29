@@ -17,13 +17,13 @@ function nextUp(){
   const cur = LESSONS.find(l => l.id === S.current && !S.done[l.id] && S.stage[l.id]);
   const l = cur || nextLesson();
   const minsLeft = cur ? Math.max(3, Math.round(15 * (STAGES.length - 1 - S.stage[l.id]) / (STAGES.length - 1))) : 15;
-  if (l) return {act:'openLesson', id:l.id, label:cur ? 'Continue' : 'Start lesson',
+  if (l) return {act:'openLesson', id:l.id, d:l.d, label:cur ? 'Continue' : 'Start lesson',
     title:`Lesson ${lessonNo(l.id)}: ${l.t}`, meta:cur ? `about ${minsLeft} min left · you are on ${STAGES[S.stage[l.id]]}` : `about 15 min · due ${fmtDate(l.due)}`};
   return {act:'goPractice', label:'Practise', title:'Practise the questions not right yet', meta:'all lessons done'};
 }
 function nextUpCard(){
   const n = nextUp();
-  return `<div class="card nextup"><div class="body"><small class="task-tag">Next up</small>
+  return `<div class="card nextup ${n.d ? 'coloured' : ''}"${n.d ? ` style="${domainVars(n.d)}"` : ''}><div class="body"><small class="task-tag">${n.d ? chip(n.d) : ''}Next up</small>
     <b class="nextup-t">${n.title}</b><small class="muted">${n.meta}</small>
     <div class="btns"><button class="btn big" data-act="${n.act}"${n.id ? ` data-id="${n.id}"` : ''} id="nextUpBtn">${n.label}</button></div></div></div>`;
 }
@@ -49,7 +49,7 @@ function domainCard(){
   return `<div class="card"><div class="body"><h3>Progress by exam domain</h3>${Object.entries(DOMAINS).map(([d, D]) => {
     const ls = LESSONS.filter(l => l.d === d), n = ls.filter(l => S.done[l.id]).length;
     return `<div class="dom"><div class="wk-top"><span>${chip(d)}${D.w} % of the exam</span><span class="muted">${n}/${ls.length} lessons</span></div>
-      <div class="bar"><i style="width:${Math.round(n / ls.length * 100)}%"></i></div></div>`;
+      <div class="bar"><i style="width:${Math.round(n / ls.length * 100)}%;background:var(--${d})"></i></div></div>`;
   }).join('')}</div></div>`;
 }
 

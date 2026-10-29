@@ -48,7 +48,7 @@ function renderPractice(){
   const q = set.find(x => x.id === pCur), pos = set.indexOf(q);
   const l = LESSONS.find(x => x.id === q.l);
   const pick = live['p:' + q.id] != null ? live['p:' + q.id] : null;
-  h += `<div class="card"><div class="body" style="padding-top:14px">
+  h += `<div class="card coloured-top" style="${domainVars(l.d)}"><div class="body" style="padding-top:14px">
     <div class="qhead"><span>${chip(l.d)}Lesson ${lessonNo(l.id)} · ${pos + 1} of ${set.length}</span>
     <span>${S.ans[q.id] ? (S.ans[q.id].ok ? 'last time: right' : 'last time: wrong') : 'new'}</span></div>
     ${qHTML(q, pick, 'p')}

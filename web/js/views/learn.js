@@ -1,5 +1,16 @@
 /* ---------- Learn: the lesson list, or one lesson as a short walk ---------- */
 const STAGES = ['Read', 'See', 'Try', 'Check', 'Done'];
+// One small icon per stage, so a stage is known by shape and colour as well as by name.
+const stageIcon = d => `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const STAGE_ICONS = [
+  stageIcon('<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5"/>'),
+  stageIcon('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
+  stageIcon('<path d="M9 11V5a2 2 0 0 1 4 0v6M13 10V4a2 2 0 0 1 4 0v7M9 11a2 2 0 0 0-4 0v2a8 8 0 0 0 8 8h1a7 7 0 0 0 7-7v-3a2 2 0 0 0-4 0"/>'),
+  stageIcon('<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'),
+  stageIcon('<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>')
+];
+// Inline style that gives a block its exam domain's colours.
+const domainVars = d => `--dc:var(--${d});--dcbg:var(--${d}-bg)`;
 const revealed = {};   // scenario answers shown this visit, by "lessonId:index"
 
 function renderLearn(){
@@ -25,7 +36,7 @@ function lessonList(){
     for (const l of ls) {
       const s = lessonStatus(l), done = !!S.done[l.id];
       h += `<div class="card"><button class="row" data-act="openLesson" data-id="${l.id}">
-        <span class="n ${done ? 'done' : ''}">${done ? '✓' : lessonNo(l.id)}</span>
+        <span class="n ${done ? 'done' : 'd-' + l.d}">${done ? '✓' : lessonNo(l.id)}</span>
         <span class="t"><b>${l.t}</b><small>${s ? `<span class="pill pill-${s.cls}">${s.text}</span> ` : ''}due ${fmtDate(l.due)} · about 15 min</small></span>
         <span class="chev">›</span></button></div>`;
     }
@@ -44,14 +55,14 @@ function taskHTML(l, i){
 
 function lessonView(l){
   const st = S.stage[l.id] || 0, qs = qsFor(l.id);
-  const strip = STAGES.map((name, k) => `<button class="stage ${k === st ? 'cur' : ''} ${k < st ? 'past' : ''}" data-act="stage" data-id="${l.id}" data-i="${k}"
-    aria-current="${k === st ? 'step' : 'false'}"><i></i>${name}</button>`).join('');
+  const strip = STAGES.map((name, k) => `<button class="stage st${k} ${k === st ? 'cur' : ''} ${k < st ? 'past' : ''}" data-act="stage" data-id="${l.id}" data-i="${k}"
+    aria-current="${k === st ? 'step' : 'false'}"><i></i><span class="stage-l">${STAGE_ICONS[k]}${name}</span></button>`).join('');
   const timerOff = !S.timer.end;
-  let h = `<div class="card lesson" id="lessonTop"><div class="body">
+  let h = `<div class="card lesson" id="lessonTop" style="${domainVars(l.d)}"><div class="lesson-band">
     <div class="lesson-bar"><button class="link" data-act="closeLesson">‹ All lessons</button>
       ${timerOff ? `<button class="btn ghost small" data-act="lessonTimer">Start 15 min timer</button>` : ''}</div>
-    <small class="muted">${chip(l.d)}Lesson ${lessonNo(l.id)} of ${LESSONS.length} · due ${fmtDate(l.due)}</small>
-    <h2 class="lesson-t">${l.t}</h2>
+    <small class="band-meta">${DOMAINS[l.d].name} · ${DOMAINS[l.d].w} % of the exam · Lesson ${lessonNo(l.id)} of ${LESSONS.length} · due ${fmtDate(l.due)}</small>
+    <h2 class="lesson-t">${l.t}</h2></div><div class="body">
     <nav class="stages" aria-label="Lesson steps">${strip}</nav>
     <div class="stage-body">${stageHTML(l, st, qs)}</div>`;
   if (st < STAGES.length - 1) {
@@ -62,8 +73,17 @@ function lessonView(l){
 }
 
 function stageHTML(l, st, qs){
-  if (st === 0) return `${taskHTML(l, 0)}<ul class="pts">${l.pts.map(p => `<li>${p}</li>`).join('')}</ul>`;
-  if (st === 1) return `<p class="muted lead">Look at the picture for a minute, then say what it shows in your own words.</p>${visualHTML(VISUALS[l.id])}`;
+  if (st === 0) {
+    const cards = modeOf(l, 0, 'points') === 'cards';
+    return `${taskHTML(l, 0)}${modeSwitch(l, 0, [['points', 'Key points'], ['cards', 'Flip cards']])}` + (cards ? cardsHTML(l)
+      : `<p class="colour-key"><b>Terms to know</b> in this lesson's colour · <span class="num">numbers</span> the exam likes to ask about</p>
+         <ul class="pts">${l.pts.map(p => `<li>${markNumbers(p)}</li>`).join('')}</ul>`);
+  }
+  if (st === 1) {
+    const test = modeOf(l, 1, 'look') === 'test';
+    return modeSwitch(l, 1, [['look', 'Look'], ['test', 'Test yourself']]) + (test ? gameHTML(l)
+      : `<p class="muted lead">Look at the picture for a minute, then say what it shows in your own words. Then tap Test yourself.</p>${visualHTML(VISUALS[l.id])}`);
+  }
   if (st === 2) return tryHTML(l);
   if (st === 3) return `${taskHTML(l, 2)}${quizHTML(l, qs)}`;
   return doneHTML(l, qs);

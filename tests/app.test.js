@@ -466,12 +466,20 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = 'l5'; S.stage.l5 = 1;`,
       `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 1;`,
       `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1;`,
-      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = [true];`
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = [true];`,
+      `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 0; ui.mode['l10:0'] = 'points';`,
+      `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 0; ui.mode['l7:0'] = 'cards'; ui.cards.l7 = {order:[0,1,2], pos:0, flipped:true, got:0, again:0};`,
+      `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 1; ui.mode['l7:1'] = 'test'; ui.game.l7 = {picks:{0:(gameQuestions(LESSONS[6]).qs[0].answer + 1) % 3}, cur:0, seq:[], cells:{}, checked:false};`,
+      `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 1; ui.mode['l2:1'] = 'test'; ui.game.l2 = {picks:{}, cur:0, seq:[], cells:{'0_0':'you','6_3':'you'}, checked:true};`,
+      `S.tab = 'practice'; pCur = 'q19';`,
+      `S.tab = 'learn'; S.openLesson = null;`
     ];
     const sels = ['body', '#top .sub', '.stat', '.stat.timer', '.theme', '.chip.d-cc', '.chip.d-sec', '.chip.d-tech', '.chip.d-bill', '.foot', '.foot .link', 'h3',
       '.hello', '.streak', '.task-tag', '.nextup small', '.week li.behind small', '.week small', '.row-link small', 'mark', '.group-h small', '.row .t small', '.pill-going',
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
-      '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag'];
+      '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag',
+      '.num', '.band-meta', '.lesson .pts b', '.colour-key b', '.stage.cur', '.flipcard small', '.flipcard span', '.chipbtn.right', '.chipbtn.wrong', '.game-fb',
+      '.who-c.blank', '.btn.good', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
       for (const setup of screens) {
@@ -572,9 +580,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const tall = await p.evaluate(() => {
       const out = [];
       for (const l of LESSONS) for (let k = 0; k < STAGES.length; k++) {
-        S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true); render();
-        const h = document.querySelector('#lessonTop').getBoundingClientRect().height;
-        if (h > 844 * 1.4) out.push(`${l.id} ${STAGES[k]} ${Math.round(h)}px`);
+        for (const mode of k === 0 ? ['points', 'cards'] : k === 1 ? ['look', 'test'] : ['-']) {
+          S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; ui.mode[l.id + ':' + k] = mode; (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true); render();
+          const h = document.querySelector('#lessonTop').getBoundingClientRect().height;
+          if (h > 844 * 1.4) out.push(`${l.id} ${STAGES[k]} ${mode} ${Math.round(h)}px`);
+        }
       }
       return out;
     });
@@ -731,6 +741,119 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       ans:{q1:{n:1, wrong:1, pick:0, ok:false, at:Date.now() - 864e5}, q2:{n:1, wrong:1, pick:0, ok:false, at:Date.now() - 864e5}}});
     ok(await q.$('.card.review [data-act=pick]:not([disabled])'), 'old review shows the old answer, cannot answer');
     await q.context().close();
+  });
+
+  // ---------- colour coding and hands-on practice (docs/UX.md U9, U10) ----------
+  await check('one colour per exam domain: list, lesson band, key terms, Today bars, Practice card (U9.1)', async () => {
+    await seed(p, {v:2, tab:'learn'});
+    const col = await p.evaluate(() => { const v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return {sec:v('--sec'), secbg:v('--sec-bg'), bill:v('--bill')}; });
+    const rgb = hex => { const n = parseInt(hex.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`; };
+    ok(await p.evaluate(() => getComputedStyle(document.querySelector('[data-id=l5] .n')).color) === rgb(col.sec), 'list number not in its domain colour');
+    await p.click('[data-act=openLesson][data-id=l5]');
+    ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lesson-band')).backgroundColor) === rgb(col.secbg), 'lesson band not in its domain colour');
+    ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lesson .pts b')).color) === rgb(col.sec), 'key terms not in the domain colour');
+    await p.click('#nav [data-tab=today]');
+    ok(await p.evaluate(() => getComputedStyle(document.querySelectorAll('.dom .bar i')[3]).backgroundColor) === rgb(col.bill), 'Today bar not in its domain colour');
+    await p.evaluate(() => { S.tab = 'practice'; pCur = 'q44'; render(); });
+    ok(await p.evaluate(() => getComputedStyle(document.querySelector('.coloured-top')).borderTopColor) === rgb(col.bill), 'practice card not in its domain colour');
+  });
+  await check('each lesson stage has its own colour and icon (U9.2)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l1'});
+    const st = await p.$$eval('[data-act=stage]', bs => bs.map(b => !!b.querySelector('svg')));
+    ok(st.length === 5 && st.every(Boolean), 'stage without an icon');
+    const colours = [];
+    for (let k = 0; k < 5; k++) { await p.click(`[data-act=stage][data-i="${k}"]`); colours.push(await p.evaluate(() => getComputedStyle(document.querySelector('.stage.cur')).color)); }
+    ok(new Set(colours).size === 5, 'stages share a colour: ' + colours);
+  });
+  await check('numbers in key points are highlighted, names with digits are not, with a colour key (U9.3)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l10'});
+    const nums = await p.$$eval('.pts .num', ns => ns.map(n => n.textContent));
+    ok(['99.999999999 %', '11 nines', '12 hours'].every(x => nums.includes(x)), 'numbers: ' + nums);
+    ok(!nums.some(x => /^3$/.test(x)), 'the 3 in S3 was highlighted');
+    ok(await p.$('.colour-key'), 'no colour key');
+    await p.evaluate(() => { S.openLesson = 'l3'; render(); });
+    const n3 = await p.$$eval('.pts .num', ns => ns.map(n => n.textContent));
+    ok(!n3.includes('1') && n3.includes('3'), 'eu-central-1 marked, or "at least 3" not: ' + n3);
+    ok(await p.evaluate(() => { const h = markNumbers('<code>port 22</code> and <a href="x1">5 min</a> &#39;'); return h.includes('<code>port 22</code>') && h.includes('href="x1"') && h.includes('&#39;') && h.includes('<span class="num">5 min</span>'); }), 'markNumbers touched code, an attribute or an entity');
+  });
+  await check('flip cards: from the lesson terms, flip with keys, Got it and Again (U10.1)', async () => {
+    ok(await p.evaluate(() => LESSONS.every(l => flashCards(l).length >= 2)), 'a lesson has under 2 cards');
+    await seed(p, {v:2, tab:'learn', openLesson:'l9'});
+    await p.click('[data-act=mode][data-v=cards]');
+    const n = await p.evaluate(() => flashCards(LESSONS[8]).length);
+    ok((await text(p, '.deck-count')).startsWith(`Card 1 of ${n}`), 'deck count');
+    const front = await text(p, '.flipcard span');
+    await p.focus('.flipcard'); await p.keyboard.press('Enter');
+    ok((await text(p, '.flipcard small')).startsWith(front) && await p.getAttribute('.flipcard', 'aria-pressed') === 'true', 'Enter did not flip');
+    await p.click('[data-act=cardAgain]');
+    ok((await text(p, '.deck-count')).startsWith(`Card 2 of ${n + 1}`), 'Again did not put the card back');
+    await p.focus('.flipcard'); await p.keyboard.press('Space'); await p.click('[data-act=cardGot]');
+    ok((await text(p, '.deck-count')).includes('1 got it'), 'Got it not counted');
+  });
+  await check('every lesson has a diagram game, and a perfect game scores full marks (U10.2)', async () => {
+    const res = await p.evaluate(() => LESSONS.map(l => {
+      const g = gameQuestions(l); delete ui.game[l.id]; const st = gameState(l);
+      if (g.kind === 'pick') { g.qs.forEach((q, i) => st.picks[i] = q.answer); st.cur = g.qs.length; }
+      else if (g.kind === 'order') { st.seq = g.items.map((it, i) => i).sort((a, b) => g.items[a].answer - g.items[b].answer); }
+      else { const v = VISUALS[l.id]; v.rows.forEach((r, ri) => v.cols.forEach((c, ci) => st.cells[ri + '_' + ci] = ri < c.you ? 'you' : 'them')); st.checked = true; }
+      const div = document.createElement('div'); div.innerHTML = gameHTML(l);
+      const score = div.querySelector('.game-score b'); delete ui.game[l.id];
+      return l.id + ' ' + g.kind + ' ' + (score ? score.textContent : 'no score');
+    }));
+    const bad = res.filter(r => { const m = r.match(/(\d+) of (\d+) right/); return !m || m[1] !== m[2] || +m[2] < 2; });
+    ok(!bad.length, bad.join(', '));
+  });
+  await check('every game answer agrees with the diagram it comes from (U10.2)', async () => {
+    // Checked against VISUALS directly, not against the game's own answer key.
+    const wrong = await p.evaluate(() => {
+      const out = [];
+      for (const l of LESSONS) {
+        const v = VISUALS[l.id], g = gameQuestions(l);
+        if (g.kind === 'order') g.items.forEach(it => { if (v.steps[it.answer].name !== it.text) out.push(l.id + ' order ' + it.text); });
+        if (g.kind !== 'pick') continue;
+        g.qs.forEach(q => {
+          const opts = q.opts || g.options, chosen = opts[q.answer];
+          if (opts.length < 2) out.push(l.id + ' too few options');
+          if (v.kind === 'compare' && !v.cols.find(c => c.title === chosen).items.includes(q.text)) out.push(l.id + ' ' + q.text);
+          if (v.kind === 'tiles' && !v.tiles.some(t => t.tag === q.text && t.text === q.sub && t.title === chosen)) out.push(l.id + ' ' + q.text);
+          if (v.kind === 'nested') {
+            const side = (v.side || []).find(sd => sd.note === q.text);
+            const kid = v.box.children.find(k => k.title === chosen);
+            const item = (q.text.match(/^Where does "(.*)" go\?$/) || [])[1];
+            if (side ? side.title !== chosen : !(kid && kid.items.includes(item))) out.push(l.id + ' ' + q.text);
+          }
+        });
+      }
+      return out;
+    });
+    ok(!wrong.length, wrong.join(', '));
+  });
+  await check('game feedback is instant, with a symbol and words, and read out (U10.3)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l1', stage:{l1:1}});
+    await p.click('[data-act=mode][data-v=test]');
+    const ans = await p.evaluate(() => gameQuestions(LESSONS[0]).qs[0].answer);
+    await p.click(`[data-act=gPick][data-v="${1 - ans}"]`);
+    ok((await text(p, '.game-fb')).startsWith('✗ Not quite.') && await p.$('.chipbtn.wrong') && await p.$('.chipbtn.right'), 'wrong answer feedback');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Not quite'));
+    ok(await p.evaluate(() => document.activeElement.dataset.act === 'gNext'), 'focus not on Next');
+    await p.keyboard.press('Enter');
+    const a2 = await p.evaluate(() => gameQuestions(LESSONS[0]).qs[1].answer);
+    await p.click(`[data-act=gPick][data-v="${a2}"]`);
+    ok((await text(p, '.game-fb')).startsWith('✓ Right.'), 'right answer feedback');
+  });
+  await check('cards and games change no saved progress except today as a study day; they restart (U10.4)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l10', stage:{l10:1}});
+    const before = await p.evaluate(() => { save(); const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; return JSON.stringify(s); });
+    await p.click('[data-act=mode][data-v=test]');
+    for (let k = 0; k < 7; k++) await p.click('.game .chipbtn:not(:disabled)');
+    ok(await p.$('.game-score'), 'order game did not finish');
+    await p.click('[data-act=gameReset]');
+    ok((await text(p, '.game ~ p')).startsWith('0 of 7 placed'), 'game did not restart');
+    await p.evaluate(() => { S.stage.l10 = 0; render(); });
+    await p.click('[data-act=mode][data-v=cards]'); await p.click('.flipcard'); await p.click('[data-act=cardGot]');
+    const after = await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('awsCourse1')); const d = s.days; delete s.days; s.stage.l10 = 1; return [JSON.stringify(s), d[todayISO()] === true]; });
+    ok(after[0] === before, 'saved progress changed by practising');
+    ok(after[1], 'today not marked as a study day');
   });
 
   await check('no script errors anywhere above', async () => { ok(!errors.length, errors.join(' | ')); });

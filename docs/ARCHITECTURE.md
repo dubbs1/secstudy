@@ -37,12 +37,17 @@ web/js/course.js          lookups over the content, recording answers, spaced re
 web/js/views/shared.js    domain chip, the question block, per-visit view state (live, lqi, pCur)
 web/js/views/visual.js    turns a VISUALS entry into HTML and CSS (no images: wraps on phones, follows the theme)
 web/js/views/timer.js     the timer button in the sticky top bar and its panel (no tab of its own)
+web/js/views/interact.js  flip cards (from key-point terms) and diagram games (from VISUALS); number highlighting.
+                          Practice state is per visit only; it saves nothing except today's study day
 web/js/views/*.js         one file per screen: header, today, learn, practice, labs. Each returns an HTML
                           string from the current state. They may settle view state while drawing (which
                           lesson is open, which quiz or practice question shows) but never save
 web/js/app.js             render loop, event handlers, focus and scroll keeping, theme, install, startup
 web/sw.js                 offline copy (network first); precache list checked against web/ by a test
 ```
+
+Colour coding: each exam domain has one colour (tokens --cc, --sec, --tech, --bill and their -bg pairs; a block
+sets --dc/--dcbg with domainVars()), each lesson stage has one (--st0 to --st4), numbers use --num.
 
 Load order matters only in one direction: content and helpers first, `app.js` last. Every file
 defines top-level names; classic scripts share one global scope, so later files see earlier ones,
