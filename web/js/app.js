@@ -4,6 +4,8 @@
 let reveal = null;     // selector of a card row to bring into view after the next render
 let announceNext = false;   // read the answer feedback to screen readers after the next render
 let focusTo = null;    // selector to focus after the next render, when an action names one
+let lessonFrom = null; // the tab a lesson was opened from, so Back can return there
+let labFromLesson = false;   // the lab was opened from a lesson: Back returns to the lesson
 
 // A selector that finds "the same control" again after the page is rebuilt.
 function controlKey(el){
@@ -53,32 +55,52 @@ function applyTheme(){
 }
 
 /* ---------- the phone's Back button ---------- */
-// An open lesson or review is a layer: Back closes it instead of leaving the app. The URL never changes.
-// The app scrolls to what it opens or closes; the browser restoring an old scroll position would undo that.
+// One spare history entry sits on top of the page (the URL never changes). Back lands on the entry below it;
+// the app then closes what is on screen and puts the spare entry back. Only from Today with nothing open
+// does Back go on and leave. Close buttons never touch history, so double taps and tab switches are harmless.
 try { history.scrollRestoration = 'manual'; } catch(e) {}
-function layerOpened(){
-  if (history.state && history.state.secstudy === 'layer') return;   // already on a layer entry: reuse it
-  try { history.pushState({secstudy:'layer'}, ''); } catch(e) {}
+let backArmed = false;
+function armBack(){   // on the first tap or key press: browsers skip entries added before any interaction
+  if (backArmed) return;
+  backArmed = true;
+  try {
+    if (!(history.state && history.state.secstudy === 'top')) {
+      history.replaceState({secstudy:'base'}, '');
+      history.pushState({secstudy:'top'}, '');
+    }
+  } catch(e) {}
 }
-function layerClosedByButton(){
-  if (history.state && history.state.secstudy === 'layer') { history.back(); return true; }   // popstate does the closing
-  return false;
+window.addEventListener('pointerdown', armBack, {once:true, capture:true});
+window.addEventListener('keydown', armBack, {once:true, capture:true});
+// Closes one thing on the screen you are looking at. False when there is nothing left to close.
+function backOneStep(){
+  if (S.tab === 'learn' && S.openLesson) {
+    reveal = `[data-act=openLesson][data-id="${S.openLesson}"]`; S.openLesson = null;
+    if (lessonFrom && lessonFrom !== 'learn') { S.tab = lessonFrom; reveal = null; }   // opened from a lab or Today: go back there
+    lessonFrom = null;
+  }
+  else if (S.tab === 'labs' && labFromLesson && S.openLesson) { S.tab = 'learn'; reveal = '#lessonTop'; }
+  else if (S.tab === 'today' && S.review) { S.review = null; reveal = '#nextUpBtn'; }
+  else if (S.tab !== 'today') { S.tab = 'today'; window.scrollTo(0, 0); }
+  else return false;
+  return true;
 }
-window.addEventListener('popstate', () => {
-  if (S.review) { S.review = null; reveal = '#nextUpBtn'; }
-  else if (S.openLesson) { reveal = `[data-act=openLesson][data-id="${S.openLesson}"]`; S.openLesson = null; }
-  else return;
-  save(); render();
+window.addEventListener('popstate', e => {
+  if (!(e.state && e.state.secstudy === 'base')) return;   // not our entry
+  if (backOneStep()) {
+    save(); render();
+    try { history.pushState({secstudy:'top'}, ''); } catch(err) {}
+  } else {
+    try { history.back(); } catch(err) {}   // nothing open: leave the app
+  }
 });
 
 /* ---------- events ---------- */
 document.addEventListener('click', e => {
   const tabBtn = e.target.closest('#nav button');
   if (tabBtn) {
-    if (S.tab === 'learn' && tabBtn.dataset.tab === 'learn' && S.openLesson) {   // Learn again: back to the list
-      if (layerClosedByButton()) return;
-      S.openLesson = null;
-    }
+    labFromLesson = false;
+    if (S.tab === 'learn' && tabBtn.dataset.tab === 'learn') { S.openLesson = null; lessonFrom = null; }   // Learn again: back to the list
     S.tab = tabBtn.dataset.tab; save(); render(); window.scrollTo(0, 0); return;
   }
   const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return;
@@ -90,11 +112,10 @@ document.addEventListener('click', e => {
     case 'goLesson':    S.stage[id] = 0;   // from Look up: start at Read, where the key point is
     // falls through
     case 'openLesson':
-      if (!S.openLesson) layerOpened();
+      if (!S.openLesson) lessonFrom = S.tab;   // where Back returns to
       S.tab = 'learn'; S.open = null; S.openLesson = id;
       reveal = '#lessonTop'; focusTo = '[data-act=stage][aria-current=step]'; break;
-    case 'closeLesson': if (layerClosedByButton()) return;
-      reveal = `[data-act=openLesson][data-id="${S.openLesson}"]`; S.openLesson = null; break;
+    case 'closeLesson': reveal = `[data-act=openLesson][data-id="${S.openLesson}"]`; S.openLesson = null; lessonFrom = null; break;
     // Moving through a lesson makes it the one Next up continues; only opening it does not.
     case 'stage':       S.current = id; S.stage[id] = +b.dataset.i; reveal = '#lessonTop'; focusTo = '[data-act=stage][aria-current=step]'; break;
     case 'stageNext':   S.current = id; S.stage[id] = Math.min((S.stage[id] || 0) + 1, STAGES.length - 1); reveal = '#lessonTop'; focusTo = '[data-act=stage][aria-current=step]'; break;
@@ -104,7 +125,7 @@ document.addEventListener('click', e => {
       revealed[id + ':' + b.dataset.i] = true; focusTo = `#ans-${id}-${b.dataset.i}`; announce(sc.answer + ' ' + sc.why);
       render(); return;   // nothing to save
     }
-    case 'goLab':       S.tab = 'labs'; S.open = null; S.openLab = id; reveal = `[data-act=openLab][data-id="${id}"]`; break;
+    case 'goLab':       labFromLesson = S.tab === 'learn' && !!S.openLesson; S.tab = 'labs'; S.open = null; S.openLab = id; reveal = `[data-act=openLab][data-id="${id}"]`; break;
     case 'goQuestion':  S.tab = 'practice'; S.pFilter = 'all'; S.pMode = 'all'; pCur = id; delete live['p:' + id]; window.scrollTo(0, 0); break;
     case 'goPractice':  S.tab = 'practice'; window.scrollTo(0, 0); break;
     case 'lessonTimer': case 'breakTimer': {
@@ -144,12 +165,11 @@ document.addEventListener('click', e => {
       break;
     }
     case 'undone':  S.done[id] = false; S.stage[id] = 0; S.current = id; reveal = '#lessonTop'; focusTo = '[data-act=stage][aria-current=step]'; break;
-    case 'rvStart': if (!S.review) layerOpened();
+    case 'rvStart':
       S.review = {ids:dueNow().slice(0, REVIEW_MAX).map(q => q.id), i:0, right:0, started:Date.now()}; S.open = null;
       S.review.ids.forEach(q => delete live['r:' + q]); window.scrollTo(0, 0); break;
     case 'rvNext':  S.review.i++; break;
-    case 'rvClose': if (layerClosedByButton()) return;
-      S.review = null; reveal = '#nextUpBtn'; break;
+    case 'rvClose': S.review = null; reveal = '#nextUpBtn'; break;
     case 'pLesson': S.pFilter = id; S.pMode = 'all'; S.open = null; pCur = null; break;
     case 'labReset': S.labs[id] = []; break;
     case 'tLen': S.timer = {...S.timer, len:+b.dataset.v, end:null, left:null}; break;

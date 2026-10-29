@@ -645,28 +645,62 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('[data-act=rvNext]');
     ok((await text(p, '.card.review')).includes('1 of 1 right') && await p.evaluate(() => S.ans.q1.n === 2), 'counted twice: ' + await text(p, '.card.review'));
   });
-  await check("the phone's Back gesture closes an open lesson or review, not the app", async () => {
-    const p = await fresh();   // a page with no history from earlier checks
-    await p.click('#nextUpBtn');
-    ok(await p.$('.lesson-t'), 'lesson not open');
-    await p.goBack();
-    await p.waitForFunction(() => !S.openLesson);
-    ok(await p.$('[data-act=openLesson]') && !(await p.$('.lesson-t')), 'Back did not close the lesson');
-    await p.click('[data-act=openLesson][data-id=l2]');
-    await p.click('[data-act=closeLesson]');   // closing with the button uses up the history entry too
-    await p.waitForFunction(() => !S.openLesson && !(history.state && history.state.secstudy)).catch(() => {});
-    ok(await p.evaluate(() => !S.openLesson && !(history.state && history.state.secstudy)), 'button left a history entry');
-    await seed(p, {v:2, ans:{q1:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}}});
-    await p.click('#nextUpBtn');
-    await p.goBack();
-    await p.waitForFunction(() => !S.review);
-    ok(await p.$('#nextUpBtn'), 'Back did not close the review');
-    // tapping Learn again closes the lesson the same way, leaving no stale entry behind
-    await p.evaluate(() => { S.srs = {}; save(); render(); });   // nothing due: Next up is the lesson
-    await p.click('#nextUpBtn');
-    await p.click('#nav [data-tab=learn]');
-    await p.waitForFunction(() => !S.openLesson && !(history.state && history.state.secstudy));
-    await p.context().close();
+  // Back: each case opens the app after a blank page, so leaving the app shows up as about:blank.
+  async function backPage(data){
+    const ctx = await browser.newContext({viewport:{width:390, height:844}});
+    const q = await ctx.newPage();
+    q.setDefaultTimeout(8000);
+    q.on('pageerror', e => errors.push(e.message));
+    await q.goto('about:blank');
+    await q.goto(URL);
+    if (data) { await q.evaluate(d => localStorage.setItem('awsCourse1', JSON.stringify(d)), {days:{}, ...data}); await q.reload(); }
+    return q;
+  }
+  const back = async q => { await q.goBack().catch(() => {}); await q.waitForTimeout(150); };
+  const left = q => q.url() === 'about:blank';
+  await check("Back closes what is on screen, returns to Today, and only then leaves the app", async () => {
+    const q = await backPage({v:2});
+    await q.click('#nextUpBtn');                                   // lesson 1, opened from Today
+    await back(q);
+    ok(!left(q) && await q.evaluate(() => S.tab === 'today' && !S.openLesson), 'Back from a lesson opened on Today did not return to Today');
+    await q.click('#nav [data-tab=learn]'); await q.click('[data-act=openLesson][data-id=l2]');
+    await back(q);
+    ok(!left(q) && await q.evaluate(() => S.tab === 'learn' && !S.openLesson), 'Back from a lesson did not return to the list');
+    await back(q);
+    ok(!left(q) && await q.evaluate(() => S.tab === 'today'), 'Back from Learn did not go to Today');
+    await back(q);
+    ok(left(q), 'Back on Today with nothing open did not leave the app');
+    await q.context().close();
+  });
+  await check('Back: a double tap on All lessons stays in the app; a hidden review and a lesson stay separate', async () => {
+    const q = await backPage({v:2, ans:{q1:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}}});
+    await q.click('#nextUpBtn');                                   // review starts
+    await q.click('#nav [data-tab=learn]'); await q.click('[data-act=openLesson][data-id=l1]');
+    await q.dblclick('[data-act=closeLesson]');
+    ok(!left(q) && await q.evaluate(() => !S.openLesson && !!S.review), 'double tap left the app, or closed the review');
+    await back(q);                                                 // Learn -> Today, review on screen
+    ok(await q.$('.card.review'), 'review not shown on Today');
+    await back(q);
+    ok(!left(q) && await q.evaluate(() => !S.review), 'Back did not close the review');
+    await q.context().close();
+  });
+  await check('Back from a lab opened in a lesson returns to the lesson; after a relaunch Back still closes the lesson', async () => {
+    let q = await backPage({v:2, tab:'learn', openLesson:'l10', stage:{l10:2}});
+    await q.click('.handson [data-act=goLab]');
+    await back(q);
+    ok(!left(q) && await q.evaluate(() => S.tab === 'learn' && S.openLesson === 'l10'), 'Back from the lab did not return to the lesson');
+    await q.context().close();
+    q = await backPage({v:2, tab:'learn', openLesson:'l2'});       // relaunch with a lesson open
+    await q.click('[data-act=stage][data-i="1"]');                 // any first tap
+    await back(q);
+    ok(!left(q) && await q.evaluate(() => !S.openLesson), 'Back after a relaunch left the app');
+    await q.context().close();
+  });
+  await check('a review saved by release 1.0.0 can still be answered', async () => {
+    const q = await backPage({v:2, review:{ids:['q1', 'q2'], i:0, right:0}, srs:{q1:{box:0, due:'2020-01-01'}, q2:{box:0, due:'2020-01-01'}},
+      ans:{q1:{n:1, wrong:1, pick:0, ok:false, at:Date.now() - 864e5}, q2:{n:1, wrong:1, pick:0, ok:false, at:Date.now() - 864e5}}});
+    ok(await q.$('.card.review [data-act=pick]:not([disabled])'), 'old review shows the old answer, cannot answer');
+    await q.context().close();
   });
 
   await check('no script errors anywhere above', async () => { ok(!errors.length, errors.join(' | ')); });

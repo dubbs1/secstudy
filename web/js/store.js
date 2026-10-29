@@ -41,7 +41,7 @@ function load(){
     const fine = isObj(R) && Array.isArray(R.ids);
     if (fine) R.ids = R.ids.filter(known);
     s.review = fine && Number.isInteger(R.i) && R.i >= 0 && R.i <= R.ids.length
-      ? {ids:R.ids, i:R.i, right:Math.max(0, Math.floor(+R.right) || 0), started:+R.started || 0} : null;
+      ? {ids:R.ids, i:R.i, right:Math.max(0, Math.floor(+R.right) || 0), started:+R.started || Date.now()} : null;   // a review from 1.0.0 starts now
   }
   if (typeof s.pFilter !== 'string') s.pFilter = 'all';
   if (!THEMES.includes(s.theme)) s.theme = 'system';
