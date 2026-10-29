@@ -87,6 +87,28 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(s.review && s.review.ids.join() === 'q1', 'unknown review ids kept');
   });
 
+  await check('hostile import: no script runs, no crash, no broken review dates', async () => {
+    let alerted = false;
+    const onDialog = d => { alerted = true; d.dismiss(); };
+    p.on('dialog', onDialog);
+    const evil = '<img src=x onerror=alert(1)>';
+    for (const review of [{ids:['q1', 'q2'], i:-1}, {ids:['q1', 'q2'], i:1.5}, {ids:['q1', 'q2'], i:5}]) {
+      await seed(p, {v:2, tab:'learn', review,
+        ans:{q1:{n:1, ok:false, pick:0, wrong:evil}, q2:{n:1, ok:true, pick:0, at:'yesterday'}, gone:{n:1, ok:false}, odd:3},
+        srs:{q3:{box:-3, due:'2020-01-01'}, q4:{box:1.5, due:'2020-01-01'}, gone:{box:0, due:'2020-01-01'}}});
+      ok(await p.$('#main .card'), 'Learn tab blank with review ' + JSON.stringify(review));
+    }
+    await p.click('#nav [data-tab=practice]');
+    await p.click('[data-act=toggleWeak]');
+    await p.waitForTimeout(200);
+    p.off('dialog', onDialog);
+    ok(!alerted, 'script from the imported file ran');
+    const [s, in7] = await p.evaluate(() => [S, addDays(todayISO(), 7)]);
+    ok(s.ans.q1.wrong === 0 && s.srs.q2.due === in7 && s.old_ans.odd === 3, 'bad numbers or dates kept: ' + JSON.stringify([s.ans.q1, s.srs.q2]));
+    ok(s.srs.q3.box === 0 && s.srs.q4.box === 1 && !s.srs.gone, 'boxes not cleaned: ' + JSON.stringify(s.srs));
+    ok(JSON.stringify(s.srs).indexOf('NaN') < 0, 'NaN date in schedule');
+  });
+
   // ---------- Learn ----------
   await check('lesson quiz: wrong answer explains itself inline, retry works', async () => {
     await seed(p);
