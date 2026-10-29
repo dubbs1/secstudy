@@ -10,7 +10,7 @@ const VISUALS = {
  l1:{kind:'compare', caption:'The six advantages of cloud, as before and after.',
   cols:[{title:'Your own data center', tone:'plain', items:['Buy servers up front', 'Guess capacity years ahead', 'Weeks to get new hardware', 'You run the building, power and cooling', 'A new country means a new data center']},
         {title:'AWS Cloud', tone:'aws', items:['Pay for what you use', 'Scale up and down with demand', 'New servers in minutes', 'AWS runs the data centers', 'Deploy in another Region in minutes']}]},
- l2:{kind:'who', caption:'Who manages each layer. Purple is you, grey is the provider. The further right, the less you manage.',
+ l2:{kind:'who', caption:'Who manages each layer. Purple is you, grey is the provider. The further right, the less you manage. Examples: EC2 is IaaS, Elastic Beanstalk is PaaS, web email is SaaS.',
   rows:['Your data and users', 'Application', 'Runtime and middleware', 'Operating system', 'Virtualization', 'Servers and storage', 'Network and data center'],
   cols:[{title:'On-prem', ex:'your servers', you:7}, {title:'IaaS', ex:'EC2', you:4}, {title:'PaaS', ex:'Beanstalk', you:2}, {title:'SaaS', ex:'web email', you:1}]},
  l3:{kind:'nested', caption:'A Region holds at least three Availability Zones. Spread across AZs to keep running when one fails.',

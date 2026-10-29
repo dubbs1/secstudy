@@ -3,9 +3,8 @@ let lookupQ = '';   // the look-up box text, kept while the page redraws
 
 function renderToday(){
   if (S.review) return reviewCard();
-  const left = daysUntil(EXAM.date), streak = streakDays();
-  let h = `<p class="hello">${left > 0 ? `<b>${left} day${left > 1 ? 's' : ''}</b> to the exam` : left === 0 ? '<b>Exam day</b>' : 'Exam done'}
-    ${streak ? ` · <span class="streak">${streak}-day streak</span>` : ''}</p>`;
+  const streak = streakDays();   // the days to the exam are already in the header
+  let h = streak ? `<p class="hello"><span class="streak">${streak}-day streak</span>. Keep it going today.</p>` : '';
   h += nextUpCard() + weekCard() + domainCard() + lookupCard() + factsCard();
   return h;
 }
@@ -14,10 +13,12 @@ function renderToday(){
 function nextUp(){
   const due = dueNow().length;
   if (due) { const n = Math.min(due, REVIEW_MAX); return {act:'rvStart', label:`Start review`, title:`Review ${n} question${n > 1 ? 's' : ''}`, meta:`about ${n} min · questions you missed or that are due again`}; }
-  const going = LESSONS.find(l => !S.done[l.id] && S.stage[l.id]);
-  const l = going || nextLesson();
-  if (l) return {act:'openLesson', id:l.id, label:going ? 'Continue' : 'Start lesson',
-    title:`Lesson ${lessonNo(l.id)}: ${l.t}`, meta:going ? `about 15 min · you are on ${STAGES[S.stage[l.id]]}` : `about 15 min · due ${fmtDate(l.due)}`};
+  // The lesson you last worked in (not one you only looked at), else the next one in order.
+  const cur = LESSONS.find(l => l.id === S.current && !S.done[l.id] && S.stage[l.id]);
+  const l = cur || nextLesson();
+  const minsLeft = cur ? Math.max(3, Math.round(15 * (STAGES.length - 1 - S.stage[l.id]) / (STAGES.length - 1))) : 15;
+  if (l) return {act:'openLesson', id:l.id, label:cur ? 'Continue' : 'Start lesson',
+    title:`Lesson ${lessonNo(l.id)}: ${l.t}`, meta:cur ? `about ${minsLeft} min left · you are on ${STAGES[S.stage[l.id]]}` : `about 15 min · due ${fmtDate(l.due)}`};
   return {act:'goPractice', label:'Practise', title:'Practise the questions not right yet', meta:'all lessons done'};
 }
 function nextUpCard(){
@@ -29,13 +30,18 @@ function nextUpCard(){
 
 function weekCard(){
   const today = todayISO(), end = addDays(today, 6);
-  const ls = LESSONS.filter(l => (l.due >= today && l.due <= end) || (l.due < today && !S.done[l.id]));
-  if (!ls.length) return '';
-  return `<div class="card"><div class="body"><h3>This week</h3><ul class="week">${ls.map(l => {
-    const done = !!S.done[l.id], late = !done && l.due < today;
-    return `<li class="${done ? 'done' : late ? 'late' : ''}"><button class="row-link" data-act="openLesson" data-id="${l.id}">
+  const late = LESSONS.filter(l => l.due < today && !S.done[l.id]);
+  const ls = LESSONS.filter(l => l.due >= today && l.due <= end);
+  if (!ls.length && !late.length) return '';
+  // Late lessons fold into one line with one button, so the list never turns into a wall of red.
+  const behind = late.length ? `<li class="behind"><button class="row-link" data-act="openLesson" data-id="${late[0].id}">
+      <span class="tick" aria-hidden="true">!</span><span><b>${late.length} lesson${late.length > 1 ? 's' : ''} behind</b>
+      <small>Catch up: start with ${esc(late[0].t)}</small></span></button></li>` : '';
+  return `<div class="card"><div class="body"><h3>This week</h3><ul class="week">${behind}${ls.map(l => {
+    const done = !!S.done[l.id];
+    return `<li class="${done ? 'done' : ''}"><button class="row-link" data-act="openLesson" data-id="${l.id}">
       <span class="tick" aria-hidden="true">${done ? '✓' : ''}</span><span><b>${l.t}</b>
-      <small>${done ? 'done' : late ? `late, was due ${fmtDate(l.due)}` : 'due ' + fmtDate(l.due)}</small></span></button></li>`;
+      <small>${done ? 'done' : 'due ' + fmtDate(l.due)}</small></span></button></li>`;
   }).join('')}</ul></div></div>`;
 }
 
@@ -94,7 +100,7 @@ function reviewCard(){
       <button class="btn ${more ? 'ghost' : ''}" data-act="rvClose">Done</button></div></div></div>`;
   }
   const q = QUESTIONS.find(x => x.id === R.ids[R.i]), l = LESSONS.find(x => x.id === q.l);
-  const pick = live['r:' + q.id] != null ? live['r:' + q.id] : null;
+  const a = S.ans[q.id], pick = live['r:' + q.id] != null ? live['r:' + q.id] : (a && a.at >= R.started ? a.pick : null);
   return `<div class="card open review"><div class="body">
     <div class="qhead"><span>${chip(l.d)}Review ${R.i + 1} of ${R.ids.length}</span><button class="link" data-act="rvClose">Stop</button></div>
     ${qHTML(q, pick, 'r')}

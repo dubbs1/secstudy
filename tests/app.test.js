@@ -21,7 +21,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.goto(URL);
     return p;
   }
-  async function seed(p, data){
+  // Saves `data` as this version's progress (adds `days`, which only this version writes), then reloads.
+  // {legacy:true} saves it as it is, the way an older version left it.
+  async function seed(p, data, {legacy = false} = {}){
+    if (data && typeof data === 'object' && !legacy && !('days' in data)) data = {...data, days:{}};
     await p.evaluate(d => { localStorage.clear(); if (d !== undefined) localStorage.setItem('awsCourse1', typeof d === 'string' ? d : JSON.stringify(d)); }, data);
     await p.reload();
   }
@@ -69,7 +72,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
   await check('older data under awsCourse1 is backed up and never dropped', async () => {
     const old = {lessons:[true, false], done:[1, 2], xp:7};
-    await seed(p, old);
+    await seed(p, old, {legacy:true});
     await p.click('#nav [data-tab=labs]');   // forces a save
     const s = await saved(p);
     ok(await p.evaluate(() => localStorage.getItem('awsCourse1_backup')) === JSON.stringify(old), 'backup missing');
@@ -128,9 +131,13 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(s.steps.l1 && s.steps.l1[2] === true, 'quiz step not ticked');
     await p.click('[data-act=stageNext][data-id=l1]');
     await p.click('[data-act=done][data-id=l1]');
+    // Done pauses on the tick with a choice; it does not jump on by itself.
+    ok((await saved(p)).done.l1 === true && await text(p, '.lesson-t') === 'Why companies use the cloud', 'did not stay on the finished lesson');
+    ok((await text(p, '.finish')).includes('Lesson done') && await p.$('.big-check.on'), 'no tick');
+    ok(await p.evaluate(() => document.activeElement.textContent === 'Next lesson'), 'focus not on Next lesson');
+    await p.click('text=Next lesson');
     const s2 = await saved(p);
-    ok(s2.done.l1 === true && s2.openLesson === 'l2', 'next lesson not opened');
-    ok(await text(p, '.lesson-t') === 'Service and deployment models', 'next lesson not shown');
+    ok(s2.openLesson === 'l2' && await text(p, '.lesson-t') === 'Service and deployment models', 'next lesson not shown');
     ok((await text(p, '.stats')).includes('Lessons 1/' + await p.evaluate(() => LESSONS.length)), 'header not updated');
   });
   await check('exam facts open and close on Today', async () => {
@@ -303,11 +310,20 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   // ---------- restructure (docs/RESTRUCTURE.md) ----------
   await check('progress saved by release 1.0.0 loads and shows the same (AC1.4)', async () => {
     const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'progress-v2-release-1.0.0.json'), 'utf8'));
-    await seed(p, fx.saved);
+    await seed(p, fx.saved, {legacy:true});
     ok((await text(p, '.stats')).startsWith(fx.shown.stats), 'header differs: ' + await text(p, '.stats'));
-    ok(await text(p, '.lesson-t') === fx.shown.open, 'different lesson open');
+    // First load after updating opens Today once (U1.1); everything else is kept as it was.
+    ok(await p.getAttribute('#nav [data-tab=today]', 'aria-selected') === 'true', 'update did not open on Today');
+    ok((await text(p, '.nextup')).includes('Lesson 2: ' + fx.shown.open), 'next up is not the lesson that was open: ' + await text(p, '.nextup'));
     const now = await p.evaluate(() => S);
-    for (const k of Object.keys(fx.saved)) ok(JSON.stringify(now[k]) === JSON.stringify(fx.saved[k]), 'field changed on load: ' + k);
+    for (const k of Object.keys(fx.saved)) if (k !== 'tab') ok(JSON.stringify(now[k]) === JSON.stringify(fx.saved[k]), 'field changed on load: ' + k);
+    // the streak starts from the days already studied
+    const studiedOn = [...new Set(Object.values(fx.saved.ans).map(a => new Date(a.at)).map(d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')))];
+    ok(studiedOn.every(d => now.days[d] === true), 'old study days not in the streak: ' + JSON.stringify(now.days));
+    await p.click('#nextUpBtn');
+    ok(await text(p, '.lesson-t') === fx.shown.open, 'different lesson open');
+    await p.reload();
+    ok(await text(p, '.lesson-t') === fx.shown.open, 'Today was forced again on the second load');
   });
   await check('footer shows the version (AC3.1)', async () => {
     ok(await text(p, '#ver') === 'Version ' + await p.evaluate(() => APP_VERSION), 'got ' + await text(p, '#ver'));
@@ -413,6 +429,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     // Each screen is a state; every selector must appear on at least one of them.
     const screens = [
       `S.tab = 'today'; S.srs.q1 = {box:0, due:'2020-01-01'}; S.days[todayISO()] = true; S.timer.left = 60000;`,
+      `S.tab = 'today'; S.srs.q1 = {box:0, due:'2020-01-01'}; S.days[todayISO()] = true; S.timer.left = 60000; LESSONS[1].due = '2020-01-02';`,
       `S.tab = 'today'; lookupQ = 'nat';`,
       `S.tab = 'learn'; S.openLesson = null; S.stage.l1 = 2;`,
       `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 3; S.ans.q1 = {n:1, wrong:1, pick:1, ok:false, at:Date.now()}; lqi.l1 = 0;`,
@@ -425,7 +442,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = [true];`
     ];
     const sels = ['body', '#top .sub', '.stat', '.stat.timer', '.theme', '.chip.d-cc', '.chip.d-sec', '.chip.d-tech', '.chip.d-bill', '.foot', '.foot .link', 'h3',
-      '.hello', '.streak', '.task-tag', '.nextup small', '.week small', '.row-link small', 'mark', '.group-h small', '.row .t small', '.pill-going',
+      '.hello', '.streak', '.task-tag', '.nextup small', '.week li.behind small', '.week small', '.row-link small', 'mark', '.group-h small', '.row .t small', '.pill-going',
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
       '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag'];
     for (const theme of ['light', 'dark']) {
@@ -435,9 +452,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
         const r = await q.evaluate(sels => {
           const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
           const bgOf = e => { let c; while (e && ((c = getComputedStyle(e).backgroundColor) === 'rgba(0, 0, 0, 0)')) e = e.parentElement; return c || getComputedStyle(document.body).backgroundColor; };
-          return sels.map(s => { const e = document.querySelector(s); if (!e) return [s, null];
-            // Dimmed (opacity) elements count as their text against the page: check them at full strength only.
-            const [a, b] = [lum(getComputedStyle(e).color), lum(bgOf(e))].sort((x, y) => y - x); return [s, (a + .05) / (b + .05)]; });
+          // The lowest ratio among all elements matching each selector, not only the first one.
+          return sels.map(s => { const es = [...document.querySelectorAll(s)]; if (!es.length) return [s, null];
+            return [s, Math.min(...es.map(e => { const [a, b] = [lum(getComputedStyle(e).color), lum(bgOf(e))].sort((x, y) => y - x); return (a + .05) / (b + .05); }))]; });
         }, sels);
         for (const [sel, c] of r) { if (c === null) continue; found.add(sel); if (c < 4.5) bad.push(`${theme} ${sel} ${c.toFixed(2)}`); }
       }
@@ -461,8 +478,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   await check('Next up picks review, then the lesson in progress, then the next lesson (U1.2)', async () => {
     await seed(p, {v:2, stage:{l3:2}, ans:{q1:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}}});
     ok(await text(p, '#nextUpBtn') === 'Start review', 'due review not first');
-    await seed(p, {v:2, stage:{l3:2}});
-    ok(await text(p, '#nextUpBtn') === 'Continue' && (await text(p, '.nextup')).includes('Lesson 3:') && (await text(p, '.nextup')).includes('you are on Try'), 'lesson in progress not next: ' + await text(p, '.nextup'));
+    await seed(p, {v:2, stage:{l7:1}});   // only looked at lesson 7: Next up stays on lesson 1
+    ok(await text(p, '#nextUpBtn') === 'Start lesson' && (await text(p, '.nextup')).includes('Lesson 1:'), 'a lesson only looked at took over: ' + await text(p, '.nextup'));
+    await seed(p, {v:2, stage:{l3:2}, current:'l3'});
+    ok(await text(p, '#nextUpBtn') === 'Continue' && (await text(p, '.nextup')).includes('Lesson 3:') && (await text(p, '.nextup')).includes('you are on Try')
+      && (await text(p, '.nextup')).includes('8 min left'), 'lesson in progress not next: ' + await text(p, '.nextup'));
     await p.click('#nextUpBtn');
     ok(await text(p, '.lesson-t') === 'Global infrastructure' && await p.getAttribute('[data-act=stage][aria-current=step]', 'data-i') === '2', 'did not continue at Try');
   });
@@ -471,8 +491,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await q.evaluate(() => { localStorage.setItem('awsCourse1', JSON.stringify({v:2, done:{l1:true, l3:true}})); });
     await q.reload();
     const rows = await q.$$eval('.week li', ls => ls.map(l => l.className + ':' + l.querySelector('b').textContent));
-    ok(JSON.stringify(rows) === JSON.stringify([':Service and deployment models'.replace(':', 'late:'), 'done:Global infrastructure', ':Well-Architected, CAF and migration', ':The shared responsibility model', ':IAM: who can do what']), 'week: ' + JSON.stringify(rows));
-    ok((await text(q, '.week li.late')).includes('late, was due'), 'late lesson not explained');
+    ok(JSON.stringify(rows) === JSON.stringify(['behind:1 lesson behind', 'done:Global infrastructure', ':Well-Architected, CAF and migration', ':The shared responsibility model', ':IAM: who can do what']), 'week: ' + JSON.stringify(rows));
+    ok((await text(q, '.week li.behind')).includes('Catch up: start with Service and deployment models'), 'late line does not say where to start');
+    await q.click('.week li.behind button');
+    ok(await text(q, '.lesson-t') === 'Service and deployment models', 'catch up did not open the late lesson');
     await q.context().close();
   });
   await check('progress bar per exam domain and a study streak (U1.4, U1.5)', async () => {
@@ -561,8 +583,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(steps.length === 7 && steps.every(s => s[1]), 'missing You should see');
     ok(steps[0][0] === 'on' && steps[1][0] === 'on' && steps[2][0] === 'now' && steps.filter(s => s[0] === 'now').length === 1, 'highlight: ' + JSON.stringify(steps));
     ok((await text(p, '.lab-meta')).includes('Cost:') && (await text(p, '.lab-meta')).includes('Lesson 9'), 'cost or lessons missing');
-    await p.click('.lab-meta [data-act=goLesson][data-id=l12]');
+    await p.evaluate(() => { S.stage.l12 = 2; save(); });
+    await p.click('.lab-meta [data-act=openLesson][data-id=l12]');
     ok(await text(p, '.lesson-t') === 'Networking and content delivery', 'lesson link did not open the lesson');
+    ok(await p.getAttribute('[aria-current=step]', 'data-i') === '2', 'a lab link sent the lesson back to Read');
   });
   await check('look up: word starts, highlighted, opens the place, keeps focus (U6)', async () => {
     await seed(p);
@@ -593,6 +617,56 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await r.evaluate(() => { S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 4; S.done.l1 = true; render(); });
     ok(await r.evaluate(() => getComputedStyle(document.querySelector('.big-check')).animationName) === 'none', 'animation runs with reduced motion');
     await r.context().close();
+  });
+
+  await check('a done lesson still offers the next lesson; Mark not done is a small link and resets it (U2.4)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l3', stage:{l3:4}, done:{l1:true, l3:true}});
+    ok(await text(p, '.finish ~ .btns .btn') === 'Next lesson' && !(await p.$('.btns [data-act=undone]')) && await p.$('.link[data-act=undone]'), 'done lesson actions');
+    await p.click('text=Next lesson');
+    ok(await text(p, '.lesson-t') === 'Service and deployment models', 'Next lesson went to ' + await text(p, '.lesson-t'));
+    await p.evaluate(() => { S.openLesson = 'l3'; render(); });
+    await p.click('[data-act=undone]');
+    ok(await p.evaluate(() => !S.done.l3 && S.stage.l3 === 0 && S.current === 'l3'), 'not reset after Mark not done');
+    await p.click('#nav [data-tab=today]');
+    ok(!(await text(p, '.nextup')).includes('Done'), 'Next up still says Done: ' + await text(p, '.nextup'));
+  });
+  await check('Done says when the quiz has not been answered, with a way back to it', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l2', stage:{l2:4}});
+    ok((await text(p, '.finish')).includes("You haven't answered the quiz yet"), 'blames the learner: ' + await text(p, '.finish'));
+    await p.click('text=Go to the quiz');
+    ok(await p.$('.opt') && await p.getAttribute('[aria-current=step]', 'data-i') === '3', 'did not go to Check');
+  });
+  await check('a reload during a review does not count an answer twice', async () => {
+    await seed(p, {v:2, ans:{q1:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}}});
+    await p.click('#nextUpBtn');
+    await p.click(`.card.review [data-act=pick][data-i="${await answerOf(p, 'q1')}"]`);
+    await p.reload();
+    ok(await p.$('.card.review .fb') && !(await p.$('.card.review [data-act=pick]:not([disabled])')), 'answered question shows as new after reload');
+    await p.click('[data-act=rvNext]');
+    ok((await text(p, '.card.review')).includes('1 of 1 right') && await p.evaluate(() => S.ans.q1.n === 2), 'counted twice: ' + await text(p, '.card.review'));
+  });
+  await check("the phone's Back gesture closes an open lesson or review, not the app", async () => {
+    const p = await fresh();   // a page with no history from earlier checks
+    await p.click('#nextUpBtn');
+    ok(await p.$('.lesson-t'), 'lesson not open');
+    await p.goBack();
+    await p.waitForFunction(() => !S.openLesson);
+    ok(await p.$('[data-act=openLesson]') && !(await p.$('.lesson-t')), 'Back did not close the lesson');
+    await p.click('[data-act=openLesson][data-id=l2]');
+    await p.click('[data-act=closeLesson]');   // closing with the button uses up the history entry too
+    await p.waitForFunction(() => !S.openLesson && !(history.state && history.state.secstudy)).catch(() => {});
+    ok(await p.evaluate(() => !S.openLesson && !(history.state && history.state.secstudy)), 'button left a history entry');
+    await seed(p, {v:2, ans:{q1:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}}});
+    await p.click('#nextUpBtn');
+    await p.goBack();
+    await p.waitForFunction(() => !S.review);
+    ok(await p.$('#nextUpBtn'), 'Back did not close the review');
+    // tapping Learn again closes the lesson the same way, leaving no stale entry behind
+    await p.evaluate(() => { S.srs = {}; save(); render(); });   // nothing due: Next up is the lesson
+    await p.click('#nextUpBtn');
+    await p.click('#nav [data-tab=learn]');
+    await p.waitForFunction(() => !S.openLesson && !(history.state && history.state.secstudy));
+    await p.context().close();
   });
 
   await check('no script errors anywhere above', async () => { ok(!errors.length, errors.join(' | ')); });

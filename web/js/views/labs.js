@@ -19,7 +19,7 @@ function renderLabs(){
     if (open) {
       const next = lab.steps.findIndex((s, i) => !st[i]);
       h += `<div class="body"><div class="lab-meta"><span><b>Cost:</b> ${lab.cost}</span>
-        <span><b>Practises:</b> ${lab.lessons.map(id => `<button class="link" data-act="goLesson" data-id="${id}">Lesson ${lessonNo(id)}</button>`).join(', ')}</span></div>
+        <span><b>Practises:</b> ${lab.lessons.map(id => `<button class="link" data-act="openLesson" data-id="${id}">Lesson ${lessonNo(id)}</button>`).join(', ')}</span></div>
         <ol class="lab-steps">`;
       lab.steps.forEach((s, i) => {
         h += `<li class="${st[i] ? 'on' : ''} ${i === next ? 'now' : ''}">${i === next ? '<small class="task-tag">Do this now</small>' : ''}

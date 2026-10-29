@@ -2,7 +2,7 @@
 const KEY = 'awsCourse1';
 const THEMES = ['system', 'light', 'dark'];
 const TABS = ['today', 'learn', 'practice', 'labs', 'timer'];
-const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, stage:{}, days:{}, review:null, tab:'today', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', theme:'system', timer:{len:15, end:null, left:null, task:''}};
+const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, stage:{}, days:{}, current:null, review:null, tab:'today', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', theme:'system', timer:{len:15, end:null, left:null, task:''}};
 let S;   // loaded just before the first render, once the helpers below exist
 
 function load(){
@@ -13,6 +13,7 @@ function load(){
     try { if (!localStorage.getItem(KEY + '_backup')) localStorage.setItem(KEY + '_backup', raw); } catch(e) {}
   }
   if (!isObj(s)) s = {};
+  const firstOfThisVersion = raw && !('days' in s);   // saved by an older version, before Today existed
   for (const k in DEFAULTS) {
     const want = DEFAULTS[k];
     const ok = s[k] !== undefined && (isObj(want) ? isObj(s[k]) : typeof s[k] === typeof want || want === null);
@@ -39,11 +40,18 @@ function load(){
     const R = s.review;
     const fine = isObj(R) && Array.isArray(R.ids);
     if (fine) R.ids = R.ids.filter(known);
-    s.review = fine && Number.isInteger(R.i) && R.i >= 0 && R.i <= R.ids.length ? {ids:R.ids, i:R.i, right:Math.max(0, Math.floor(+R.right) || 0)} : null;
+    s.review = fine && Number.isInteger(R.i) && R.i >= 0 && R.i <= R.ids.length
+      ? {ids:R.ids, i:R.i, right:Math.max(0, Math.floor(+R.right) || 0), started:+R.started || 0} : null;
   }
   if (typeof s.pFilter !== 'string') s.pFilter = 'all';
   if (!THEMES.includes(s.theme)) s.theme = 'system';
   if (!TABS.includes(s.tab)) s.tab = 'today';
+  if (!LESSONS.some(l => l.id === s.current)) s.current = null;
+  if (firstOfThisVersion) {
+    s.tab = 'today';   // show the new Today screen once after updating
+    // the streak starts from the days you already studied
+    for (const r of Object.values(s.ans)) { const d = new Date(r.at); if (r.at && !isNaN(d)) s.days[isoOf(d)] = true; }
+  }
   for (const k in s.stage) { const n = s.stage[k]; if (!Number.isInteger(n) || n < 0 || n >= STAGES.length) delete s.stage[k]; }
   for (const k in s.days) if (!/^\d{4}-\d\d-\d\d$/.test(k) || s.days[k] !== true) delete s.days[k];
   // Answers given before smart review existed: misses are due now, right answers a week after they were given.

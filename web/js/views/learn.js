@@ -97,14 +97,19 @@ function quizHTML(l, qs){
 }
 
 function doneHTML(l, qs){
-  const right = qs.filter(q => S.ans[q.id] && S.ans[q.id].ok).length, done = !!S.done[l.id];
-  const labs = LABS.filter(x => x.lessons.includes(l.id));
+  const answered = qs.filter(q => S.ans[q.id]).length, right = qs.filter(q => S.ans[q.id] && S.ans[q.id].ok).length;
+  const done = !!S.done[l.id], labs = LABS.filter(x => x.lessons.includes(l.id)), next = nextLesson();
+  const quiz = !answered ? 'You haven\'t answered the quiz yet.'
+    : `Quiz: ${right} of ${qs.length} right${right < answered ? '. Misses come back in your review tomorrow.' : answered < qs.length ? `, ${qs.length - answered} not answered yet.` : '.'}`;
+  // Not done: one main action. Done: a pause with the tick, then a choice; "Mark not done" is a small link.
   return `<div class="finish"><div class="big-check ${done ? 'on' : ''}" aria-hidden="true">✓</div>
-    <b>${done ? 'Lesson done' : 'Last step: mark it done'}</b>
-    <p class="muted">Quiz: ${right} of ${qs.length} right${right < qs.length ? '. Misses come back in your review tomorrow.' : '.'}</p></div>
+    <b>${done ? `Lesson done. ${LESSONS.filter(x => !S.done[x.id]).length} to go.` : 'Last step: mark it done'}</b>
+    <p class="muted">${quiz}${answered < qs.length ? ` <button class="link" data-act="stage" data-id="${l.id}" data-i="3">Go to the quiz</button>` : ''}</p></div>
     <div class="btns">
-      <button class="btn ${done ? 'ghost' : ''}" data-act="done" data-id="${l.id}">${done ? 'Mark not done' : 'Mark done, next lesson'}</button>
+      ${done ? (next ? `<button class="btn" data-act="openLesson" data-id="${next.id}">Next lesson</button>` : `<button class="btn" data-act="goPractice">Practise</button>`)
+             : `<button class="btn" data-act="done" data-id="${l.id}">Mark done</button>`}
       <button class="btn ghost" data-act="breakTimer">5 min break</button>
       ${labs.length ? `<button class="btn ghost" data-act="goLab" data-id="${labs[0].id}">Try the lab</button>` : ''}
-    </div>`;
+    </div>
+    ${done ? `<p class="center small"><button class="link" data-act="undone" data-id="${l.id}">Mark not done</button></p>` : ''}`;
 }
