@@ -50,6 +50,11 @@ Colour coding: each exam domain has one colour (tokens --cc, --sec, --tech, --bi
 sets --dc/--dcbg with domainVars()), chosen apart from right/wrong green and red and the brand purple. Stages have
 icons, not colours. Numbers use --num/--num-bg (a highlighter).
 
+Security: a Content-Security-Policy in `web/index.html` (and the same policy in `tauri.conf.json` for the Windows app)
+lets only the app's own files run or load: no inline scripts, nothing from other sites. Every text that comes from
+saved or imported data goes through `esc()` before it reaches HTML, and `load()` checks each field's type. A check
+proves an injected script is blocked from disk and from the website.
+
 Load order matters only in one direction: content and helpers first, `app.js` last. Every file
 defines top-level names; classic scripts share one global scope, so later files see earlier ones,
 and a name defined in two files breaks the second file (a structure check finds that).

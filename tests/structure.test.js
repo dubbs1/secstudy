@@ -86,9 +86,16 @@ function runScripts(files){
     ok(/fetch\(req, \{cache:'no-cache'\}\)/.test(sw), 'runtime fetch does not skip the HTTP cache');
   });
 
+  await check('CI: every action pinned to a full commit, the default token is read-only', async () => {
+    const wf = read('.github/workflows/test.yml');
+    const loose = [...wf.matchAll(/uses:\s*([^\s#]+)/g)].map(m => m[1]).filter(u => !/@[0-9a-f]{40}$/.test(u));
+    ok(!loose.length, 'not pinned: ' + loose.join(', '));
+    ok(/^permissions:\s*\n\s+contents: read\s*\n\s*\njobs:/m.test(wf), 'no read-only default permissions');
+  });
+
   await check('Windows app and website both ship web/ as it is (AC2.1)', async () => {
     ok(JSON.parse(read('desktop/src-tauri/tauri.conf.json')).build.frontendDist === '../../web', 'Tauri frontendDist is not ../../web');
-    ok(/upload-pages-artifact@v3\s+with:\s+path: web\b/.test(read('.github/workflows/test.yml')), 'pages job does not upload web/');
+    ok(/upload-pages-artifact@[0-9a-f]{40}[^\n]*\s+with:\s+path: web\b/.test(read('.github/workflows/test.yml')), 'pages job does not upload web/');
   });
 
   await check('no hard-coded exam facts outside content (AC4.1)', async () => {

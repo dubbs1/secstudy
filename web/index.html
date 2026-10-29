@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- Only the app's own files may run or load: no inline scripts, nothing from other sites. Inline style
+     attributes are allowed (they only set sizes and colours). Keep in step with desktop/src-tauri/tauri.conf.json. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#6D4AFF">
 <title>AWS CP Study</title>
 <link rel="manifest" href="manifest.webmanifest">
