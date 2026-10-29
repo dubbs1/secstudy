@@ -120,6 +120,11 @@ ul.pts li{margin:4px 0}
 .foot{margin-top:24px;font-size:13px;color:var(--muted);text-align:center}
 .foot .link{font-size:13px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:14px;font-weight:600;box-shadow:var(--shadow);z-index:9}
+.card.review{border:1.5px solid var(--brand)}
+.wk{margin:10px 0}
+.wk-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13.5px}
+.wk-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.wk-row:last-child{border-bottom:0}
 table.facts{width:100%;border-collapse:collapse;font-size:14px}
 table.facts td{padding:6px 0;border-bottom:1px solid var(--line)}
 table.facts td:last-child{text-align:right;font-weight:600}
@@ -476,9 +481,9 @@ const LABS = [
 
 /* ---------- state ---------- */
 const KEY = 'awsCourse1';
-const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, tab:'learn', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', timer:{len:15, end:null, left:null, task:''}};
+const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, review:null, tab:'learn', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', timer:{len:15, end:null, left:null, task:''}};
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
-let S = load();
+let S;   // loaded just before the first render, once the helpers below exist
 
 function load(){
   let raw = null, s = null;
@@ -497,6 +502,13 @@ function load(){
     }
   }
   if (!isObj(s.timer) || typeof s.timer.len !== 'number') s.timer = {...DEFAULTS.timer};
+  if (s.review !== null && !(isObj(s.review) && Array.isArray(s.review.ids))) s.review = null;
+  // Answers given before smart review existed: misses are due now, right answers a week after they were given.
+  for (const qid in s.ans) {
+    const r = s.ans[qid];
+    if (s.srs[qid] || !isObj(r)) continue;
+    s.srs[qid] = r.ok ? {box:2, due:addDays(r.at ? isoOf(new Date(r.at)) : todayISO(), 7)} : {box:0, due:todayISO()};
+  }
   s.v = 2;
   return s;
 }
@@ -508,8 +520,10 @@ function save(){
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad = n => String(n).padStart(2, '0');
-const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+const isoOf = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const todayISO = () => isoOf(new Date());
 const parseISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseISO(s); d.setDate(d.getDate() + n); return isoOf(d); };
 const fmtDate = s => parseISO(s).toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short'});
 const daysUntil = s => Math.round((parseISO(s) - parseISO(todayISO())) / 864e5);
 const chip = d => `<span class="chip d-${d}">${DOMAINS[d].short}</span>`;
@@ -542,19 +556,21 @@ function renderTop(){
       <span class="stat">Lessons <b>${done}/${LESSONS.length}</b></span>
       <span class="stat">Questions right <b>${right}/${QUESTIONS.length}</b></span>
       <span class="stat">Labs <b>${labsDone}/${LABS.length}</b></span>
+      ${dueNow().length ? `<span class="stat timer">Review due <b style="color:inherit">${dueNow().length}</b></span>` : ''}
       ${S.timer.end || S.timer.left != null ? `<span class="stat timer" id="miniClock">⏱ ${mmss(t)}</span>` : ''}
     </div>`;
 }
 
 /* ---------- question ---------- */
-function qHTML(q, pick){
+// ctx: where the question is shown — 'l' lesson quiz, 'p' practice, 'r' review
+function qHTML(q, pick, ctx){
   const answered = pick != null;
   let h = `<p class="qt">${q.q}</p><div>`;
   q.o.forEach(([text, why], i) => {
     let cls = 'opt';
     if (answered) cls += i === q.a ? ' right' : i === pick ? ' wrong' : ' dim';
     const whyHtml = answered && i === pick && i !== q.a ? `<small class="why">${why}</small>` : '';
-    h += `<button class="${cls}" data-act="pick" data-q="${q.id}" data-i="${i}" ${answered ? 'disabled' : ''}><span class="k">${'ABCD'[i]}</span><span>${text}${whyHtml}</span></button>`;
+    h += `<button class="${cls}" data-act="pick" data-ctx="${ctx}" data-q="${q.id}" data-i="${i}" ${answered ? 'disabled' : ''}><span class="k">${'ABCD'[i]}</span><span>${text}${whyHtml}</span></button>`;
   });
   h += '</div>';
   if (answered) {
@@ -568,13 +584,104 @@ function record(qid, i){
   const r = S.ans[qid] || {n:0, wrong:0};
   r.n++; r.pick = i; r.ok = i === q.a; if (!r.ok) r.wrong++; r.at = Date.now();
   S.ans[qid] = r;
+  schedule(qid, r.ok);
+}
+
+/* ---------- smart review (spaced repetition) ---------- */
+// A miss comes back tomorrow; each right answer on a due question waits longer: 1, 3, 7, 14 days.
+const GAPS = [1, 3, 7, 14];
+const REVIEW_MAX = 10;   // one sitting ≈ 10 minutes
+function schedule(qid, ok){
+  const t = todayISO(), c = S.srs[qid];
+  if (!ok) { S.srs[qid] = {box:0, due:addDays(t, GAPS[0])}; return; }
+  if (!c) { S.srs[qid] = {box:2, due:addDays(t, GAPS[2])}; return; }   // right first time
+  if (c.due > t) return;   // answered again before it was due: no extra credit
+  const box = Math.min(c.box + 1, GAPS.length - 1);
+  S.srs[qid] = {box, due:addDays(t, GAPS[box])};
+}
+const dueNow = () => QUESTIONS.filter(q => S.srs[q.id] && S.srs[q.id].due <= todayISO())
+  .sort((a, b) => S.srs[a.id].due.localeCompare(S.srs[b.id].due));
+function nextDue(){
+  const later = Object.values(S.srs).map(x => x.due).filter(d => d > todayISO()).sort();
+  return later.length ? {date:later[0], n:later.filter(d => d === later[0]).length} : null;
+}
+function reviewCard(){
+  const R = S.review, due = dueNow();
+  if (!R) {
+    if (!Object.keys(S.srs).length) return '';
+    if (!due.length) {
+      const nx = nextDue();
+      return `<div class="card"><div class="row" style="cursor:default"><span class="n done">✓</span><span class="t"><b>Review: all caught up</b>
+        <small>${nx ? `Next: ${nx.n} question${nx.n > 1 ? 's' : ''} on ${fmtDate(nx.date)}` : 'Nothing scheduled'}</small></span></div></div>`;
+    }
+    const n = Math.min(due.length, REVIEW_MAX);
+    return `<div class="card open review"><div class="body" style="padding-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div><b>Today's review</b><div class="muted" style="font-size:13.5px">${due.length} question${due.length > 1 ? 's' : ''} due · about ${n} min</div></div>
+        <button class="btn" data-act="rvStart">Start ${n}</button></div></div></div>`;
+  }
+  if (R.i >= R.ids.length) {
+    const more = dueNow().length;
+    return `<div class="card open review"><div class="body" style="padding-top:14px">
+      <b>Review done: ${R.right}/${R.ids.length} right</b>
+      <p class="muted" style="font-size:13.5px;margin:4px 0 0">Misses come back tomorrow. Right answers wait longer each time.</p>
+      <div class="btns">${more ? `<button class="btn" data-act="rvStart">${Math.min(more, REVIEW_MAX)} more</button>` : ''}
+      <button class="btn ${more ? 'ghost' : ''}" data-act="rvClose">Back to lessons</button></div></div></div>`;
+  }
+  const q = QUESTIONS.find(x => x.id === R.ids[R.i]), l = LESSONS.find(x => x.id === q.l);
+  const pick = live['r:' + q.id] != null ? live['r:' + q.id] : null;
+  return `<div class="card open review"><div class="body" style="padding-top:14px">
+    <div class="qhead"><span>${chip(l.d)}Review ${R.i + 1} of ${R.ids.length}</span><button class="link" data-act="rvClose">Stop</button></div>
+    ${qHTML(q, pick, 'r')}
+    ${pick != null ? `<div class="btns"><button class="btn" data-act="rvNext">${R.i + 1 < R.ids.length ? 'Next' : 'Finish'}</button></div>` : ''}
+    </div></div>`;
+}
+
+/* ---------- weak spots ---------- */
+function domainStats(d){
+  const qs = QUESTIONS.filter(q => LESSONS.find(l => l.id === q.l).d === d);
+  const seen = qs.filter(q => S.ans[q.id]);
+  return {total:qs.length, seen:seen.length, right:seen.filter(q => S.ans[q.id].ok).length,
+          misses:seen.reduce((n, q) => n + (S.ans[q.id].wrong || 0), 0)};
+}
+function weakLessons(){
+  return LESSONS.map(l => {
+    const qs = qsFor(l.id);
+    return {l, now:qs.filter(q => S.ans[q.id] && !S.ans[q.id].ok).length, misses:qs.reduce((n, q) => n + ((S.ans[q.id] || {}).wrong || 0), 0)};
+  }).filter(x => x.misses).sort((a, b) => b.now - a.now || b.misses - a.misses).slice(0, 3);
+}
+function weakCard(){
+  const open = S.open === 'weak';
+  const worst = Object.keys(DOMAINS).map(d => ({d, s:domainStats(d)})).filter(x => x.s.seen)
+    .sort((a, b) => a.s.right / a.s.seen - b.s.right / b.s.seen)[0];
+  let h = `<div class="card ${open ? 'open' : ''}"><button class="row" data-act="toggleWeak" aria-expanded="${open}">
+    <span class="n">!</span><span class="t"><b>Weak spots</b><small>${worst ? `Lowest: ${DOMAINS[worst.d].name}` : 'Answer some questions to see them'}</small></span><span class="chev">›</span></button>`;
+  if (!open) return h + '</div>';
+  h += '<div class="body"><h3 style="margin-top:4px">By exam domain</h3>';
+  for (const [d, D] of Object.entries(DOMAINS)) {
+    const s = domainStats(d), pct = s.seen ? Math.round(s.right / s.seen * 100) : 0;
+    const col = !s.seen ? 'var(--line)' : pct >= 80 ? 'var(--ok)' : pct >= 70 ? 'var(--warn)' : 'var(--bad)';
+    h += `<div class="wk"><div class="wk-top"><span>${chip(d)}${D.w}% of exam</span>
+      <span class="muted">${s.seen ? `${s.right}/${s.seen} right${s.misses ? ` · ${s.misses} miss${s.misses > 1 ? 'es' : ''}` : ''}` : 'not started'}${s.seen < s.total ? ` · ${s.total - s.seen} new` : ''}</span></div>
+      <div class="bar" style="margin:4px 0 0"><i style="width:${s.seen ? Math.max(pct, 3) : 0}%;background:${col}"></i></div></div>`;
+  }
+  h += '<p class="muted" style="font-size:13px;margin:8px 0 0">Aim for green (80 %+). The real pass mark is 70 %.</p>';
+  const wl = weakLessons();
+  if (wl.length) {
+    h += '<h3>Lessons to redo</h3>';
+    wl.forEach(({l, now, misses}) => {
+      h += `<div class="wk-row"><span><b>${lessonNo(l.id)}. ${l.t}</b><br><small class="muted">${now ? `${now} still wrong · ` : ''}${misses} miss${misses > 1 ? 'es' : ''} in total</small></span>
+        <button class="btn ghost" data-act="pLesson" data-id="${l.id}">Practise</button></div>`;
+    });
+  }
+  return h + '</div></div>';
 }
 
 /* ---------- Learn ---------- */
 function renderLearn(){
   const nl = nextLesson();
   if (S.openLesson === null && S.open !== 'facts' && nl) S.openLesson = nl.id;
-  let h = '';
+  let h = reviewCard();
   // exam facts (collapsed by default)
   const fOpen = S.open === 'facts';
   h += `<div class="card ${fOpen ? 'open' : ''}"><button class="row" data-act="toggleFacts" aria-expanded="${fOpen}">
@@ -588,7 +695,7 @@ function renderLearn(){
   h += '</div>';
   if (!nl) h += `<div class="note">All 15 lessons done. Use Practice for the questions you haven't got right yet.</div>`;
   LESSONS.forEach((l, idx) => {
-    const open = S.openLesson === l.id && !fOpen;
+    const open = S.openLesson === l.id && !fOpen && !S.review;
     const done = !!S.done[l.id];
     const qs = qsFor(l.id), qRight = qs.filter(q => S.ans[q.id] && S.ans[q.id].ok).length;
     const late = !done && daysUntil(l.due) < 0;
@@ -614,7 +721,7 @@ function lessonBody(l, qs){
   const i = lqi[l.id], q = qs[i];
   const pick = live[q.id] != null ? live[q.id] : (S.ans[q.id] ? S.ans[q.id].pick : null);
   const dots = qs.map((x, k) => { const r = S.ans[x.id]; return `<i class="${r ? (r.ok ? 'ok' : 'no') : ''} ${k === i ? 'cur' : ''}"></i>`; }).join('');
-  h += `<h3>Check yourself</h3><div class="qhead"><span>Question ${i + 1} of ${qs.length}</span><span class="dots">${dots}</span></div>${qHTML(q, pick)}`;
+  h += `<h3>Check yourself</h3><div class="qhead"><span>Question ${i + 1} of ${qs.length}</span><span class="dots">${dots}</span></div>${qHTML(q, pick, 'l')}`;
   h += '<div class="btns">';
   if (pick != null && i < qs.length - 1) h += `<button class="btn" data-act="lqNext" data-id="${l.id}">Next question</button>`;
   if (pick != null && S.ans[q.id] && !S.ans[q.id].ok) h += `<button class="btn ghost" data-act="lqRetry" data-q="${q.id}">Try again</button>`;
@@ -627,14 +734,17 @@ function lessonBody(l, qs){
 /* ---------- Practice ---------- */
 function practiceSet(){
   return QUESTIONS.filter(q => {
-    if (S.pFilter !== 'all' && LESSONS.find(l => l.id === q.l).d !== S.pFilter) return false;
+    if (S.pFilter in DOMAINS && LESSONS.find(l => l.id === q.l).d !== S.pFilter) return false;
+    if (S.pFilter.startsWith('l') && q.l !== S.pFilter) return false;
     if (S.pMode === 'todo' && S.ans[q.id] && S.ans[q.id].ok && q.id !== pCur) return false;
     return true;
   });
 }
 function renderPractice(){
-  let h = `<div class="seg small" role="tablist">${[['all', 'All']].concat(Object.entries(DOMAINS).map(([k, d]) => [k, d.short])).map(([k, n]) =>
-    `<button data-act="pFilter" data-v="${k}" aria-selected="${S.pFilter === k}">${n}</button>`).join('')}</div>
+  const lf = LESSONS.find(l => l.id === S.pFilter);
+  let h = weakCard() + `<div class="seg small" role="tablist">${[['all', 'All']].concat(Object.entries(DOMAINS).map(([k, d]) => [k, d.short])).map(([k, n]) =>
+    `<button data-act="pFilter" data-v="${k}" aria-selected="${S.pFilter === k}">${n}</button>`).join('')}
+    ${lf ? `<button data-act="pFilter" data-v="all" aria-selected="true" title="Show all lessons">Lesson ${lessonNo(lf.id)} ✕</button>` : ''}</div>
     <div class="seg small" role="tablist">
       <button data-act="pMode" data-v="todo" aria-selected="${S.pMode === 'todo'}">Not right yet</button>
       <button data-act="pMode" data-v="all" aria-selected="${S.pMode === 'all'}">All questions</button></div>`;
@@ -647,7 +757,7 @@ function renderPractice(){
   h += `<div class="card"><div class="body" style="padding-top:14px">
     <div class="qhead"><span>${chip(l.d)}Lesson ${lessonNo(l.id)} · ${pos + 1} of ${set.length}</span>
     <span>${S.ans[q.id] ? (S.ans[q.id].ok ? 'last time: right' : 'last time: wrong') : 'new'}</span></div>
-    ${qHTML(q, pick)}
+    ${qHTML(q, pick, 'p')}
     <div class="btns"><button class="btn ${pick == null ? 'ghost' : ''}" data-act="pNext">${pick == null ? 'Skip' : 'Next'}</button></div>
     </div></div>`;
   return h;
@@ -769,11 +879,12 @@ document.addEventListener('click', e => {
     case 'openLesson':  S.open = null; S.openLesson = S.openLesson === id ? '' : id; break;
     case 'openLab':     S.open = null; S.openLab = S.openLab === id ? null : id; break;
     case 'pick': {
-      const i = +b.dataset.i, qid = b.dataset.q;
+      const i = +b.dataset.i, qid = b.dataset.q, ctx = b.dataset.ctx;
       record(qid, i);
-      if (S.tab === 'practice') live['p:' + qid] = i; else live[qid] = i;
+      if (ctx === 'l') live[qid] = i; else live[ctx + ':' + qid] = i;
+      if (ctx === 'r' && i === QUESTIONS.find(q => q.id === qid).a) S.review.right++;
       const lid = QUESTIONS.find(q => q.id === qid).l, qs = qsFor(lid);
-      if (S.tab === 'learn' && qs.every(q => S.ans[q.id])) { const st = S.steps[lid] || []; st[LESSONS.find(l => l.id === lid).steps.length - 1] = true; S.steps[lid] = st; }
+      if (ctx === 'l' && qs.every(q => S.ans[q.id])) { const st = S.steps[lid] || []; st[LESSONS.find(l => l.id === lid).steps.length - 1] = true; S.steps[lid] = st; }
       break;
     }
     case 'lqNext': lqi[id]++; break;
@@ -792,6 +903,12 @@ document.addEventListener('click', e => {
       pCur = after ? after.id : null;
       break;
     }
+    case 'rvStart': S.review = {ids:dueNow().slice(0, REVIEW_MAX).map(q => q.id), i:0, right:0}; S.open = null;
+      S.review.ids.forEach(q => delete live['r:' + q]); window.scrollTo(0, 0); break;
+    case 'rvNext':  S.review.i++; break;
+    case 'rvClose': S.review = null; S.openLesson = null; break;
+    case 'toggleWeak': S.open = S.open === 'weak' ? null : 'weak'; break;
+    case 'pLesson': S.pFilter = id; S.pMode = 'all'; S.open = null; pCur = null; break;
     case 'labReset': S.labs[id] = []; break;
     case 'tLen': S.timer = {...S.timer, len:+b.dataset.v, end:null, left:null}; break;
     case 'tGo': {
@@ -847,6 +964,7 @@ function importProgress(file){
 }
 
 window.addEventListener('visibilitychange', () => { if (!document.hidden && S.timer.end && timerLeft() <= 0) finishTimer(); });
+S = load();
 render();
 </script>
 </body>
