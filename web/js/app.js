@@ -3,6 +3,7 @@
 /* ---------- render ---------- */
 let reveal = null;     // selector of a card row to bring into view after the next render
 let announceNext = false;   // read the answer feedback to screen readers after the next render
+let focusTo = null;    // selector to focus after the next render, when an action names one
 
 // A selector that finds "the same control" again after the page is rebuilt.
 function controlKey(el){
@@ -17,13 +18,15 @@ function render(){
   applyTheme();
   document.querySelectorAll('#nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === S.tab));
   renderTop();
-  const views = {learn:renderLearn, practice:renderPractice, labs:renderLabs, timer:renderTimer};
-  $('#main').innerHTML = (views[S.tab] || renderLearn)();
+  const views = {today:renderToday, learn:renderLearn, practice:renderPractice, labs:renderLabs, timer:renderTimer};
+  $('#main').innerHTML = (views[S.tab] || renderToday)();
   startTick();
   // Keyboard users keep their place: the feedback after answering, else the same control, else (when it
   // went away, e.g. "Next question") the card just opened or the first answer on screen.
   const row = reveal && document.querySelector(reveal); reveal = null;
-  if (key) {
+  const named = focusTo && document.querySelector(focusTo); focusTo = null;
+  if (named) named.focus({preventScroll:true});
+  else if (key) {
     const same = document.querySelector(answered ? '#main .fb' : key);
     // Fallbacks the user can see: Enter must never act on something below the screen.
     const visible = sel => { const el = $(sel); return el && onScreen(el) ? el : null; };
@@ -52,16 +55,38 @@ function applyTheme(){
 /* ---------- events ---------- */
 document.addEventListener('click', e => {
   const tabBtn = e.target.closest('#nav button');
-  if (tabBtn) { S.tab = tabBtn.dataset.tab; save(); render(); window.scrollTo(0, 0); return; }
+  if (tabBtn) {
+    if (S.tab === 'learn' && tabBtn.dataset.tab === 'learn') S.openLesson = null;   // Learn again: back to the list
+    S.tab = tabBtn.dataset.tab; save(); render(); window.scrollTo(0, 0); return;
+  }
   const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return;
   const {act, id} = b.dataset;
   switch (act) {
-    case 'toggleFacts': S.open = S.open === 'facts' ? null : 'facts'; S.openLesson = S.open ? '' : null;
-      reveal = S.open ? '[data-act=toggleFacts]' : (nextLesson() ? `[data-act=openLesson][data-id="${nextLesson().id}"]` : null); break;
+    case 'toggleFacts': S.open = S.open === 'facts' ? null : 'facts'; if (S.open) reveal = '[data-act=toggleFacts]'; break;
     case 'toggleFree':  S.open = S.open === 'free' ? null : 'free'; if (S.open) reveal = '[data-act=toggleFree]'; break;
     case 'toggleWeak':  S.open = S.open === 'weak' ? null : 'weak'; if (S.open) reveal = '[data-act=toggleWeak]'; break;
-    case 'openLesson':  S.open = null; S.openLesson = S.openLesson === id ? '' : id;
-      if (S.openLesson) reveal = `[data-act=openLesson][data-id="${id}"]`; break;
+    case 'goLesson':    S.stage[id] = 0;   // from a look-up or a lab: start at Read, where the key points are
+    // falls through
+    case 'openLesson':  S.tab = 'learn'; S.open = null; S.openLesson = id; reveal = '#lessonTop'; break;
+    case 'closeLesson': reveal = `[data-act=openLesson][data-id="${S.openLesson}"]`; S.openLesson = null; break;
+    case 'stage':       S.stage[id] = +b.dataset.i; reveal = '#lessonTop'; break;
+    case 'stageNext':   S.stage[id] = Math.min((S.stage[id] || 0) + 1, STAGES.length - 1); reveal = '#lessonTop'; focusTo = '[data-act=stage][aria-current=step]'; break;
+    case 'stagePrev':   S.stage[id] = Math.max((S.stage[id] || 0) - 1, 0); reveal = '#lessonTop'; focusTo = '[data-act=stage][aria-current=step]'; break;
+    case 'reveal': {
+      const sc = SCENARIOS[id][+b.dataset.i];
+      revealed[id + ':' + b.dataset.i] = true; focusTo = `#ans-${id}-${b.dataset.i}`; announce(sc.answer + ' ' + sc.why);
+      render(); return;   // nothing to save
+    }
+    case 'goLab':       S.tab = 'labs'; S.open = null; S.openLab = id; reveal = `[data-act=openLab][data-id="${id}"]`; break;
+    case 'goQuestion':  S.tab = 'practice'; S.pFilter = 'all'; S.pMode = 'all'; pCur = id; delete live['p:' + id]; window.scrollTo(0, 0); break;
+    case 'goPractice':  S.tab = 'practice'; window.scrollTo(0, 0); break;
+    case 'lessonTimer': case 'breakTimer': {
+      const len = act === 'breakTimer' ? 5 : 15;
+      try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+      S.timer = {...S.timer, len, end:Date.now() + len * 60000, left:null};
+      toast(len === 5 ? '5 min break started. The timer is at the top.' : '15 min timer started. It shows at the top.');
+      break;
+    }
     case 'openLab':     S.open = null; S.openLab = S.openLab === id ? null : id;
       if (S.openLab) reveal = `[data-act=openLab][data-id="${id}"]`; break;
     case 'pick': {
@@ -71,7 +96,7 @@ document.addEventListener('click', e => {
       if (ctx === 'r' && i === QUESTIONS.find(q => q.id === qid).a) S.review.right++;
       const lid = QUESTIONS.find(q => q.id === qid).l, qs = qsFor(lid);
       if (ctx === 'l' && qs.every(q => S.ans[q.id])) { const st = S.steps[lid] || []; st[LESSONS.find(l => l.id === lid).steps.length - 1] = true; S.steps[lid] = st; }
-      announceNext = true;
+      announceNext = true; studied();
       break;
     }
     case 'lqNext': lqi[id]++; break;
@@ -79,8 +104,10 @@ document.addEventListener('click', e => {
     case 'done': {
       S.done[id] = !S.done[id];
       if (S.done[id]) {
-        const n = nextLesson(); S.openLesson = n ? n.id : ''; toast('Lesson done');
-        if (n) reveal = `[data-act=openLesson][data-id="${n.id}"]`;
+        studied();
+        const n = nextLesson(); S.openLesson = n ? n.id : null;
+        toast(n ? `Lesson done. ${LESSONS.filter(l => !S.done[l.id]).length} to go.` : 'All lessons done.');
+        reveal = n ? '#lessonTop' : null;
       }
       break;
     }
@@ -96,11 +123,7 @@ document.addEventListener('click', e => {
     case 'rvStart': S.review = {ids:dueNow().slice(0, REVIEW_MAX).map(q => q.id), i:0, right:0}; S.open = null;
       S.review.ids.forEach(q => delete live['r:' + q]); window.scrollTo(0, 0); break;
     case 'rvNext':  S.review.i++; break;
-    case 'rvClose': {
-      S.review = null; S.openLesson = null;
-      const n = nextLesson(); if (n) reveal = `[data-act=openLesson][data-id="${n.id}"]`;
-      break;
-    }
+    case 'rvClose': S.review = null; reveal = '#nextUpBtn'; break;
     case 'pLesson': S.pFilter = id; S.pMode = 'all'; S.open = null; pCur = null; break;
     case 'labReset': S.labs[id] = []; break;
     case 'tLen': S.timer = {...S.timer, len:+b.dataset.v, end:null, left:null}; break;
@@ -127,10 +150,10 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (t.dataset.act === 'step') {
     const st = S.steps[t.dataset.id] || []; st[+t.dataset.i] = t.checked; S.steps[t.dataset.id] = st;
-    save(); render();
+    studied(); save(); render();
   } else if (t.dataset.act === 'labStep') {
     const st = S.labs[t.dataset.id] || []; st[+t.dataset.i] = t.checked; S.labs[t.dataset.id] = st;
-    save(); render();
+    studied(); save(); render();
     if (st.filter(Boolean).length === LABS.find(l => l.id === t.dataset.id).steps.length) toast('Lab complete');
   } else if (t.id === 'importFile' && t.files[0]) {
     readImport(t.files[0]); t.value = '';
@@ -138,6 +161,8 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('input', e => {
   if (e.target.id === 'task') { S.timer.task = e.target.value; save(); }
+  // Look up redraws only its results, so the box keeps focus and the cursor stays put.
+  if (e.target.id === 'lookup') { lookupQ = e.target.value; $('#lookupResults').innerHTML = lookupHTML(lookupQ); }
 });
 window.addEventListener('visibilitychange', () => { if (!document.hidden && S.timer.end && timerLeft() <= 0) finishTimer(); });
 

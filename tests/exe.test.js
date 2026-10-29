@@ -46,7 +46,8 @@ async function connect(){
     });
     await check('ticking a lesson step is saved', async () => {
       await page.evaluate(() => { localStorage.clear(); location.reload(); }).catch(() => {});
-      await page.waitForSelector('[data-act=step]');
+      await page.waitForSelector('#nextUpBtn');
+      await page.click('#nextUpBtn');   // opens lesson 1 at Read
       await page.click('[data-act=step][data-id=l1][data-i="0"]');
       const s = await page.evaluate(() => JSON.parse(localStorage.getItem('awsCourse1')));
       ok(s.steps.l1[0] === true, 'not saved');
@@ -68,6 +69,7 @@ async function connect(){
     });
     await check('Import asks in the page and restores the file (AC8.2)', async () => {
       ok(exported, 'no exported file to import');
+      await page.click('[data-act=stage][data-id=l1][data-i="2"]');
       await page.click('[data-act=step][data-id=l1][data-i="1"]');   // a change the import should undo
       await page.setInputFiles('#importFile', exported);
       await page.waitForSelector('#importBar:not([hidden])', {timeout:10000});

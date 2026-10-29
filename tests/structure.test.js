@@ -40,13 +40,24 @@ function runScripts(files){
     const ctx = runScripts(files);
     const fns = vm.runInContext(`(() => { const out = [];
       const walk = (v, at) => { if (typeof v === 'function') out.push(at); else if (v && typeof v === 'object') for (const k in v) walk(v[k], at + '.' + k); };
-      for (const n of ['EXAM', 'DOMAINS', 'LESSONS', 'QUESTIONS', 'LABS']) walk(globalThis[n] !== undefined ? globalThis[n] : eval(n), n);
+      for (const n of ['EXAM', 'DOMAINS', 'LESSONS', 'QUESTIONS', 'LABS', 'VISUALS', 'SCENARIOS']) walk(globalThis[n] !== undefined ? globalThis[n] : eval(n), n);
       return out; })()`, ctx);
     ok(!fns.length, 'functions in content: ' + fns.join(', '));
     const problems = vm.runInContext(`(() => { const p = [];
       if (!LESSONS.length || !QUESTIONS.length || !LABS.length) p.push('empty list');
       if (!/^\\d{4}-\\d\\d-\\d\\d$/.test(EXAM.date)) p.push('EXAM.date');
-      for (const l of LESSONS) { if (!DOMAINS[l.d]) p.push(l.id + ' domain'); if (QUESTIONS.filter(q => q.l === l.id).length < 3) p.push(l.id + ' has under 3 questions'); }
+      const kinds = ['compare', 'who', 'nested', 'scale', 'tiles'];
+      for (const l of LESSONS) {
+        if (!DOMAINS[l.d]) p.push(l.id + ' domain');
+        if (QUESTIONS.filter(q => q.l === l.id).length < 3) p.push(l.id + ' has under 3 questions');
+        const v = VISUALS[l.id]; if (!v || !kinds.includes(v.kind) || !v.caption) p.push(l.id + ' diagram');
+        const sc = SCENARIOS[l.id] || []; if (!sc.length || sc.some(x => !x.situation || !x.answer || !x.why)) p.push(l.id + ' scenarios');
+      }
+      for (const x of LABS) {
+        if (!Array.isArray(x.see) || x.see.length !== x.steps.length || x.see.some(t => !t)) p.push(x.id + ' needs one "you should see" per step');
+        if (!x.cost || !x.lessons.length || x.lessons.some(id => !LESSONS.some(l => l.id === id))) p.push(x.id + ' cost or lessons');
+      }
+      for (const id of Object.keys(VISUALS).concat(Object.keys(SCENARIOS))) if (!LESSONS.some(l => l.id === id)) p.push(id + ' is not a lesson');
       return p; })()`, ctx);
     ok(!problems.length, 'content: ' + problems.join(', '));
   });

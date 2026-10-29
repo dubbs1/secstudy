@@ -27,13 +27,16 @@ web/js/content/           data only, no logic
     exam.js               EXAM (code, date, format, pass mark, cost, retake) and DOMAINS (weights)
     lessons.js            LESSONS: id, domain, due date, steps, key points
     questions.js          QUESTIONS: id, lesson, question, options with "why wrong", answer, explanation
-    labs.js               LABS: console steps for the Free plan
+    labs.js               LABS: console steps for the Free plan, what each step should show, cost, related lessons
+    visuals.js            VISUALS: one diagram per lesson (compare, who, nested, scale, tiles), drawn by views/visual.js
+    scenarios.js          SCENARIOS: worked examples for each lesson's Try stage
 web/js/util.js            DOM and date helpers, toast
 web/js/store.js           saved progress: KEY 'awsCourse1', DEFAULTS, load() (cleans and migrates), save(),
                           export and import
 web/js/course.js          lookups over the content, recording answers, spaced repetition, weak-spot statistics
 web/js/views/shared.js    domain chip, the question block, per-visit view state (live, lqi, pCur)
-web/js/views/*.js         one file per screen: header, learn, practice, labs, timer. Each returns an HTML
+web/js/views/visual.js    turns a VISUALS entry into HTML and CSS (no images: wraps on phones, follows the theme)
+web/js/views/*.js         one file per screen: header, today, learn, practice, labs, timer. Each returns an HTML
                           string from the current state. They may settle view state while drawing (which
                           lesson is open, which quiz or practice question shows) but never save
 web/js/app.js             render loop, event handlers, focus and scroll keeping, theme, install, startup
@@ -75,6 +78,8 @@ Adding things:
 | `tab`, `open`, `openLesson`, `openLab`, `pFilter`, `pMode` | where you were |
 | `timer` | `{len, end, left, task}` |
 | `theme` | `system`, `light` or `dark` |
+| `stage[lessonId]` | 0-4: Read, See, Try, Check, Done, where the lesson was left |
+| `days[YYYY-MM-DD]` | true on days with any study, for the streak |
 
 ## Desktop (`desktop/`)
 

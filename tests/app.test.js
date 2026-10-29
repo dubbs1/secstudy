@@ -61,10 +61,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
 
   // ---------- saved progress ----------
-  await check('first load: no errors, next lesson open, Learn tab', async () => {
+  await check('first load: opens on Today with one Next up action (U1.1, U1.2)', async () => {
     await seed(p);
-    ok((await p.$$('.card.open')).length === 1, 'one open card expected');
-    ok(await p.getAttribute('#nav [data-tab=learn]', 'aria-selected') === 'true', 'learn not selected');
+    ok(await p.getAttribute('#nav [data-tab=today]', 'aria-selected') === 'true', 'Today not selected');
+    ok((await p.$$('#nextUpBtn')).length === 1 && await text(p, '#nextUpBtn') === 'Start lesson', 'next up: ' + await text(p, '#main'));
+    ok((await text(p, '.nextup')).includes('Lesson 1:') && (await text(p, '.nextup')).includes('15 min'), 'next up does not name lesson 1 and its time');
   });
   await check('older data under awsCourse1 is backed up and never dropped', async () => {
     const old = {lessons:[true, false], done:[1, 2], xp:7};
@@ -109,7 +110,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
 
   // ---------- Learn ----------
   await check('lesson quiz: wrong answer explains itself inline, retry works', async () => {
-    await seed(p);
+    await seed(p, {v:2, tab:'learn', openLesson:'l1', stage:{l1:3}});
     const wrong = ((await answerOf(p, 'q1')) + 1) % 4;
     await p.click(`[data-act=pick][data-q=q1][data-i="${wrong}"]`);
     ok(await p.$('.opt.wrong .why'), 'no inline why');
@@ -125,16 +126,19 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     }
     const s = await saved(p);
     ok(s.steps.l1 && s.steps.l1[2] === true, 'quiz step not ticked');
+    await p.click('[data-act=stageNext][data-id=l1]');
     await p.click('[data-act=done][data-id=l1]');
     const s2 = await saved(p);
     ok(s2.done.l1 === true && s2.openLesson === 'l2', 'next lesson not opened');
+    ok(await text(p, '.lesson-t') === 'Service and deployment models', 'next lesson not shown');
     ok((await text(p, '.stats')).includes('Lessons 1/' + await p.evaluate(() => LESSONS.length)), 'header not updated');
   });
-  await check('exam facts open and close; closing reopens the next lesson', async () => {
+  await check('exam facts open and close on Today', async () => {
+    await p.click('#nav [data-tab=today]');
     await p.click('[data-act=toggleFacts]');
     ok((await text(p, '.card.open')).includes('700 / 1000'), 'facts not shown');
     await p.click('[data-act=toggleFacts]');
-    ok((await text(p, '.card.open')).includes('Service and deployment models'), 'next lesson not reopened');
+    ok(!(await p.$('.card.open')), 'facts did not close');
   });
 
   // ---------- smart review ----------
@@ -146,16 +150,17 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(srs.q2.due === today && srs.q1.due === in7, JSON.stringify(srs));
     ok((await text(p, '.stats')).includes('Review due 1'), 'header has no review count');
   });
-  await check('review: session runs, hides lessons, schedules 1 / 3 / 7 days', async () => {
-    await p.click('[data-act=rvStart]');
-    ok((await p.$$('.card.open')).length === 1, 'lessons still open during review');
+  await check('review: session runs alone on Today, schedules 1 / 3 / 7 days', async () => {
+    ok(await text(p, '#nextUpBtn') === 'Start review', 'due review is not the next step');
+    await p.click('#nextUpBtn');
+    ok((await p.$$('#main .card')).length === 1, 'other cards showing during review');
     await p.click(`.card.review [data-act=pick][data-i="${await answerOf(p, 'q2')}"]`);
     await p.click('[data-act=rvNext]');
-    ok((await text(p, '.card.review')).includes('1/1 right'), 'summary wrong');
+    ok((await text(p, '.card.review')).includes('1 of 1 right'), 'summary wrong');
     const r = await p.evaluate(() => [S.srs.q2.box, S.srs.q2.due === addDays(todayISO(), 3)]);
     ok(r[0] === 1 && r[1], 'right answer not pushed to 3 days: ' + r);
     await p.click('[data-act=rvClose]');
-    ok((await text(p, '#main .card')).includes('Review: nothing due'), 'nothing-due card missing');
+    ok(await text(p, '#nextUpBtn') === 'Start lesson', 'after review, next up is not the lesson');
     // a miss comes back tomorrow
     await p.click('#nav [data-tab=practice]');
     await p.click('[data-act=pMode][data-v=all]');
@@ -258,10 +263,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
 
   // ---------- layout ----------
-  for (const [name, opts] of [['phone width, light', {}], ['phone width, dark', {colorScheme:'dark'}], ['desktop width', {viewport:{width:1280, height:900}}]]) {
+  for (const [name, opts] of [['phone width, light', {}], ['phone width, dark', {colorScheme:'dark'}], ['narrow phone, 320 px (U7.3)', {viewport:{width:320, height:640}}], ['desktop width', {viewport:{width:1280, height:900}}]]) {
     await check('layout: no sideways scroll at ' + name, async () => {
       const q = await fresh(opts);
-      for (const tab of ['learn', 'practice', 'labs', 'timer']) {
+      for (const tab of ['today', 'learn', 'practice', 'labs', 'timer']) {
         await q.click(`#nav [data-tab=${tab}]`);
         const w = await q.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         ok(w <= 0, `${tab} overflows by ${w}px`);
@@ -300,7 +305,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'progress-v2-release-1.0.0.json'), 'utf8'));
     await seed(p, fx.saved);
     ok((await text(p, '.stats')).startsWith(fx.shown.stats), 'header differs: ' + await text(p, '.stats'));
-    ok(await text(p, '.card.open .row b') === fx.shown.open, 'different lesson open');
+    ok(await text(p, '.lesson-t') === fx.shown.open, 'different lesson open');
     const now = await p.evaluate(() => S);
     for (const k of Object.keys(fx.saved)) ok(JSON.stringify(now[k]) === JSON.stringify(fx.saved[k]), 'field changed on load: ' + k);
   });
@@ -313,10 +318,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.evaluate(() => {
       EXAM.date = '2027-03-15'; EXAM.questions = 70;
       LESSONS.push({...LESSONS.find(l => l.d === 'bill'), id:'lx', t:'Extra billing lesson', due:'2027-03-01'});
-      S.open = 'facts'; render();
+      S.tab = 'today'; S.open = 'facts'; render();
     });
     const head = await text(p, '#top .sub'), facts = await text(p, '.card.open');
-    await p.evaluate(() => { LESSONS.forEach(l => S.done[l.id] = true); S.open = null; render(); });
+    await p.evaluate(() => { LESSONS.forEach(l => S.done[l.id] = true); S.open = null; S.tab = 'learn'; S.openLesson = null; render(); });
     const doneMsg = await text(p, '#main .note');
     await p.reload();   // restore the real content
     ok(head.includes('2027'), 'header year did not follow: ' + head);
@@ -325,12 +330,15 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok((await text(p, '.stats')).includes(`Lessons 0/${nLessons}`), 'content not restored');
   });
   await check('an opened lesson, lab or card stays on screen (AC5.1)', async () => {
-    await seed(p);
+    await seed(p, {v:2, tab:'learn'});
     const onScreen = sel => p.evaluate(s => { const t = document.querySelector(s).getBoundingClientRect().top; return t >= 0 && t < innerHeight; }, sel);
     await p.evaluate(() => scrollTo(0, 1e5)); await p.click('[data-act=openLesson][data-id=l14]');
-    ok(await onScreen('[data-act=openLesson][data-id=l14]'), 'lesson 14 off screen');
-    await p.click('[data-act=openLesson][data-id=l2]');
-    ok(await onScreen('[data-act=openLesson][data-id=l2]'), 'lesson 2 off screen');
+    ok(await onScreen('#lessonTop') && await text(p, '.lesson-t') === 'Pricing models', 'lesson 14 off screen');
+    await p.evaluate(() => scrollTo(0, 1e5)); await p.click('[data-act=stageNext]');
+    ok(await onScreen('#lessonTop'), 'next stage starts off screen');
+    await p.click('[data-act=closeLesson]');
+    ok(await onScreen('[data-act=openLesson][data-id=l14]'), 'back to the list, lesson 14 row off screen');
+    await p.click('#nav [data-tab=today]');
     await p.evaluate(() => scrollTo(0, 1e5)); await p.click('[data-act=toggleFacts]');
     ok(await onScreen('[data-act=toggleFacts]'), 'exam facts off screen');
     await p.click('#nav [data-tab=labs]'); await p.click('[data-act=openLab][data-id=lab1]');
@@ -338,14 +346,14 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await onScreen('[data-act=openLab][data-id=lab6]'), 'lab 6 off screen');
   });
   await check('keyboard focus is kept; answers are announced (AC6.1-6.4)', async () => {
-    await seed(p);
+    await seed(p, {v:2, tab:'learn', openLesson:'l1', stage:{l1:3}});
     const active = () => p.evaluate(() => { const a = document.activeElement; return a.className + '|' + (a.dataset.act || '') + '|' + (a.dataset.i || ''); });
     await p.focus('[data-act=pick][data-q=q1][data-i="1"]'); await p.keyboard.press('Enter');
     ok((await active()).startsWith('fb '), 'after answering, focus is on ' + await active());
     await p.waitForFunction(() => document.querySelector('#announce').textContent.length > 10);
     ok(/^(Right\.|The answer is)/.test(await text(p, '#announce')), 'announcement: ' + await text(p, '#announce'));
-    await p.focus('[data-act=step][data-id=l1][data-i="1"]'); await p.keyboard.press('Space');
-    ok(await active() === '|step|1', 'after ticking, focus is on ' + await active());
+    await p.focus('[data-act=step][data-id=l1][data-i="2"]'); await p.keyboard.press('Space');
+    ok(await active() === '|step|2', 'after ticking, focus is on ' + await active());
     await p.focus('[data-act=theme]'); await p.keyboard.press('Enter');
     ok((await active()).includes('|theme|'), 'after theme change, focus is on ' + await active());
     await p.keyboard.press('Enter'); await p.keyboard.press('Enter');   // back to System
@@ -356,14 +364,14 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const seen = () => p.evaluate(() => { const a = document.activeElement, r = a.getBoundingClientRect();
       return (r.bottom > 0 && r.top < innerHeight) ? (a.dataset.act || a.id || a.tagName) : 'OFF SCREEN ' + (a.dataset.act || a.tagName); });
     await seed(p, {v:2, ans:{q1:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}, q2:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}}});
-    await p.focus('[data-act=rvStart]'); await p.keyboard.press('Enter');
+    await p.focus('#nextUpBtn'); await p.keyboard.press('Enter');
     ok(await seen() === 'pick', 'after Start review: ' + await seen());
     await p.keyboard.press('Enter'); await p.focus('[data-act=rvNext]'); await p.keyboard.press('Enter');
     ok(await seen() === 'pick', 'after Next: ' + await seen());
     await p.keyboard.press('Enter'); await p.focus('[data-act=rvNext]'); await p.keyboard.press('Enter');
     ok(['rvStart', 'rvClose'].includes(await seen()), 'after Finish: ' + await seen());
     await p.focus('[data-act=rvClose]'); await p.keyboard.press('Enter');
-    ok(await seen() === 'openLesson', 'after Back to lessons: ' + await seen());
+    ok(await seen() === 'openLesson', 'after Done: ' + await seen());
   });
   await check('filter rows are toggle buttons, only the tab bar is tabs (AC6.5)', async () => {
     await p.click('#nav [data-tab=practice]');
@@ -400,22 +408,191 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       ok(await q.evaluate(() => getComputedStyle(document.body).backgroundColor) === 'rgb(22, 20, 28)', 'page not dark before app.js');
     } finally { await ctx.close(); close(); }
   });
-  await check('text contrast is at least 4.5:1 in both themes (AC7.4)', async () => {
-    const bad = [];
+  await check('text contrast is at least 4.5:1 in both themes, on every screen (AC7.4, U3.2)', async () => {
+    const bad = [], found = new Set();
+    // Each screen is a state; every selector must appear on at least one of them.
+    const screens = [
+      `S.tab = 'today'; S.srs.q1 = {box:0, due:'2020-01-01'}; S.days[todayISO()] = true; S.timer.left = 60000;`,
+      `S.tab = 'today'; lookupQ = 'nat';`,
+      `S.tab = 'learn'; S.openLesson = null; S.stage.l1 = 2;`,
+      `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 3; S.ans.q1 = {n:1, wrong:1, pick:1, ok:false, at:Date.now()}; lqi.l1 = 0;`,
+      `S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 2; revealed['l1:0'] = true;`,
+      `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l4'; S.stage.l4 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l5'; S.stage.l5 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 1;`,
+      `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1;`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = [true];`
+    ];
+    const sels = ['body', '#top .sub', '.stat', '.stat.timer', '.theme', '.chip.d-cc', '.chip.d-sec', '.chip.d-tech', '.chip.d-bill', '.foot', '.foot .link', 'h3',
+      '.hello', '.streak', '.task-tag', '.nextup small', '.week small', '.row-link small', 'mark', '.group-h small', '.row .t small', '.pill-going',
+      '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
+      '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
-      await q.evaluate(t => { S.theme = t; S.ans.q1 = {n:1, wrong:1, pick:1, ok:false, at:Date.now()}; S.srs.q1 = {box:0, due:'2020-01-01'}; S.timer.left = 60000; render(); }, theme);
-      const r = await q.evaluate(() => {
-        const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
-        const bgOf = e => { let c; while (e && ((c = getComputedStyle(e).backgroundColor) === 'rgba(0, 0, 0, 0)')) e = e.parentElement; return c || getComputedStyle(document.body).backgroundColor; };
-        const sels = ['body', '#top .sub', '.stat', '.stat.timer', '.theme', '.row .t small', '.chip.d-cc', '.chip.d-sec', '.chip.d-tech', '.chip.d-bill', '.opt.wrong .why', '.fb', '.foot', '.foot .link', 'h3', '.check em'];
-        return sels.map(s => { const e = document.querySelector(s); if (!e) return [s, null];
-          const [a, b] = [lum(getComputedStyle(e).color), lum(bgOf(e))].sort((x, y) => y - x); return [s, (a + .05) / (b + .05)]; });
-      });
-      for (const [sel, c] of r) if (c === null || c < 4.5) bad.push(`${theme} ${sel} ${c === null ? 'not found' : c.toFixed(2)}`);
+      for (const setup of screens) {
+        await q.evaluate(([t, js]) => { S.theme = t; (0, eval)(js); render(); }, [theme, setup]);
+        const r = await q.evaluate(sels => {
+          const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
+          const bgOf = e => { let c; while (e && ((c = getComputedStyle(e).backgroundColor) === 'rgba(0, 0, 0, 0)')) e = e.parentElement; return c || getComputedStyle(document.body).backgroundColor; };
+          return sels.map(s => { const e = document.querySelector(s); if (!e) return [s, null];
+            // Dimmed (opacity) elements count as their text against the page: check them at full strength only.
+            const [a, b] = [lum(getComputedStyle(e).color), lum(bgOf(e))].sort((x, y) => y - x); return [s, (a + .05) / (b + .05)]; });
+        }, sels);
+        for (const [sel, c] of r) { if (c === null) continue; found.add(sel); if (c < 4.5) bad.push(`${theme} ${sel} ${c.toFixed(2)}`); }
+      }
       await q.context().close();
     }
-    ok(!bad.length, bad.join(', '));
+    const missing = sels.filter(x => !found.has(x));
+    ok(!missing.length, 'not found on any screen: ' + missing.join(', '));
+    ok(!bad.length, [...new Set(bad)].join(', '));
+  });
+
+  // ---------- friendlier study flow (docs/UX.md) ----------
+  async function at(date, opts = {}){   // a page whose clock reads `date`, for date-dependent screens
+    const ctx = await browser.newContext({viewport:{width:390, height:844}, ...opts});
+    const q = await ctx.newPage();
+    q.setDefaultTimeout(8000);
+    q.on('pageerror', e => errors.push(e.message));
+    await q.clock.setFixedTime(new Date(date + 'T10:00:00'));
+    await q.goto(URL);
+    return q;
+  }
+  await check('Next up picks review, then the lesson in progress, then the next lesson (U1.2)', async () => {
+    await seed(p, {v:2, stage:{l3:2}, ans:{q1:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}}});
+    ok(await text(p, '#nextUpBtn') === 'Start review', 'due review not first');
+    await seed(p, {v:2, stage:{l3:2}});
+    ok(await text(p, '#nextUpBtn') === 'Continue' && (await text(p, '.nextup')).includes('Lesson 3:') && (await text(p, '.nextup')).includes('you are on Try'), 'lesson in progress not next: ' + await text(p, '.nextup'));
+    await p.click('#nextUpBtn');
+    ok(await text(p, '.lesson-t') === 'Global infrastructure' && await p.getAttribute('[data-act=stage][aria-current=step]', 'data-i') === '2', 'did not continue at Try');
+  });
+  await check('This week lists lessons due in 7 days, done ticked, late marked (U1.3)', async () => {
+    const q = await at('2026-11-02');
+    await q.evaluate(() => { localStorage.setItem('awsCourse1', JSON.stringify({v:2, done:{l1:true, l3:true}})); });
+    await q.reload();
+    const rows = await q.$$eval('.week li', ls => ls.map(l => l.className + ':' + l.querySelector('b').textContent));
+    ok(JSON.stringify(rows) === JSON.stringify([':Service and deployment models'.replace(':', 'late:'), 'done:Global infrastructure', ':Well-Architected, CAF and migration', ':The shared responsibility model', ':IAM: who can do what']), 'week: ' + JSON.stringify(rows));
+    ok((await text(q, '.week li.late')).includes('late, was due'), 'late lesson not explained');
+    await q.context().close();
+  });
+  await check('progress bar per exam domain and a study streak (U1.4, U1.5)', async () => {
+    const q = await at('2026-11-10');
+    await q.evaluate(() => { localStorage.setItem('awsCourse1', JSON.stringify({v:2, done:{l1:true, l5:true, l6:true}, days:{'2026-11-08':true, '2026-11-09':true}})); });
+    await q.reload();
+    const doms = await q.$$eval('.dom', ds => ds.map(d => d.innerText.replace(/\s+/g, ' ')));
+    ok(doms[0].includes('24 % of the exam') && doms[0].includes('1/4 lessons') && doms[1].includes('2/4 lessons'), 'domains: ' + doms);
+    ok(await text(q, '.streak') === '2-day streak', 'streak before studying today: ' + await text(q, '.hello'));
+    await q.click('#nextUpBtn'); await q.click('[data-act=step][data-i="0"]');
+    await q.click('#nav [data-tab=today]');
+    ok(await text(q, '.streak') === '3-day streak', 'streak after a tick today: ' + await text(q, '.hello'));
+    await q.evaluate(() => { S.days = {'2026-11-01':true}; render(); });
+    ok(!(await q.$('.streak')), 'a broken streak still shows');
+    await q.context().close();
+  });
+  await check('a lesson shows one stage at a time; Next, Back and the strip move; the stage is saved (U2.1, U2.2)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l2'});
+    ok(await p.$$eval('[data-act=stage]', b => b.length) === 5 && (await p.$$('.stage-body')).length === 1, 'not five stages with one body');
+    ok(await p.$$eval('[aria-current=step]', b => b.map(x => x.textContent.trim()).join()) === 'Read', 'does not start on Read');
+    await p.click('[data-act=stageNext]'); ok(await p.$('figure.vis'), 'Next did not show See');
+    await p.click('[data-act=stageNext]'); ok(await p.$('.scenario'), 'Next did not show Try');
+    await p.click('[data-act=stagePrev]'); ok(await p.$('figure.vis'), 'Back did not show See');
+    await p.click('[data-act=stage][data-i="3"]'); ok(await p.$('.opt'), 'strip did not jump to Check');
+    await p.reload();
+    ok(await p.$('.opt') && await text(p, '.lesson-t') === 'Service and deployment models', 'stage not kept after reload');
+    await p.click('[data-act=closeLesson]');
+    ok((await text(p, '[data-act=openLesson][data-id=l2]')).includes('In progress: Check'), 'list does not show the stage');
+  });
+  await check('each Do this task sits on its stage and keeps the same tick data (U2.3)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l4', steps:{l4:[true, false, true]}});
+    for (const [stage, i, on] of [[0, 0, true], [2, 1, false], [3, 2, true]]) {
+      await p.click(`[data-act=stage][data-i="${stage}"]`);
+      const box = await p.$$eval('.stage-body [data-act=step]', bs => bs.map(b => b.dataset.i + ':' + b.checked));
+      ok(JSON.stringify(box) === JSON.stringify([`${i}:${on}`]), `stage ${stage} task boxes ${box}`);
+    }
+    for (const stage of [1, 4]) { await p.click(`[data-act=stage][data-i="${stage}"]`); ok(!(await p.$('.stage-body [data-act=step]')), `task on stage ${stage}`); }
+  });
+  await check('Done offers next lesson, a 5 min break and the related lab (U2.4)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l10', stage:{l10:4}});
+    ok(await p.$('[data-act=done][data-id=l10]') && await p.$('[data-act=breakTimer]') && await p.$('[data-act=goLab][data-id=lab3]'), 'missing a Done action');
+    await p.click('[data-act=breakTimer]');
+    ok(await p.evaluate(() => S.timer.len === 5 && S.timer.end > Date.now()) && await p.$('#miniClock'), 'break timer not running');
+    await p.click('[data-act=goLab]');
+    ok(await p.getAttribute('#nav [data-tab=labs]', 'aria-selected') === 'true' && (await text(p, '.card.open')).includes('S3: bucket'), 'lab not opened');
+  });
+  await check('no stage of any lesson is taller than 1.4 screens on a phone (U2.5)', async () => {
+    const tall = await p.evaluate(() => {
+      const out = [];
+      for (const l of LESSONS) for (let k = 0; k < STAGES.length; k++) {
+        S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true); render();
+        const h = document.querySelector('#lessonTop').getBoundingClientRect().height;
+        if (h > 844 * 1.4) out.push(`${l.id} ${STAGES[k]} ${Math.round(h)}px`);
+      }
+      return out;
+    });
+    await p.reload();
+    ok(!tall.length, tall.join(', '));
+  });
+  await check('every lesson has a captioned diagram, scenarios hidden until asked, hands-on links (U3.1, U3.3, U4)', async () => {
+    const probs = await p.evaluate(() => {
+      const out = [];
+      for (const l of LESSONS) {
+        S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = 1; render();
+        const fig = document.querySelector('.stage-body figure.vis');
+        if (!fig || !fig.querySelector('figcaption') || fig.querySelector('figcaption').textContent.trim().length < 15) out.push(l.id + ' diagram/caption');
+        S.stage[l.id] = 2; render();
+        const sc = document.querySelectorAll('.scenario');
+        if (!sc.length) out.push(l.id + ' no scenario');
+        if (document.querySelector('.answer')) out.push(l.id + ' answer shown before asking');
+        const labs = LABS.filter(x => x.lessons.includes(l.id)).map(x => x.id).join();
+        if ([...document.querySelectorAll('.handson [data-act=goLab]')].map(b => b.dataset.id).join() !== labs) out.push(l.id + ' hands-on links');
+      }
+      return out;
+    });
+    ok(!probs.length, probs.join(', '));
+    await seed(p, {v:2, tab:'learn', openLesson:'l9', stage:{l9:2}});
+    await p.focus('[data-act=reveal][data-i="0"]'); await p.keyboard.press('Enter');
+    ok((await text(p, '.answer')).startsWith('Lambda'), 'answer not shown');
+    ok(await p.evaluate(() => document.activeElement.classList.contains('answer')), 'focus not on the answer');
+    await p.waitForFunction(() => document.querySelector('#announce').textContent.startsWith('Lambda'));
+  });
+  await check('labs: every step says what you should see; next step highlighted; cost and lessons shown (U5)', async () => {
+    await seed(p, {v:2, tab:'labs', openLab:'lab4', labs:{lab4:[true, true]}});
+    const steps = await p.$$eval('.lab-steps li', ls => ls.map(l => [l.className.trim(), !!l.querySelector('.see')]));
+    ok(steps.length === 7 && steps.every(s => s[1]), 'missing You should see');
+    ok(steps[0][0] === 'on' && steps[1][0] === 'on' && steps[2][0] === 'now' && steps.filter(s => s[0] === 'now').length === 1, 'highlight: ' + JSON.stringify(steps));
+    ok((await text(p, '.lab-meta')).includes('Cost:') && (await text(p, '.lab-meta')).includes('Lesson 9'), 'cost or lessons missing');
+    await p.click('.lab-meta [data-act=goLesson][data-id=l12]');
+    ok(await text(p, '.lesson-t') === 'Networking and content delivery', 'lesson link did not open the lesson');
+  });
+  await check('look up: word starts, highlighted, opens the place, keeps focus (U6)', async () => {
+    await seed(p);
+    await p.evaluate(() => { document.querySelector('#nextUpBtn').dataset.probe = 'same'; });
+    await p.click('#lookup');
+    await p.keyboard.type('nat');
+    ok(await p.evaluate(() => document.activeElement.id === 'lookup'), 'typing lost focus');
+    ok(await p.evaluate(() => document.querySelector('#nextUpBtn').dataset.probe === 'same'), 'typing redrew the page');
+    const hits = await p.$$eval('.hits li', ls => ls.map(l => l.innerText));
+    ok(hits.length >= 1 && hits[0].includes('Networking and content delivery') && hits.every(h => !/designated|Terminate/.test(h)), 'hits: ' + hits);
+    ok(await text(p, '.hits mark') === 'NAT', 'match not highlighted');
+    await p.click('.hits [data-act=goLesson]');
+    ok(await text(p, '.lesson-t') === 'Networking and content delivery' && await p.getAttribute('[aria-current=step]', 'data-i') === '0', 'did not open the lesson at Read');
+    await p.click('#nav [data-tab=today]'); await p.fill('#lookup', 'xyzzy');
+    ok((await text(p, '#lookupResults')).startsWith('Nothing found'), 'no empty message');
+    await p.fill('#lookup', 'cross-site');
+    await p.click('.hits [data-act=goQuestion]');
+    ok(await p.getAttribute('#nav [data-tab=practice]', 'aria-selected') === 'true' && (await text(p, '.qt')).includes('SQL injection'), 'question not opened');
+  });
+  await check('16 px text, sticky tab bar with icon and word, reduced motion (U7.1, U7.2, U7.4)', async () => {
+    await seed(p, {v:2, tab:'learn'});
+    const f = await p.evaluate(() => { const c = getComputedStyle(document.body); return [c.fontSize, parseFloat(c.lineHeight) / parseFloat(c.fontSize)]; });
+    ok(f[0] === '16px' && f[1] >= 1.55, 'font ' + f);
+    await p.evaluate(() => scrollTo(0, 2000));
+    ok(await p.evaluate(() => { const t = document.querySelector('#nav').getBoundingClientRect().top; return t >= 0 && t < 40; }), 'tab bar scrolled away');
+    ok(await p.$$eval('#nav button', bs => bs.every(b => b.querySelector('svg') && b.innerText.trim().length > 2)), 'tab without icon or word');
+    const r = await fresh({reducedMotion:'reduce'});
+    await r.evaluate(() => { S.tab = 'learn'; S.openLesson = 'l1'; S.stage.l1 = 4; S.done.l1 = true; render(); });
+    ok(await r.evaluate(() => getComputedStyle(document.querySelector('.big-check')).animationName) === 'none', 'animation runs with reduced motion');
+    await r.context().close();
   });
 
   await check('no script errors anywhere above', async () => { ok(!errors.length, errors.join(' | ')); });

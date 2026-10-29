@@ -17,11 +17,16 @@ function renderLabs(){
       <span class="n ${all ? 'done' : ''}">${all ? '✓' : idx + 1}</span>
       <span class="t"><b>${lab.t}</b><small>about ${lab.min} min · ${n}/${lab.steps.length} steps</small></span><span class="chev">›</span></button>`;
     if (open) {
-      h += '<div class="body">';
+      const next = lab.steps.findIndex((s, i) => !st[i]);
+      h += `<div class="body"><div class="lab-meta"><span><b>Cost:</b> ${lab.cost}</span>
+        <span><b>Practises:</b> ${lab.lessons.map(id => `<button class="link" data-act="goLesson" data-id="${id}">Lesson ${lessonNo(id)}</button>`).join(', ')}</span></div>
+        <ol class="lab-steps">`;
       lab.steps.forEach((s, i) => {
-        h += `<label class="check ${st[i] ? 'on' : ''}"><input type="checkbox" data-act="labStep" data-id="${lab.id}" data-i="${i}" ${st[i] ? 'checked' : ''}><span>${s}</span></label>`;
+        h += `<li class="${st[i] ? 'on' : ''} ${i === next ? 'now' : ''}">${i === next ? '<small class="task-tag">Do this now</small>' : ''}
+          <label class="check"><input type="checkbox" data-act="labStep" data-id="${lab.id}" data-i="${i}" ${st[i] ? 'checked' : ''}><span>${s}</span></label>
+          <p class="see"><b>You should see:</b> ${lab.see[i]}</p></li>`;
       });
-      h += `<div class="note">${lab.note}</div>`;
+      h += `</ol><div class="note">${lab.note}</div>`;
       if (n) h += `<div class="btns"><button class="btn ghost" data-act="labReset" data-id="${lab.id}">Untick all</button></div>`;
       h += '</div>';
     }

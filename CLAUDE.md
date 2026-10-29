@@ -3,7 +3,8 @@
 AWS Cloud Practitioner study tool. The app is `web/` (no build step, no dependencies): classic script files,
 not ES modules, so it still opens from disk. The same folder ships as the installable website (GitHub Pages)
 and inside the Windows app (`desktop/`, Tauri 2, NSIS per-user installer on Releases).
-Read `docs/ARCHITECTURE.md` before changing structure; `docs/RESTRUCTURE.md` lists the acceptance criteria.
+Read `docs/ARCHITECTURE.md` before changing structure. Acceptance criteria: `docs/RESTRUCTURE.md` (structure)
+and `docs/UX.md` (the study flow: Today, lessons as Read/See/Try/Check/Done, diagrams, labs, look up).
 
 ## Working rule: do it all automatically
 

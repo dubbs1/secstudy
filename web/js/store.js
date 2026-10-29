@@ -1,7 +1,8 @@
 // Saved progress: localStorage key awsCourse1. load() is the only way data gets in.
 const KEY = 'awsCourse1';
 const THEMES = ['system', 'light', 'dark'];
-const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, review:null, tab:'learn', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', theme:'system', timer:{len:15, end:null, left:null, task:''}};
+const TABS = ['today', 'learn', 'practice', 'labs', 'timer'];
+const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, stage:{}, days:{}, review:null, tab:'today', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', theme:'system', timer:{len:15, end:null, left:null, task:''}};
 let S;   // loaded just before the first render, once the helpers below exist
 
 function load(){
@@ -42,6 +43,9 @@ function load(){
   }
   if (typeof s.pFilter !== 'string') s.pFilter = 'all';
   if (!THEMES.includes(s.theme)) s.theme = 'system';
+  if (!TABS.includes(s.tab)) s.tab = 'today';
+  for (const k in s.stage) { const n = s.stage[k]; if (!Number.isInteger(n) || n < 0 || n >= STAGES.length) delete s.stage[k]; }
+  for (const k in s.days) if (!/^\d{4}-\d\d-\d\d$/.test(k) || s.days[k] !== true) delete s.days[k];
   // Answers given before smart review existed: misses are due now, right answers a week after they were given.
   for (const qid in s.ans) {
     const r = s.ans[qid];
