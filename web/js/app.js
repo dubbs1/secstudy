@@ -114,6 +114,10 @@ window.addEventListener('popstate', e => {
 document.addEventListener('pointerdown', e => {
   if (focusOpen && !e.target.closest('#focusPanel, #timerBtn')) { focusOpen = false; renderTimerButton(); }
 });
+// Enter in a practice console box checks it, like its Check button.
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.dataset && e.target.dataset.lab) { e.preventDefault(); const b = e.target.parentElement.querySelector('[data-act=labText]'); if (b && !b.disabled) b.click(); }
+});
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && focusOpen) { focusOpen = false; renderTimerButton(); $('#timerBtn').focus(); }
 });
@@ -225,6 +229,24 @@ document.addEventListener('click', e => {
     case 'rvClose': S.review = null; reveal = '#nextUpBtn'; break;
     case 'pLesson': S.pFilter = id; S.pMode = 'all'; S.open = null; pCur = null; break;
     case 'labReset': S.labs[id] = []; break;
+    // Practise here: the practice console
+    case 'labMode': labState(id).mode = b.dataset.v; focusTo = `[data-act=labMode][data-v="${b.dataset.v}"]`; break;
+    case 'labPick': case 'labToggle': case 'labText': {
+      const st = labState(id), c = LAB_SIMS[id].steps[st.step].controls.find(x => x.id === b.dataset.v);
+      if (act === 'labPick') st.vals[c.id] = +b.dataset.i;
+      else if (act === 'labToggle') st.vals[c.id] = !(st.vals[c.id] == null ? !!c.on : st.vals[c.id]);
+      else {
+        const v = $(`#lc-${id}-${c.id}`).value; st.vals[c.id] = v;
+        if (c.type === 'cmd') { const r = labCheck(c, v); st.out[c.id] = [...(st.out[c.id] || []), (c.prompt || '$') + ' ' + v, ...(r.ok ? [c.output] : ['command not recognised'])]; }
+      }
+      const r = labCheck(c, st.vals[c.id]); studied();
+      const stepDone = labStepDone(id, st.step);
+      announce((r.ok ? 'Right. ' : 'Not quite. ') + (r.why || '') + (stepDone ? ' Step done. ' + LAB_SIMS[id].steps[st.step].see : ''));
+      focusTo = stepDone ? '[data-act=labNext]' : c.type === 'text' || c.type === 'cmd' ? `#lc-${id}-${c.id}` : `[data-act=${act}][data-v="${c.id}"]${act === 'labPick' ? `[data-i="${b.dataset.i}"]` : ''}`;
+      break;
+    }
+    case 'labNext': { const st = labState(id); st.step++; focusTo = st.step >= LAB_SIMS[id].steps.length ? '.pcon-done .btn' : '.pcon-task'; reveal = `[data-act=openLab][data-id="${id}"]`; break; }
+    case 'labRestart': labUi[id] = {mode:'sim', step:0, vals:{}, out:{}}; focusTo = '.pcon .lc button, .pcon .lc input'; break;
     case 'tLen': S.timer = {...S.timer, len:+b.dataset.v, end:null, left:null}; break;
     case 'tGo': {
       try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}

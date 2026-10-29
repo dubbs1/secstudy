@@ -461,3 +461,30 @@ button.fnode{width:100%;font:inherit;font-size:13.5px}
 .adv-check{width:30px;height:30px;border-radius:99px;background:var(--ok);color:#06281F;display:grid;place-items:center;font-weight:800;font-size:17px;flex:none}
 .stage-body.enter{animation:partIn .45s ease-out}
 @keyframes partIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+
+/* ---------- Practise here: the practice console (views/labsim.js), in the app's own style ---------- */
+.pcon{border:1.5px solid var(--line);border-radius:var(--r-sm);overflow:hidden;margin-top:10px}
+.pcon-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 12px;background:var(--field);border-bottom:1px solid var(--line);font-size:12.5px}
+.pcon-tag{font-weight:800;color:var(--brand-text);text-transform:uppercase;letter-spacing:.05em;font-size:11.5px}
+.pcon-where{color:var(--text);font-weight:600}
+.pcon-body{padding:10px 12px 12px}
+.pcon-task{margin:4px 0 10px;font-size:15px}
+.lc{margin:8px 0 4px;border:0;padding:0}
+.lc legend,.lc-l{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:5px}
+.lc-opt{display:block;width:100%;text-align:left;margin:0 0 6px;padding:9px 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);color:var(--text);font:inherit;font-size:14px}
+.lc-opt.right{border-color:var(--ok);background:var(--ok-soft)}.lc-opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.lc-toggle{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);color:var(--text);font:inherit;font-size:14px}
+.lc-toggle .sw{flex:none;font-size:12px;font-weight:700;border-radius:99px;padding:3px 10px;background:var(--field);color:var(--muted)}
+.lc-toggle.on .sw{background:var(--brand);color:var(--on-brand)}
+.lc-row{display:flex;gap:6px;align-items:center}
+.lc-row .field{flex:1 1 auto;min-width:0}
+.lc-fb{margin:4px 0 8px;font-size:13.5px;padding:6px 10px;border-radius:var(--r-sm)}
+.lc-fb.ok{background:var(--ok-soft)}.lc-fb.no{background:var(--bad-soft)}
+.term{background:#14121A;border-radius:var(--r-sm);padding:8px 10px;color:#E8E6EF;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.term-out div{white-space:pre-wrap;overflow-wrap:anywhere}
+.term-p{color:#9BE9C8;font-weight:700}
+.term .field.term-in{background:#211E29;color:#F3F2F7;border-color:#34303D;font-family:inherit}
+.pcon-see{margin-top:10px;padding:10px 12px;border-radius:var(--r-sm);background:var(--brand-soft);font-size:14px}
+.pcon-table{width:100%;margin-top:8px;border-collapse:collapse;font-size:13px;background:var(--card)}
+.pcon-table th,.pcon-table td{border:1px solid var(--line);padding:5px 8px;text-align:left}
+.pcon-done{text-align:center;padding:12px 0}

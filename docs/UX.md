@@ -155,3 +155,14 @@ yourself), Try (What if, Situations), Check, Done. Data for the scenes in `web/j
 - AC13.4 Remember from before: every lesson after the first starts with 3 to 4 pictures from the lessons it builds
   on (`builds` in scenes.js), to recall and tap to check, then bridges to Picture it. Skip goes straight there.
   The colour key is shown in lessons 1 to 3 only.
+
+### U14. Practise here: labs in a practice console
+Each lab can be done first in a practice console inside the app (data in `web/js/content/labsims.js`), drawn in the
+app's own style and labelled "Practice console": it never imitates the real AWS console. Nothing is created in AWS
+and nothing costs credits.
+- AC14.1 A lab opens on Practise here unless its real console steps were already started; a switch moves between them.
+- AC14.2 Each step is one task with choices, switches, text boxes (Enter checks) or a terminal. Every answer says at
+  once why it is right or wrong (bucket naming rules, a name already taken, public access, deleting a full bucket,
+  stop versus terminate). A step done shows what the real console would show, sometimes as a small table.
+- AC14.3 The terminal prints what the server would answer to the right command and "command not recognised" otherwise.
+- AC14.4 The end of a practice run leads to the real console steps. Practising saves nothing except today's study day.

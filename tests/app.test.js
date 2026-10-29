@@ -209,6 +209,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   await check('labs: ticks persist across a reload', async () => {
     await seed(p, {v:2, tab:'labs'});
     await p.click('[data-act=openLab][data-id=lab3]');
+    await p.click('[data-act=labMode][data-v=real]');
     await p.click('.check input');
     await p.reload();
     ok((await text(p, '.card.open')).includes('1/6 steps'), 'tick lost');
@@ -473,6 +474,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 1; ui.mode['l10:1'] = 'look';`,
       `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 1; ui.mode['l12:1'] = 'look';`,
       `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = [true];`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'My Bucket', region:1}, out:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:0, vals:{name:'alex-notes', region:0}, out:{}};`,
+      `S.tab = 'labs'; S.openLab = 'lab4'; S.labs.lab4 = []; labUi.lab4 = {mode:'sim', step:3, vals:{uname:'uname -a'}, out:{uname:['$ ls', 'command not recognised', '$ uname -a', 'Linux ip-172-31-5-20']}};`,
+      `S.tab = 'labs'; S.openLab = 'lab3'; S.labs.lab3 = []; labUi.lab3 = {mode:'sim', step:4, vals:{show:true}, out:{}};`,
       `S.tab = 'learn'; S.openLesson = 'l10'; S.stage.l10 = 0; ui.mode['l10:0'] = 'points';`,
       `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 0; ui.mode['l7:0'] = 'cards'; ui.cards.l7 = {order:[0,1,2], pos:0, flipped:true, got:0, again:[]};`,
       `S.tab = 'learn'; S.openLesson = 'l9'; S.stage.l9 = 0; ui.mode['l9:0'] = 'cards'; ui.cards.l9 = {order:[flashCards(LESSONS[8]).findIndex(c => c.kind === 'gap')], pos:0, flipped:true, got:0, again:[]};`,
@@ -494,7 +499,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
       '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag',
       '.num', '.band-meta', '.lesson .pts b', '.colour-key b', '.stage.cur', '.flipcard small', '.flipcard span', '.chipbtn.right', '.chipbtn.wrong', '.game-fb',
-      '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.scene-t', '.scene-q', '.scene-a b', '.scene-a small', '.bridge', '.bridge-t', '.part-ok', '.mnode', '.mnode small', '.mnode.part.off small', '.mframe span', '.sim-test.ok', '.sim-test.no', '.sim-test.never', '.sim-result', '.sim-result small', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
+      '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.pcon-tag', '.pcon-where', '.pcon-task', '.lc legend', '.lc-opt', '.lc-opt.right', '.lc-opt.wrong', '.lc-fb.ok', '.lc-fb.no', '.lc-toggle .sw', '.term-out div', '.term-p', '.pcon-see', '.pcon-table td', '.scene-t', '.scene-q', '.scene-a b', '.scene-a small', '.bridge', '.bridge-t', '.part-ok', '.mnode', '.mnode small', '.mnode.part.off small', '.mframe span', '.sim-test.ok', '.sim-test.no', '.sim-test.never', '.sim-result', '.sim-result small', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
       '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
@@ -1209,6 +1214,62 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok((await text(p, '.bridge')).includes('mark the lesson done') && await p.$('.fb'), 'finishing the quiz does not bridge to Done, or hid the explanation');
     await p.click('[data-act=advGo]');
     ok(await p.evaluate(() => S.stage.l1 === 4), 'Continue did not open Done');
+  });
+
+  await check('Practise here: each lab in a practice console; wrong answers explain themselves (U14.1, U14.2)', async () => {
+    const bad = await p.evaluate(() => {
+      const out = [];
+      for (const lab of LABS) {
+        const sim = LAB_SIMS[lab.id]; if (!sim || sim.steps.length < 4) { out.push(lab.id + ' has no practice run'); continue; }
+        sim.steps.forEach((st, i) => {
+          if (!st.where || !st.task || !st.see || !st.controls.length) out.push(`${lab.id} step ${i + 1}`);
+          st.controls.forEach(c => {
+            if (c.type === 'choice' && (!c.options.some(o => o.ok) || c.options.some(o => !o.why))) out.push(`${lab.id} ${c.id} choice`);
+            if (c.type === 'toggle' && (typeof c.want !== 'boolean' || !c.why)) out.push(`${lab.id} ${c.id} toggle`);
+            try { if (c.type === 'text') { new RegExp(c.need); (c.bad || []).forEach(x => new RegExp(x.re)); }
+                  if (c.type === 'cmd') c.expect.forEach(x => new RegExp(x)); } catch (e) { out.push(`${lab.id} ${c.id} pattern`); }
+          });
+        });
+      }
+      return out;
+    });
+    ok(!bad.length, bad.join(', '));
+    await seed(p, {v:2, tab:'labs', openLab:'lab3'});
+    const before = await p.evaluate(() => { save(); const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; return JSON.stringify(s); });
+    ok(await p.$eval('[data-act=labMode][aria-pressed=true]', b => b.dataset.v) === 'sim' && await p.$('.pcon'), 'a new lab does not open on Practise here');
+    const name = async v => { await p.fill('#lc-lab3-name', v); await p.press('#lc-lab3-name', 'Enter'); return text(p, '.lc-fb'); };
+    ok((await name('My Bucket')).includes('lowercase'), 'capital letters not explained');
+    ok((await name('test')).includes('already taken') && (await name('test')).includes('every AWS account'), 'a taken name not explained');
+    ok((await name('alex-notes-2026')).startsWith('✓'), 'a good name not accepted');
+    await p.click('[data-act=labPick][data-v=region][data-i="1"]');
+    ok((await text(p, '.lc-fb.no')).includes('nearest Region'), 'far Region not explained');
+    await p.click('[data-act=labPick][data-v=region][data-i="0"]');
+    ok((await text(p, '.pcon-see')).includes('bucket settings') && await p.evaluate(() => document.activeElement.dataset.act === 'labNext'), 'step not done, or focus not on Next');
+    await p.click('[data-act=labNext]');
+    await p.click('[data-act=labToggle][data-v=block]');
+    ok((await text(p, '.lc-fb.no')).includes('readable by anyone'), 'turning off Block public access not explained');
+    await p.click('[data-act=labToggle][data-v=block]'); await p.click('[data-act=labToggle][data-v=ver]'); await p.click('[data-act=labNext]');
+    await p.click('[data-act=labPick][data-v=up]'); await p.click('[data-act=labNext]');
+    await p.click('[data-act=labPick][data-v=up2]'); await p.click('[data-act=labNext]');
+    await p.click('[data-act=labToggle][data-v=show]');
+    ok((await text(p, '.pcon-table')).includes('Older version'), 'versions not shown');
+    await p.click('[data-act=labNext]');
+    await p.click('[data-act=labPick][data-v=clean][data-i="1"]');
+    ok((await text(p, '.lc-fb.no')).includes('must be empty'), 'deleting a full bucket not refused');
+    await p.click('[data-act=labPick][data-v=clean][data-i="0"]'); await p.click('[data-act=labNext]');
+    ok((await text(p, '.pcon-done')).includes('all 6 steps'), 'no end of the practice run');
+    const after = await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; return JSON.stringify(s); });
+    ok(after === before, 'practising changed saved progress: ' + before + ' => ' + after);
+    await p.click('[data-act=labMode][data-v=real]');
+    ok(await p.$('.lab-steps') && (await text(p, '.lab-meta')).includes('Cost: less than a cent'), 'Do it in the real console did not show the real steps');
+  });
+  await check('Practise here: the terminal answers commands (U14.3)', async () => {
+    await seed(p, {v:2, tab:'labs', openLab:'lab4'});
+    await p.evaluate(() => { labUi.lab4 = {mode:'sim', step:3, vals:{}, out:{}}; render(); });
+    await p.fill('#lc-lab4-uname', 'ls'); await p.press('#lc-lab4-uname', 'Enter');
+    ok((await text(p, '.term-out')).includes('command not recognised') && (await text(p, '.lc-fb.no')).includes('Not that command'), 'a wrong command was accepted');
+    await p.fill('#lc-lab4-uname', 'uname -a'); await p.press('#lc-lab4-uname', 'Enter');
+    ok((await text(p, '.term-out')).includes('Linux ip-') && await p.$('.pcon-see'), 'uname -a did not answer');
   });
 
   await check('the content security policy blocks injected script, from disk and from the website', async () => {
