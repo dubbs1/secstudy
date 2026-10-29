@@ -2,20 +2,21 @@
 
 AWS Cloud Practitioner study tool. One file, `index.html`: no build step, no dependencies.
 
-## The owner's working rule: do it all automatically
+## Working rule: do it all automatically
 
-The owner wants changes finished end to end without manual steps:
+Changes are finished end to end without manual steps:
 make the change → review your own diff → run the tests → fix and re-run until everything passes →
 push → open a pull request → wait for the GitHub `test` check to go green → merge into `main` → tell them.
 Never merge with a failing or missing check. If a failure can't be fixed, stop and explain it in plain words.
-The owner is a beginner: explain things step by step, plain words.
+Explain results step by step, in plain words.
+No personal details (names, emails, chat or session links) in files, commit messages or pull requests: the repo is public.
 
 ## Never break
 
 - **localStorage key `awsCourse1`.** Changing it loses all progress. New fields must have defaults in
   `DEFAULTS`; `load()` keeps unknown fields, moves clashing ones to `old_<name>` and backs up older
   data to `awsCourse1_backup` once. Imported files are cleaned in `load()` too.
-- ADHD design: one thing open at a time; tasks 10–20 min and concrete; timer 15 min default with 5 min;
+- Focus-friendly design: one thing open at a time; tasks 10–20 min and concrete; timer 15 min default with 5 min;
   wrong answers explain themselves inline (each wrong option has its own "why"); each lesson has its own quiz.
 - Proton look (purple `#6D4AFF`, pill nav, rounded white cards) in hand-written CSS. Proton's packages
   (`@proton/atoms`, `@proton/components`) are GPLv3, only in ProtonMail/WebClients, not on npm: don't install them.
