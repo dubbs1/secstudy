@@ -344,21 +344,23 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   // ---------- restructure (docs/RESTRUCTURE.md) ----------
   await check('progress saved by release 1.0.0 loads and shows the same (AC1.4)', async () => {
     const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'progress-v2-release-1.0.0.json'), 'utf8'));
-    await seed(p, fx.saved, {legacy:true});
-    const nq = await p.evaluate(() => QUESTIONS.length);   // the bank grew in 1.3.0; the answers right are the same
-    ok((await text(p, '.stats')).startsWith(fx.shown.stats.replace('/45', '/' + nq)), 'header differs: ' + await text(p, '.stats'));
+    const q = await at('2026-10-29');   // the day the fixture was saved, so its review dates read the same
+    await seed(q, fx.saved, {legacy:true});
+    const nq = await q.evaluate(() => QUESTIONS.length);   // the bank grew in 1.3.0; the answers right are the same
+    ok((await text(q, '.stats')).startsWith(fx.shown.stats.replace('/45', '/' + nq)), 'header differs: ' + await text(q, '.stats'));
     // First load after updating opens Today once (U1.1); everything else is kept as it was.
-    ok(await p.getAttribute('#nav [data-tab=today]', 'aria-selected') === 'true', 'update did not open on Today');
-    ok((await text(p, '.nextup')).includes('Lesson 2: ' + fx.shown.open), 'next up is not the lesson that was open: ' + await text(p, '.nextup'));
-    const now = await p.evaluate(() => S);
+    ok(await q.getAttribute('#nav [data-tab=today]', 'aria-selected') === 'true', 'update did not open on Today');
+    ok((await text(q, '.nextup')).includes('Lesson 2: ' + fx.shown.open), 'next up is not the lesson that was open: ' + await text(q, '.nextup'));
+    const now = await q.evaluate(() => S);
     for (const k of Object.keys(fx.saved)) if (k !== 'tab') ok(JSON.stringify(now[k]) === JSON.stringify(fx.saved[k]), 'field changed on load: ' + k);
     // the streak starts from the days already studied
     const studiedOn = [...new Set(Object.values(fx.saved.ans).map(a => new Date(a.at)).map(d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')))];
     ok(studiedOn.every(d => now.days[d] === true), 'old study days not in the streak: ' + JSON.stringify(now.days));
-    await p.click('#nextUpBtn');
-    ok(await text(p, '.lesson-t') === fx.shown.open, 'different lesson open');
-    await p.reload();
-    ok(await text(p, '.lesson-t') === fx.shown.open, 'Today was forced again on the second load');
+    await q.click('#nextUpBtn');
+    ok(await text(q, '.lesson-t') === fx.shown.open, 'different lesson open');
+    await q.reload();
+    ok(await text(q, '.lesson-t') === fx.shown.open, 'Today was forced again on the second load');
+    await q.context().close();
   });
   await check('footer shows the version (AC3.1)', async () => {
     ok(await text(p, '#ver') === 'Version ' + await p.evaluate(() => APP_VERSION), 'got ' + await text(p, '#ver'));
