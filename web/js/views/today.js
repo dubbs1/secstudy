@@ -20,7 +20,7 @@ function nextUp(){
   const cur = LESSONS.find(l => l.id === S.current && !S.done[l.id] && S.stage[l.id]);
   const l = cur || nextLesson();
   const minsLeft = cur ? Math.max(3, Math.round(15 * (STAGES.length - 1 - S.stage[l.id]) / (STAGES.length - 1))) : 15;
-  if (l) return {act:'openLesson', id:l.id, d:l.d, label:cur ? 'Continue' : 'Start lesson',
+  if (l) return {act:cur ? 'openLesson' : 'play', id:l.id, d:l.d, label:cur ? 'Continue' : 'Start lesson',
     title:`Lesson ${lessonNo(l.id)}: ${l.t}`, meta:cur ? `about ${minsLeft} min left · you are on ${STAGES[S.stage[l.id]]}` : `about 15 min · due ${fmtDate(l.due)}`};
   // All lessons done: a full mock every few days, practice in between.
   const last = lastMock();

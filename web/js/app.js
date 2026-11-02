@@ -21,6 +21,7 @@ function render(){
   applyTheme();
   document.querySelectorAll('#nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === S.tab));
   renderTop();
+  document.body.classList.toggle('playing', S.tab === 'learn' && !!playerUi.id);   // the lesson player gets the screen
   const views = {today:renderToday, learn:renderLearn, practice:renderPractice, labs:renderLabs};
   $('#main').innerHTML = (views[S.tab] || renderToday)();
   renderTimerButton();
@@ -89,6 +90,7 @@ window.addEventListener('keydown', armBack, {once:true, capture:true});
 // Closes one thing on the screen you are looking at. False when there is nothing left to close.
 function backOneStep(){
   if (focusOpen) { focusOpen = false; focusTo = '#timerBtn'; }
+  else if (S.tab === 'learn' && playerUi.id) { reveal = `[data-act=play][data-id="${playerUi.id}"]`; playerUi.id = null; }
   else if (S.tab === 'learn' && S.openLesson) {
     reveal = `[data-act=openLesson][data-id="${S.openLesson}"]`; S.openLesson = null;
     if (lessonFrom && lessonFrom !== 'learn') { S.tab = lessonFrom; reveal = null; }   // opened from a lab or Today: go back there
@@ -153,7 +155,7 @@ document.addEventListener('click', e => {
   const tabBtn = e.target.closest('#nav button');
   if (tabBtn) {
     labFromLesson = false; stayHere();
-    if (S.tab === 'learn' && tabBtn.dataset.tab === 'learn') { S.openLesson = null; lessonFrom = null; }   // Learn again: back to the list
+    if (S.tab === 'learn' && tabBtn.dataset.tab === 'learn') { S.openLesson = null; lessonFrom = null; playerUi.id = null; }   // Learn again: back to the list
     S.tab = tabBtn.dataset.tab; save(); render(); window.scrollTo(0, 0); return;
   }
   // A link to another site: the browser opens it in a new tab; the Windows app copies it for the browser.
@@ -219,6 +221,36 @@ document.addEventListener('click', e => {
     }
     case 'goLab':       labFromLesson = S.tab === 'learn' && !!S.openLesson; S.tab = 'labs'; S.open = null; S.openLab = id; reveal = `[data-act=openLab][data-id="${id}"]`; break;
     case 'goQuestion':  S.tab = 'practice'; S.pFilter = 'all'; S.pMode = 'all'; pCur = id; delete live['p:' + id]; window.scrollTo(0, 0); break;
+    // Step by step: the lesson player
+    case 'play': playerOpen(id); S.tab = 'learn'; S.open = null; S.current = id; window.scrollTo(0, 0); focusTo = '#plScreen h2'; break;
+    case 'plClose': reveal = `[data-act=play][data-id="${playerUi.id}"]`; focusTo = reveal; playerUi.id = null; break;
+    case 'plPick': playerUi.sel = +b.dataset.i; focusTo = controlKey(b); break;
+    case 'plCheck': {
+      const s = plScreen(), q = s.k === 'q' ? s.q : GUESS[playerUi.id];
+      if (s.k === 'q') record(q.id, playerUi.sel); else S.guess[playerUi.id] = playerUi.sel;
+      playerUi.checked = true; studied(); focusTo = '#plNext';
+      announce((playerUi.sel === q.a ? 'Right. ' : `Not quite: it's ${LETTERS[q.a]}. `) + plain(q.x)); break;
+    }
+    case 'plNext': playerUi.i = Math.min(playerUi.i + 1, playerUi.list.length - 1); playerUi.sel = null; playerUi.checked = false; playerUi.anim = true; playerUi.w = null;
+      window.scrollTo(0, 0); focusTo = '#plScreen h2, #plScreen .flow-say, #plScreen .pl-point, #plNext'; break;
+    case 'plFinish': S.done[playerUi.id] = true; S.current = null; studied(); reveal = `[data-act=play][data-id="${playerUi.id}"]`; focusTo = reveal; playerUi.id = null; toast('Lesson done'); break;
+    case 'plMatch': {
+      const M = playerUi.m, i = +b.dataset.i, side = b.dataset.v;
+      M.miss = null; M[side] = M[side] === i ? null : i;
+      if (M.l != null && M.r != null) {
+        const it = plMatchItems()[M.l];
+        if (M.l === M.r) { M.done.push(M.l); announce(`Match: ${it.t} is ${it.aws}. ${it.n}`); }
+        else { M.miss = M.r; announce('Not a match. Try another.'); }
+        M.l = M.r = null;
+      }
+      studied(); focusTo = M.done.length === plMatchItems().length ? '#plNext' : controlKey(b); break;
+    }
+    case 'plSort': {
+      const W = playerUi.w, w = STEPS[playerUi.id].widget, i = +b.dataset.i, it = w.items[i];
+      W.sorted[i] = b.dataset.v; W.cur = null; studied();
+      if (Object.keys(W.sorted).length === w.items.length) W.done = true;
+      announce((it.who === b.dataset.v ? 'Right. ' : 'Not quite. ') + it.why); focusTo = W.done ? '#plNext' : '.pl-sortcard .btn'; break;
+    }
     case 'goPractice':  S.tab = 'practice'; window.scrollTo(0, 0); break;
     case 'goMock':      S.tab = 'practice'; drillUi = null; mockShow = null; if (!S.mock) mockStart('full'); window.scrollTo(0, 0); focusTo = '#main .opt'; break;
     case 'lessonTimer': case 'breakTimer': {
@@ -477,6 +509,12 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('input', e => {
   if (e.target.id === 'task') { S.timer.task = e.target.value; save(); }
+  if (e.target.id === 'plDemand') {   // the widget redraws only its picture, so the slider keeps working while dragged
+    const W = playerUi.w, w = STEPS[playerUi.id].widget; W.v = +e.target.value; W.seen[W.v] = true;
+    const busy = Object.keys(W.seen).some(h => w.need[h] > w.fixed), quiet = Object.keys(W.seen).some(h => w.need[h] <= 2);
+    if (busy && quiet && !W.done) { W.done = true; $('#plNext').disabled = false; const sk = $('.pl-foot .link'); if (sk) sk.remove(); }
+    $('#plDemandOut').innerHTML = plDemandOut(w);
+  }
   if (e.target.id === 'plan') { S.plan = e.target.value.slice(0, 120); save(); }
   // Look up redraws only its results, so the box keeps focus and the cursor stays put.
   if (e.target.id === 'lookup') { lookupQ = e.target.value; $('#lookupResults').innerHTML = lookupHTML(lookupQ); }
