@@ -54,7 +54,7 @@ function render(){
 function onScreen(el){ const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }
 function keepInView(el){
   const r = el.getBoundingClientRect();
-  if (r.top < 0 || r.top > innerHeight - 80) el.closest('.card').scrollIntoView({block:'start'});
+  if (r.top < 0 || r.top > innerHeight - 80) (el.closest('.card, .map-stop') || el).scrollIntoView({block:'start'});
 }
 function announce(msg){
   const a = $('#announce'); a.textContent = '';
