@@ -551,3 +551,78 @@ button.fnode{width:100%;font:inherit;font-size:13.5px}
 .cs-ed-me{display:flex;align-items:center}
 .cs-ed-me code{white-space:pre;flex:none}
 .cs-err:focus{outline:2px solid var(--bad);outline-offset:2px}
+
+/* ---------- 1.3.0: mock exam, drills, choose two, readiness, exam plan, settings ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chipbtn[aria-pressed=true]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.opt.picked{border-color:var(--brand);background:var(--brand-soft)}
+.opt.picked .k{background:var(--brand);color:var(--on-brand)}
+.choose{margin:-4px 0 8px}
+.qt-row{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.qt-row .qt{flex:1}
+.speak{flex:none;border:0;background:var(--field);color:var(--brand-text);border-radius:99px;width:32px;height:32px;display:grid;place-items:center;padding:0}
+.speak:hover{background:var(--line)}
+.pts-head{display:flex;justify-content:flex-end;margin:-4px 0 2px}
+.sure{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+/* mock exam */
+.mock-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-bottom:10px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.mock-head small{display:block;color:var(--muted);font-size:13px}
+.mock-clock{font-variant-numeric:tabular-nums;font-weight:700;background:var(--field);border-radius:99px;padding:4px 12px;white-space:nowrap}
+.mock-nav{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap}
+.mock-nav .btn:disabled{opacity:.4}
+.flagbtn[aria-pressed=true]{background:var(--warn-soft);color:var(--text);box-shadow:inset 0 0 0 1.5px var(--warn)}
+.mock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:6px;margin:10px 0}
+.mock-grid button,.mock-key span{border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:8px 0;font-weight:700;font-size:13.5px;font-variant-numeric:tabular-nums}
+.mock-grid .done,.mock-key .done{background:var(--brand-soft);border-color:var(--brand-soft)}
+.mock-grid .flag,.mock-key .flag{border-color:var(--warn);box-shadow:inset 0 -4px 0 var(--warn)}
+.mock-grid .blank,.mock-key .blank{border-style:dashed}
+.mock-key span{display:inline-block;width:26px;padding:2px 0;text-align:center;margin:0 4px 0 10px}
+.mock-key span:first-child{margin-left:0}
+.mock-item{padding:10px 0 4px}
+.mock-item .opt{cursor:default}
+.mock .hits li{list-style:none}
+/* drills */
+.tell{margin-top:10px;background:var(--field);border-radius:var(--r-sm);padding:10px 12px;font-size:14px}
+.tell ul{margin:4px 0 0;padding-left:18px}
+.tell li{margin:2px 0}
+/* readiness */
+.ready{margin:4px 0 8px}
+.row .n.ready-ok{background:var(--ok);color:#fff}
+.row .n.ready-warn{background:var(--warn-soft);color:var(--warn)}
+.row .n.ready-bad{background:var(--bad-soft);color:var(--bad-text)}
+.ready-ok b{color:var(--ok)}.ready-warn b{color:var(--warn)}.ready-bad b{color:var(--bad-text)}
+/* Today: week count, plan line, exam plan */
+.week-count{display:flex;align-items:center;gap:10px}
+.wkdots{display:flex;gap:4px}
+.wkdots i{width:12px;height:12px;border-radius:99px;background:var(--line)}
+.wkdots i.on{background:var(--brand)}
+.wkdots i.today{outline:2px solid var(--brand);outline-offset:1px}
+.plan-line{margin:0 4px 14px;font-size:14px}
+.plan-line label{display:block;color:var(--muted);font-size:13px;margin-bottom:4px}
+.checklist{list-style:none;margin:0;padding:0}
+.checklist li{border-bottom:1px solid var(--line);padding:2px 0}
+.checklist li:last-child{border-bottom:0}
+.checklist .small{margin:0 0 8px 30px}
+.task-tag.late{color:var(--bad-text)}
+.final-week{list-style:none;margin:0;padding:0}
+.final-week li{display:flex;gap:10px;align-items:baseline;padding:5px 0;font-size:14px}
+.final-week small{flex:none;width:96px;color:var(--muted)}
+.final-week li.today{font-weight:700}
+.guess{border:1.5px dashed var(--line);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px}
+.also{margin:10px 0;font-size:14px}
+.also summary{cursor:pointer;font-weight:600;color:var(--brand-text)}
+.also ul{margin:6px 0 0;padding-left:18px}
+.also li{margin:4px 0}
+.also small{display:block}
+.hits .term{background:var(--field);border-radius:var(--r-sm);padding:8px 12px;font-size:14px}
+.hits .term small{display:block;margin-top:2px}
+.hits .term .link{display:block;margin-top:4px;font-size:13px}
+.pref{margin-bottom:10px}
+.pref > span{display:block;font-size:13.5px;margin:0 0 4px}
+.pref .seg.small{margin:0}
+/* Settings: text size, less motion, the calm view */
+html[data-text=l] body{zoom:1.12}
+html[data-text=xl] body{zoom:1.25}
+html[data-motion=reduce] *,html[data-motion=reduce] *::before,html[data-motion=reduce] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+html[data-calm] .top .bar,html[data-calm] .dom .bar,html[data-calm] .week-count{display:none}
+.btn:disabled{opacity:.45;cursor:default}

@@ -26,7 +26,8 @@ web/js/version.js         APP_VERSION (set with tools/set-version.js; checked ag
 web/js/content/           data only, no logic
     exam.js               EXAM (code, date, format, pass mark, cost, retake) and DOMAINS (weights)
     lessons.js            LESSONS: id, domain, due date, steps, key points
-    questions.js          QUESTIONS: id, lesson, question, options with "why wrong", answer, explanation
+    questions.js          QUESTIONS: id, lesson, question, options with "why wrong", answer, explanation.
+                          `m:1` = bank only (Practice and mocks, not the lesson quiz); `a` as a list = "Choose two"
     labs.js               LABS: console steps for the Free plan, what each step should show, cost, related lessons
     visuals.js            VISUALS: one diagram per lesson (compare, who, nested, scale, tiles), drawn by views/visual.js
     scenarios.js          SCENARIOS: worked examples for each lesson's Try stage
@@ -34,10 +35,14 @@ web/js/content/           data only, no logic
     sims.js               SIMS: "What if" sandboxes for each lesson's Try stage (build: switch parts; pick: compare options)
     scenes.js             SCENES: "Picture it", an everyday scene per lesson (emoji pictures and what each stands for)
     labsims.js            LAB_SIMS: each lab as a practice run (choices, switches, text, terminal) for Practise here
+    glossary.js           GLOSSARY: one line per service the exam names (lesson it fits, "often confused with")
+    drills.js             LOOKALIKES (groups of confusable services with scenarios), KEYWORDS (exam key-word
+                          questions), GUESS (one guess-first question per lesson)
 web/js/util.js            DOM and date helpers, toast
 web/js/store.js           saved progress: KEY 'awsCourse1', DEFAULTS, load() (cleans and migrates), save(),
                           export and import
-web/js/course.js          lookups over the content, recording answers, spaced repetition, weak-spot statistics
+web/js/course.js          lookups over the content, recording answers, spaced repetition fitted to the exam date,
+                          readiness, study days per week
 web/js/views/shared.js    domain chip, the question block, per-visit view state (live, lqi, pCur)
 web/js/views/visual.js    turns a VISUALS entry into HTML and CSS (no images: wraps on phones, follows the theme)
 web/js/views/timer.js     the timer button in the sticky top bar and its panel (no tab of its own)
@@ -48,6 +53,8 @@ web/js/views/flow.js      "How it works": draws FLOWS one step at a time, the pu
 web/js/views/sim.js       "What if": draws SIMS, works out each goal from the parts switched on or the option picked
 web/js/views/path.js      the guided path through a lesson: bridge cards, Remember from before, Picture it
 web/js/views/labsim.js    Practise here: the practice console for a lab, checking each answer as it is given
+web/js/views/mock.js      the mock exam (full or one domain): drawing, the clock, flags, review list, results
+web/js/views/drill.js     lookalike and key-word drills (visit-only state)
 web/js/views/*.js         one file per screen: header, today, learn, practice, labs. Each returns an HTML
                           string from the current state. They may settle view state while drawing (which
                           lesson is open, which quiz or practice question shows) but never save
@@ -97,14 +104,20 @@ Adding things:
 |---|---|
 | `done[lessonId]` | lesson marked done |
 | `steps[lessonId][i]`, `labs[labId][i]` | ticked steps |
-| `ans[qid]` | `{n, wrong, pick, ok, at}` attempts on a question |
-| `srs[qid]` | `{box 0-3, due YYYY-MM-DD}` review schedule (gaps 1, 3, 7, 14 days) |
+| `ans[qid]` | `{n, wrong, pick, ok, at, f, sure}` attempts on a question; `pick` is an index or a list ("Choose two"); `f` right on the first try; `sure` false for a guess |
+| `srs[qid]` | `{box 0-3, due YYYY-MM-DD, sw}` review schedule (gaps 1, 3, 7, 14 days, fitted to the exam date; `sw` once seen in the final sweep) |
+| `mock` | mock exam in progress `{ids, picks, flags, start, mins, kind, i, list, over}` or null |
+| `mocks[id]` | past mock results `{at, kind, n, right, used, mins, dom, sureWrong, ids, picks, flags}`, newest 10 |
+| `check[id]` | exam plan items ticked |
+| `guess[lessonId]` | the guess-first answer (-1 skipped) |
+| `plan` | the "I will study when" line |
+| `prefs` | `{text m/l/xl, motion system/reduce, calm, speak, extra}` |
 | `review` | review in progress `{ids, i, right}` or null |
 | `tab`, `open`, `openLesson`, `openLab`, `pFilter`, `pMode` | where you were |
 | `timer` | `{len, end, left, task}` |
 | `theme` | `system`, `light` or `dark` |
 | `stage[lessonId]` | 0-4: Read, See, Try, Check, Done, where the lesson was left |
-| `days[YYYY-MM-DD]` | true on days with any study, for the streak |
+| `days[YYYY-MM-DD]` | true on days with any study, counted per week |
 
 ## Desktop (`desktop/`)
 

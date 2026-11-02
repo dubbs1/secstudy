@@ -1,11 +1,18 @@
+// Readiness: a plain verdict from first tries, weighted like the exam, and the one domain to work on next.
 function weakCard(){
-  const open = S.open === 'weak';
-  const worst = Object.keys(DOMAINS).map(d => ({d, s:domainStats(d)})).filter(x => x.s.seen)
-    .sort((a, b) => a.s.right / a.s.seen - b.s.right / b.s.seen)[0];
+  const open = S.open === 'weak', R = readiness();
+  const sum = R.cls === 'none' ? `Answer about ${Math.max(R.need, 1)} more to see it` : `${R.verdict}${R.next ? ` · do ${DOMAINS[R.next].short} next` : ''}`;
   let h = `<div class="card ${open ? 'open' : ''}"><button class="row" data-act="toggleWeak" aria-expanded="${open}">
-    <span class="n">!</span><span class="t"><b>Weak spots</b><small>${worst ? `Lowest: ${DOMAINS[worst.d].name}` : 'Answer some questions to see them'}</small></span><span class="chev">›</span></button>`;
+    <span class="n ready-${R.cls}">!</span><span class="t"><b>Readiness and weak spots</b><small>${sum}</small></span><span class="chev">›</span></button>`;
   if (!open) return h + '</div>';
-  h += '<div class="body"><h3 style="margin-top:4px">By exam domain</h3>';
+  h += `<div class="body"><p class="ready ready-${R.cls}"><b>${R.verdict}</b> ${R.cls === 'none'
+      ? `Answer at least ${READY.minAll} questions, with ${READY.minDomain} or more in every domain${R.thin.length ? ` (still short: ${R.thin.map(d => DOMAINS[d].short).join(', ')})` : ''}.`
+      : `About ${Math.round(R.score * 100)} % on first tries, weighted like the exam.`}</p>
+    ${R.next && R.cls !== 'none' ? `<div class="wk-row"><span><b>Do next: ${DOMAINS[R.next].name}</b><br><small class="muted">${DOMAINS[R.next].w} % of the exam, and the biggest gap to 80 %</small></span>
+      <button class="btn ghost" data-act="pFilter" data-v="${R.next}">Practise</button></div>` : ''}
+    ${R.last ? `<p class="muted small">Last full mock: ${Math.round(R.last.right / R.last.n * 100)} % on ${fmtDate(isoOf(new Date(R.last.at)))}.</p>` : ''}
+    <p class="muted small">A guide, not a promise: the real exam is scored differently, and a strong domain can make up for a weak one.</p>
+    <h3>By exam domain</h3>`;
   for (const [d, D] of Object.entries(DOMAINS)) {
     const s = domainStats(d), pct = s.seen ? Math.round(s.right / s.seen * 100) : 0;
     const col = !s.seen ? 'var(--line)' : pct >= 80 ? 'var(--ok)' : pct >= 70 ? 'var(--warn)' : 'var(--bad)';
@@ -35,8 +42,11 @@ function practiceSet(){
   });
 }
 function renderPractice(){
+  if (S.mock) return mockView();
+  if (mockShow) return mockResult(mockShow) || renderPractice();
+  if (drillUi) return drillView();
   const lf = LESSONS.find(l => l.id === S.pFilter);
-  let h = weakCard() + `<div class="seg small" role="group">${[['all', 'All']].concat(Object.entries(DOMAINS).map(([k, d]) => [k, d.short])).map(([k, n]) =>
+  let h = weakCard() + mockCard() + drillCard() + `<h2 class="group-h">Question bank<small>${QUESTIONS.length} questions</small></h2><div class="seg small" role="group">${[['all', 'All']].concat(Object.entries(DOMAINS).map(([k, d]) => [k, d.short])).map(([k, n]) =>
     `<button data-act="pFilter" data-v="${k}" aria-pressed="${S.pFilter === k}">${n}</button>`).join('')}
     ${lf ? `<button data-act="pFilter" data-v="all" aria-pressed="true" title="Show all lessons">Lesson ${lessonNo(lf.id)} ✕</button>` : ''}</div>
     <div class="seg small" role="group">

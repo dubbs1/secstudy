@@ -112,7 +112,7 @@ function simPlay(){
   const end = box.querySelector(`[data-node="${plan.path[plan.path.length - 1]}"]`);
   const finish = () => { dot.classList.remove('go'); if (end) end.classList.add('hit', 'hit-' + plan.state); };   // the mark replaces the dot
   dot.classList.add('go'); Object.assign(dot.style, pts[pts.length - 1]);
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches || pts.length < 2 || !dot.animate) { finish(); return; }
+  if (reduceMotion() || pts.length < 2 || !dot.animate) { finish(); return; }
   dot.animate(pts, {duration:450 * (pts.length - 1), easing:'linear'}).onfinish = finish;
 }
 

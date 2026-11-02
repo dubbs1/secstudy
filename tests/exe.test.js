@@ -42,12 +42,13 @@ async function connect(){
   if (phase === 'first') {
     await check('app window shows the study tool', async () => {
       ok(await page.title() === 'AWS CP Study', 'title is ' + await page.title());
-      ok(await page.evaluate(() => LESSONS.length === 15 && QUESTIONS.length === 45), 'content missing');
+      ok(await page.evaluate(() => LESSONS.length === 15 && QUESTIONS.length >= 45), 'content missing');
     });
     await check('ticking a lesson step is saved', async () => {
       await page.evaluate(() => { localStorage.clear(); location.reload(); }).catch(() => {});
       await page.waitForSelector('#nextUpBtn');
       await page.click('#nextUpBtn');   // opens lesson 1 at Read
+      const skip = await page.$('[data-act=guessSkip]'); if (skip) await skip.click();   // a new lesson asks Guess first
       await page.click('[data-act=step][data-id=l1][data-i="0"]');
       const s = await page.evaluate(() => JSON.parse(localStorage.getItem('awsCourse1')));
       ok(s.steps.l1[0] === true, 'not saved');

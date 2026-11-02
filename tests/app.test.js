@@ -25,6 +25,8 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   // {legacy:true} saves it as it is, the way an older version left it.
   async function seed(p, data, {legacy = false} = {}){
     if (data && typeof data === 'object' && !legacy && !('days' in data)) data = {...data, days:{}};
+    // Guess first is skipped unless a check asks for it, so lessons open straight on their first part.
+    if (data && typeof data === 'object' && !legacy && !('guess' in data)) data = {...data, guess:Object.fromEntries([...Array(15)].map((x, i) => ['l' + (i + 1), -1]))};
     await p.evaluate(d => { localStorage.clear(); if (d !== undefined) localStorage.setItem('awsCourse1', typeof d === 'string' ? d : JSON.stringify(d)); }, data);
     await p.reload();
   }
@@ -43,10 +45,12 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       const ids = new Set(), out = [];
       for (const q of QUESTIONS) {
         if (ids.has(q.id)) out.push(q.id + ' duplicate id'); ids.add(q.id);
-        if (q.o.length !== 4) out.push(q.id + ' not 4 options');
-        if (!(q.a >= 0 && q.a < 4)) out.push(q.id + ' bad answer index');
+        const many = Array.isArray(q.a);   // "Choose two": five options, two right, said in the question
+        if (many ? q.o.length !== 5 || q.a.length !== 2 || !/\(Choose two\.\)$/.test(q.q) : q.o.length !== 4) out.push(q.id + ' wrong option count');
+        if (many ? !q.a.every(i => i >= 0 && i < 5) || q.a[0] >= q.a[1] : !(q.a >= 0 && q.a < 4)) out.push(q.id + ' bad answer index');
+        if (many && !q.m) out.push(q.id + ' choose two in a lesson quiz');
         if (!q.x) out.push(q.id + ' no explanation');
-        q.o.forEach(([t, why], i) => { if (!t) out.push(q.id + ' empty option'); if (i !== q.a && !why) out.push(q.id + ' option ' + i + ' has no why'); });
+        q.o.forEach(([t, why], i) => { const right = many ? q.a.includes(i) : i === q.a; if (!t) out.push(q.id + ' empty option'); if (!right && !why) out.push(q.id + ' option ' + i + ' has no why'); });
         if (!LESSONS.some(l => l.id === q.l)) out.push(q.id + ' unknown lesson');
       }
       return out;
@@ -199,9 +203,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await seed(p, {v:2, tab:'practice', ans:{q19:{n:2, wrong:2, pick:0, ok:false, at:Date.now()}}});
     await p.click('[data-act=toggleWeak]');
     const t = await text(p, '.card.open');
-    ok(t.includes('Lowest: Security') && t.includes('Security services'), t.slice(0, 120));
+    ok(t.includes('Readiness and weak spots') && t.includes('Not enough answers yet') && t.includes('Security services'), t.slice(0, 160));
     await p.click('[data-act=pLesson][data-id=l7]');
-    ok((await text(p, '.qhead')).includes('Lesson 7 · 1 of ' + await p.evaluate(() => qsFor('l7').length)), 'lesson filter not applied');
+    ok((await text(p, '.qhead')).includes('Lesson 7 · 1 of ' + await p.evaluate(() => QUESTIONS.filter(q => q.l === 'l7').length)), 'lesson filter not applied');
     ok((await text(p, '.seg.small')).includes('Lesson 7 ✕'), 'no clear-filter pill');
   });
 
@@ -238,7 +242,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.evaluate(() => { S.timer.end = Date.now() + 300; save(); render(); });
     await p.waitForTimeout(900);
     ok(await text(p, '#timerLabel') === '05:00', 'did not reset after finishing');
-    ok(await p.$('.toast'), 'no message');
+    ok((await text(p, '#focusPanel')).includes('Time\'s up') && await p.$('#focusPanel [data-act=tKeep]') && await p.$('#focusPanel [data-act=tBreak]'), 'no Time\'s up panel with Keep going and a break');
+    ok(await p.evaluate(() => !S.timer.end), 'a new timer started by itself');
+    await p.click('[data-act=focusClose]');
   });
   await check('timer panel: opens from the top bar, closes by Close, Escape, a tap outside or Back; focus returns (U8.1, U8.2)', async () => {
     await seed(p, {v:2, tab:'learn', openLesson:'l1'});
@@ -338,20 +344,23 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   // ---------- restructure (docs/RESTRUCTURE.md) ----------
   await check('progress saved by release 1.0.0 loads and shows the same (AC1.4)', async () => {
     const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'progress-v2-release-1.0.0.json'), 'utf8'));
-    await seed(p, fx.saved, {legacy:true});
-    ok((await text(p, '.stats')).startsWith(fx.shown.stats), 'header differs: ' + await text(p, '.stats'));
+    const q = await at('2026-10-29');   // the day the fixture was saved, so its review dates read the same
+    await seed(q, fx.saved, {legacy:true});
+    const nq = await q.evaluate(() => QUESTIONS.length);   // the bank grew in 1.3.0; the answers right are the same
+    ok((await text(q, '.stats')).startsWith(fx.shown.stats.replace('/45', '/' + nq)), 'header differs: ' + await text(q, '.stats'));
     // First load after updating opens Today once (U1.1); everything else is kept as it was.
-    ok(await p.getAttribute('#nav [data-tab=today]', 'aria-selected') === 'true', 'update did not open on Today');
-    ok((await text(p, '.nextup')).includes('Lesson 2: ' + fx.shown.open), 'next up is not the lesson that was open: ' + await text(p, '.nextup'));
-    const now = await p.evaluate(() => S);
+    ok(await q.getAttribute('#nav [data-tab=today]', 'aria-selected') === 'true', 'update did not open on Today');
+    ok((await text(q, '.nextup')).includes('Lesson 2: ' + fx.shown.open), 'next up is not the lesson that was open: ' + await text(q, '.nextup'));
+    const now = await q.evaluate(() => S);
     for (const k of Object.keys(fx.saved)) if (k !== 'tab') ok(JSON.stringify(now[k]) === JSON.stringify(fx.saved[k]), 'field changed on load: ' + k);
     // the streak starts from the days already studied
     const studiedOn = [...new Set(Object.values(fx.saved.ans).map(a => new Date(a.at)).map(d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')))];
     ok(studiedOn.every(d => now.days[d] === true), 'old study days not in the streak: ' + JSON.stringify(now.days));
-    await p.click('#nextUpBtn');
-    ok(await text(p, '.lesson-t') === fx.shown.open, 'different lesson open');
-    await p.reload();
-    ok(await text(p, '.lesson-t') === fx.shown.open, 'Today was forced again on the second load');
+    await q.click('#nextUpBtn');
+    ok(await text(q, '.lesson-t') === fx.shown.open, 'different lesson open');
+    await q.reload();
+    ok(await text(q, '.lesson-t') === fx.shown.open, 'Today was forced again on the second load');
+    await q.context().close();
   });
   await check('footer shows the version (AC3.1)', async () => {
     ok(await text(p, '#ver') === 'Version ' + await p.evaluate(() => APP_VERSION), 'got ' + await text(p, '#ver'));
@@ -494,20 +503,41 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = 'l2'; S.stage.l2 = 0; ui.mode['l2:0'] = 'points'; pathUi.next = null;`,
       `S.tab = 'learn'; S.openLesson = 'l12'; S.stage.l12 = 0; ui.mode['l12:0'] = 'recap'; recapUi.l12 = ['l3:0'];`,
       `S.tab = 'practice'; pCur = 'q19'; pathUi.next = null;`,
-      `S.tab = 'learn'; S.openLesson = null;`
+      `S.tab = 'learn'; S.openLesson = null;`,
+      // 1.3.0
+      `S.tab = 'learn'; S.openLesson = 'l5'; S.stage.l5 = 0; delete S.guess.l5;`,
+      `S.tab = 'learn'; S.openLesson = 'l6'; S.stage.l6 = 0; S.guess.l6 = (GUESS.l6.a + 1) % 4; guessUi.l6 = true;`,
+      `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 0; ui.mode['l7:0'] = 'points'; document.querySelector('details.also') || 0;`,
+      `S.tab = 'today'; S.days[todayISO()] = true; S.open = 'plan';`,
+      `S.tab = 'today'; S.open = 'prefs'; lookupQ = 'Firewall';`,
+      `S.tab = 'today'; focusOpen = true; timerEnded = true;`,
+      `focusOpen = false; timerEnded = false; S.tab = 'practice'; S.open = 'weak'; QUESTIONS.slice(0, 30).forEach((q, i) => S.ans[q.id] = {n:1, wrong:i % 3 ? 0 : 1, ok:!!(i % 3), f:!!(i % 3), pick:0, at:Date.now()});`,
+      `S.open = null; pCur = QUESTIONS.find(q => Array.isArray(q.a)).id; live['sel:p:' + pCur] = [0];`,
+      `delete live['sel:p:' + pCur]; live['p:' + pCur] = [0, 1]; S.ans[pCur] = {n:1, wrong:1, ok:false, f:false, pick:[0, 1], at:Date.now(), sure:false};`,
+      `mockStart('full'); S.mock.flags[S.mock.ids[0]] = true; S.mock.picks[S.mock.ids[0]] = 0; S.mock.i = 0;`,
+      `S.mock.i = S.mock.ids.findIndex(id => Array.isArray(QUESTIONS.find(q => q.id === id).a)); S.mock.picks[S.mock.ids[S.mock.i]] = [1];`,
+      `S.mock.list = true; mockConfirm = true;`,
+      `S.mock.list = false; S.mock.over = true;`,
+      `S.mock.ids.forEach(id => { const q = QUESTIONS.find(x => x.id === id); S.mock.picks[id] = q.a; }); const w = S.mock.ids.find(id => !Array.isArray(QUESTIONS.find(x => x.id === id).a)); S.mock.picks[w] = (S.mock.picks[w] + 1) % 4; mockFinish(); mockOpen = w;`,
+      `mockShow = null; mockOpen = null; drillStart('look'); drillUi.picks[0] = (drillAnswer(drillUi.set[0]) + 1) % drillOpts(drillUi.set[0]).length;`,
+      `drillStart('key'); drillUi.picks[0] = (drillAnswer(drillUi.set[0]) + 1) % 4;`,
+      `drillUi = null; S.tab = 'practice';`
     ];
     const sels = ['body', '#top .sub', '.stat', '.stat.timer', '.theme', '.chip.d-cc', '.chip.d-sec', '.chip.d-tech', '.chip.d-bill', '.foot', '.foot .link', 'h3',
-      '.hello', '.streak', '.task-tag', '.nextup small', '.week li.behind small', '.week small', '.row-link small', 'mark', '.group-h small', '.row .t small', '.pill-going',
+      '.hello', '.week-count b', '.task-tag', '.nextup small', '.week li.behind small', '.week small', '.row-link small', 'mark', '.group-h small', '.row .t small', '.pill-going',
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
       '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag',
       '.num', '.band-meta', '.lesson .pts b', '.colour-key b', '.stage.cur', '.flipcard small', '.flipcard span', '.chipbtn.right', '.chipbtn.wrong', '.game-fb',
       '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.pcon-task', '.coach', '.lc-fb.ok', '.lc-fb.no', '.cs-crumbs', '.cs-title', '.cs-flash.ok', '.cs-flash.bad', '.cs-label', '.cs-desc', '.cs-err', '.cs-radio', '.cs-check',
       '.cs-btn', '.cs-btn.primary', '.cs-table th', '.cs-table td', '.cs-badge', '.cs-nav span', '.cs-menu button', '.cs-term-bar', '.term-out div', '.term-p', '.cs-ed-tab', '.cs-ed-lines code', '.cs-panel-h b', '.scene-t', '.scene-q', '.scene-a b', '.scene-a small', '.bridge', '.bridge-t', '.part-ok', '.mnode', '.mnode small', '.mnode.part.off small', '.mframe span', '.sim-test.ok', '.sim-test.no', '.sim-test.never', '.sim-result', '.sim-result small', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
-      '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill'];
+      '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill',
+      '.week-count span', '.plan-line label', '.checklist .task-tag', '.final-week small', '.ext', '.pref > span', '.mock-head small', '.mock-clock', '.mock-grid button', '.mock-key span',
+      '.opt.picked', '.flagbtn[aria-pressed=true]', '.tell', '.ready b', '.hits .term', '.hits .term small', '.also summary', '.also small', '.sure .muted', '.choose', '.guess .muted',
+      '.pill-late', '.pill-done', '.speak', '.mock-item .why', '.chipbtn[aria-pressed=true]'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
       for (const setup of screens) {
-        await q.evaluate(([t, js]) => { S.theme = t; (0, eval)(js); render(); }, [theme, setup]);
+        await q.evaluate(([t, js]) => { S.theme = t; for (const k in GUESS) if (S.guess[k] == null) S.guess[k] = -1; (0, eval)(js); render(); document.querySelectorAll('details.also').forEach(d => d.open = true); }, [theme, setup]);
         const r = await q.evaluate(sels => {
           const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
           const bgOf = e => { let c; while (e && ((c = getComputedStyle(e).backgroundColor) === 'rgba(0, 0, 0, 0)')) e = e.parentElement; return c || getComputedStyle(document.body).backgroundColor; };
@@ -556,18 +586,21 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await text(q, '.lesson-t') === 'Service and deployment models', 'catch up did not open the late lesson');
     await q.context().close();
   });
-  await check('progress bar per exam domain and a study streak (U1.4, U1.5)', async () => {
-    const q = await at('2026-11-10');
-    await q.evaluate(() => { localStorage.setItem('awsCourse1', JSON.stringify({v:2, done:{l1:true, l5:true, l6:true}, days:{'2026-11-08':true, '2026-11-09':true}})); });
+  await check('progress bar per exam domain; study days counted per week, never a streak; welcome back after a gap (U1.4, U1.5, U15.4)', async () => {
+    const q = await at('2026-11-11');   // a Wednesday
+    await q.evaluate(() => { localStorage.setItem('awsCourse1', JSON.stringify({v:2, done:{l1:true, l5:true, l6:true}, days:{'2026-11-08':true, '2026-11-09':true, '2026-11-10':true}})); });
     await q.reload();
     const doms = await q.$$eval('.dom', ds => ds.map(d => d.innerText.replace(/\s+/g, ' ')));
     ok(doms[0].includes('24 % of the exam') && doms[0].includes('1/4 lessons') && doms[1].includes('2/4 lessons'), 'domains: ' + doms);
-    ok(await text(q, '.streak') === '2-day streak', 'streak before studying today: ' + await text(q, '.hello'));
-    await q.click('#nextUpBtn'); await q.click('[data-act=step][data-i="0"]');
+    ok(await text(q, '.week-count') === 'Studied 2 days this week', 'week count (Sunday is last week): ' + await text(q, '.hello'));
+    ok(await q.$$eval('.wkdots i.on', d => d.length) === 2 && !(await q.$('.streak')) && !/streak/i.test(await text(q, '#main')), 'dots, or a streak still shows');
+    await q.click('#nextUpBtn'); await q.click('[data-act=guessSkip]').catch(() => {}); await q.click('[data-act=step][data-i="0"]');
     await q.click('#nav [data-tab=today]');
-    ok(await text(q, '.streak') === '3-day streak', 'streak after a tick today: ' + await text(q, '.hello'));
+    ok(await text(q, '.week-count') === 'Studied 3 days this week', 'after a tick today: ' + await text(q, '.hello'));
     await q.evaluate(() => { S.days = {'2026-11-01':true}; render(); });
-    ok(!(await q.$('.streak')), 'a broken streak still shows');
+    ok((await text(q, '.hello')).startsWith('Welcome back') && !/miss|broke|lost/i.test(await text(q, '.hello')), 'after a gap: ' + await text(q, '.hello'));
+    await q.evaluate(() => { S.days = {'2026-11-10':true}; S.prefs.calm = true; render(); });
+    ok(!(await q.isVisible('.week-count')) && !(await q.isVisible('.top .bar')), 'the calm setting does not hide the count and bars');
     await q.context().close();
   });
   await check('a lesson shows one stage at a time; Next, Back and the strip move; the stage is saved (U2.1, U2.2)', async () => {
@@ -608,8 +641,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const tall = await q.evaluate(() => {
       const out = [];
       for (const l of LESSONS) for (let k = 0; k < STAGES.length; k++) {
-        for (const mode of k === 0 ? ['recap', 'scene', 'points', 'cards'] : k === 1 ? ['how', 'how-order', 'look', 'test'] : k === 2 ? ['sim', 'cases'] : ['-']) {
-          S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; ui.mode[l.id + ':' + k] = mode.replace('-order', ''); (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true);
+        for (const mode of k === 0 ? ['guess', 'recap', 'scene', 'points', 'cards'] : k === 1 ? ['how', 'how-order', 'look', 'test'] : k === 2 ? ['sim', 'cases'] : ['-']) {
+          S.tab = 'learn'; S.openLesson = l.id; S.stage[l.id] = k; ui.mode[l.id + ':' + k] = mode.replace('-order', ''); S.guess[l.id] = 0; delete guessUi[l.id];
+          if (mode === 'guess') guessUi[l.id] = true;   // guess first, answered: the answer and why (SCENARIOS[l.id] || []).forEach((x, i) => revealed[l.id + ':' + i] = true);
           if (mode === 'scene') sceneUi[l.id] = SCENES[l.id].items.map((x, i) => i);   // every picture opened
           if (mode === 'recap') recapUi[l.id] = recapItems(l).map(it => it.key);
           if (mode === 'cards') { const cs = flashCards(l), i = cs.reduce((b, c, j) => c.back.length > cs[b].back.length ? j : b, 0); ui.cards[l.id] = {order:[i], pos:0, flipped:true, got:0, again:[]}; }
@@ -1328,6 +1362,237 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await p.inputValue('#lc-lab1-email') === 'me@example.com', 'typed email lost');
     await p.click('[data-act=labGo]');
     ok((await text(p, '.cs-table')).includes('me@example.com'), 'the budget page does not show the email');
+  });
+
+  // ---------- 1.3.0: exam practice, exam plan, comfort settings (docs/UX.md U15-U18) ----------
+  await check('content: glossary, lookalike drills, key words and guess-first are well-formed; the bank fits a full mock (U15.1, U16.4)', async () => {
+    const bad = await p.evaluate(() => {
+      const out = [], lesson = id => LESSONS.some(l => l.id === id);
+      const four = (x, at) => { if (x.o.length !== 4 || !(x.a >= 0 && x.a < 4) || !x.x) out.push(at + ' shape'); x.o.forEach(([t, w], i) => { if (!t || (i !== x.a && !w)) out.push(at + ' option ' + i); }); };
+      GLOSSARY.forEach(g => { if (!g.t || !g.s || !lesson(g.l)) out.push('glossary ' + g.t); });
+      const named = GLOSSARY.map(g => g.t).join('|');
+      for (const n of ['Firewall Manager', 'CloudHSM', 'Cognito', 'Parameter Store', 'Trust and Safety', 'Partner Network', 'Compute Optimizer', 'Control Tower', 'Billing Conductor', 'DataSync', 'Transit Gateway', 'PrivateLink', 'Step Functions', 'Outposts'])
+        if (!named.includes(n)) out.push('glossary misses ' + n);
+      LOOKALIKES.forEach(g => { if (g.items.length < 3 || g.items.length > 7 || !g.qs.length) out.push('group ' + g.id); g.qs.forEach(q => { if (!g.items.some(it => it.n === q.a) || !q.x) out.push(g.id + ' ' + q.q.slice(0, 30)); }); });
+      KEYWORDS.forEach(k => { four(k, k.id); if (!/<mark>/.test(k.q)) out.push(k.id + ' no key word marked'); });
+      LESSONS.forEach(l => GUESS[l.id] ? four(GUESS[l.id], 'guess ' + l.id) : out.push('no guess for ' + l.id));
+      for (const [d, n] of Object.entries(MOCK_FULL)) if (QUESTIONS.filter(q => LESSONS.find(l => l.id === q.l).d === d).length < n) out.push('too few for a mock in ' + d);
+      if (Object.values(MOCK_FULL).reduce((a, b) => a + b) !== EXAM.questions) out.push('full mock is not the exam size');
+      if (QUESTIONS.filter(q => Array.isArray(q.a)).length < 8) out.push('few choose-two questions');
+      return out;
+    });
+    ok(!bad.length, bad.join('; '));
+  });
+  await check('"Choose two": select two, Check, all-or-nothing; the pick is saved as a list (U15.2)', async () => {
+    const qid = await p.evaluate(() => QUESTIONS.find(q => Array.isArray(q.a)).id);
+    const a = await answerOf(p, qid);
+    await seed(p, {v:2, tab:'practice', pMode:'all'});
+    await p.evaluate(id => { pCur = id; render(); }, qid);
+    ok((await text(p, '.choose')).startsWith('Choose 2. 0 chosen') && await p.isDisabled('[data-act=pickCheck]'), 'no Choose 2 line, or Check enabled with none chosen');
+    const wrong = [0, 1, 2, 3, 4].find(i => !a.includes(i));
+    await p.click(`[data-act=pickM][data-i="${a[0]}"]`); await p.click(`[data-act=pickM][data-i="${wrong}"]`);
+    ok(await p.getAttribute(`[data-act=pickM][data-i="${wrong}"]`, 'aria-checked') === 'true' && !(await p.isDisabled('[data-act=pickCheck]')), 'selection not shown, or Check still off');
+    await p.click(`[data-act=pickM][data-i="${a[1]}"]`);
+    ok(await p.$('.toast') && await p.$$eval('[aria-checked=true]', b => b.length) === 2, 'a third pick was allowed');
+    await p.click('[data-act=pickCheck]');
+    ok((await text(p, '.fb')).startsWith(`The answer is ${'ABCDE'[a[0]]} and ${'ABCDE'[a[1]]}.`) && await p.$$eval('.opt.right', b => b.length) === 2, 'half right counted, or answer not shown: ' + await text(p, '.fb'));
+    const r = (await saved(p)).ans[qid];
+    ok(JSON.stringify(r.pick) === JSON.stringify([a[0], wrong].sort()) && r.ok === false && r.f === false, 'saved: ' + JSON.stringify(r));
+    await p.reload();
+    ok((await saved(p)).ans[qid].pick.length === 2, 'list pick lost on reload');
+  });
+  await check('"How sure were you?": a right guess comes back tomorrow without counting as a miss (U15.3)', async () => {
+    await seed(p, {v:2, tab:'practice', pMode:'all'});
+    await p.evaluate(() => { pCur = 'q1'; render(); });
+    await p.click(`[data-act=pick][data-q=q1][data-i="${await answerOf(p, 'q1')}"]`);
+    ok((await text(p, '.sure')).includes('How sure were you?'), 'no sure / guessed choice');
+    ok((await saved(p)).srs.q1.due > await p.evaluate(() => addDays(todayISO(), 1)), 'a right answer is not scheduled later');
+    await p.click('[data-act=sure][data-v="0"]');
+    const sv = await saved(p);
+    ok(sv.ans.q1.sure === false && sv.ans.q1.ok && sv.ans.q1.wrong === 0 && sv.srs.q1.box === 0 && sv.srs.q1.due === await p.evaluate(() => addDays(todayISO(), 1)), 'a guess: ' + JSON.stringify([sv.ans.q1, sv.srs.q1]));
+    ok(await p.getAttribute('[data-act=sure][data-v="0"]', 'aria-pressed') === 'true', 'choice not shown');
+    await p.click('[data-act=sure][data-v="1"]');   // a mis-tap undone: the schedule comes back
+    const back = (await saved(p)).srs.q1;
+    ok(back.box === 2 && back.due > await p.evaluate(() => addDays(todayISO(), 1)), 'Sure after Guessed did not restore the schedule: ' + JSON.stringify(back));
+  });
+  await check('mock exam: the exam size and weights, unseen first, flag, review list, blank warning, results only at the end (U16.1, U16.2)', async () => {
+    await seed(p, {v:2, tab:'practice', ans:{q1:{n:1, wrong:0, pick:0, ok:true, at:Date.now()}}});
+    await p.click('[data-act=mStart][data-v=full]');
+    const m = await p.evaluate(() => ({n:S.mock.ids.length, mins:S.mock.mins, dom:Object.fromEntries(Object.keys(DOMAINS).map(d => [d, S.mock.ids.filter(id => LESSONS.find(l => l.id === QUESTIONS.find(q => q.id === id).l).d === d).length])), q1:S.mock.ids.includes('q1')}));
+    ok(m.n === 65 && m.mins === 90 && JSON.stringify(m.dom) === JSON.stringify({cc:16, sec:19, tech:22, bill:8}) && !m.q1, 'mock: ' + JSON.stringify(m));
+    ok((await text(p, '.mock-clock')).includes('left') && (await text(p, '#mockPace')) === 'on track' && !(await p.$('.fb')), 'clock, pace, or feedback shown during the mock');
+    ok(!(await p.$('#nav [data-tab=practice][aria-selected=false]')), 'not on Practice');
+    await p.click('.mock [data-act=mPick][data-i="0"]');
+    ok(await p.getAttribute('.mock [data-act=mPick][data-i="0"]', 'aria-checked') === 'true', 'pick not shown');
+    await p.click('[data-act=mFlag]');
+    await p.focus('.mock-nav [data-act=mGo]:not([disabled]):last-of-type'); await p.keyboard.press('Enter');
+    ok((await text(p, '.qhead')).startsWith('Question 2 of 65'), 'Next did not move: ' + await text(p, '.qhead'));
+    ok(await p.evaluate(() => document.activeElement.matches('.mock .qt')), 'focus lost after Next: ' + await p.evaluate(() => document.activeElement.tagName));
+    await p.reload();   // a reload keeps the mock, the answer and the flag
+    ok(await p.evaluate(() => S.mock && S.mock.i === 1 && Object.keys(S.mock.picks).length === 1 && Object.keys(S.mock.flags).length === 1), 'mock not kept across a reload');
+    await p.click('.mock .link[data-act=mList]');
+    ok((await text(p, '.mock')).includes('1 answered · 1 flagged · 64 blank') && await p.$$eval('.mock-grid button', b => b.length) === 65, 'review list: ' + (await text(p, '.mock')).slice(0, 200));
+    await p.click('[data-act=mSubmit]');
+    ok((await text(p, '#mockWarn')).includes('64 questions are blank'), 'no blank warning');
+    await p.click('#mockWarn [data-act=mGo]');
+    ok((await text(p, '.qhead')).startsWith('Question 2 of 65'), 'Go to the first blank went elsewhere');
+    await p.evaluate(() => { S.mock.ids.forEach((id, k) => { if (k) S.mock.picks[id] = QUESTIONS.find(q => q.id === id).a; }); S.mock.list = true; render(); });
+    await p.click('[data-act=mSubmit]');
+    ok(await p.evaluate(() => document.activeElement.matches('.mock .finish b')), 'focus lost on the results');
+    const res = await text(p, '.mock');
+    ok(/Full mock exam: \d+ of 65 right/.test(res) && res.includes('By domain') && res.includes('Meets') && !(await p.$('[data-act=mPick]')), 'results: ' + res.slice(0, 200));
+    const sv = await saved(p);
+    ok(!sv.mock && Object.keys(sv.mocks).length === 1 && Object.keys(sv.ans).length === 66, 'mock answers not recorded: ' + Object.keys(sv.ans).length);
+    const flagged = await p.evaluate(() => { const R = Object.values(S.mocks)[0]; return Object.keys(R.flags)[0]; });
+    ok(sv.ans[flagged].sure === false, 'a flagged answer was not counted as unsure');
+    await p.click('[data-act=mClose]');
+    ok((await text(p, '.mock-past, #main')).includes('Past results'), 'past results not listed');
+  });
+  await check('mock exam: at zero it says Time is up and waits for a tap; mini mocks and extra time (U16.3, U18.4)', async () => {
+    await seed(p, {v:2, tab:'practice'});
+    await p.click('[data-act=mStart][data-v=sec]');
+    ok(await p.evaluate(() => S.mock.ids.length === 12 && S.mock.mins === 17 && S.mock.kind === 'sec'), 'mini mock size or time');
+    await p.evaluate(() => { S.mock.start = Date.now() - S.mock.mins * 60000 + 1200; save(); render(); });
+    await p.waitForTimeout(2600);
+    ok((await text(p, '.mock')).includes('Time is up') && await p.evaluate(() => !!S.mock && S.mock.over), 'no Time is up screen, or it moved on by itself');
+    await p.waitForTimeout(1200);
+    ok((await text(p, '.mock')).includes('Time is up'), 'the time-up screen did not wait');
+    await p.click('[data-act=mSubmit]');
+    ok((await text(p, '.mock')).includes('Security & Compliance mini mock: 0 of 12'), 'results after time up: ' + (await text(p, '.mock')).slice(0, 100));
+    await seed(p, {v:2, tab:'practice', prefs:{text:'m', motion:'system', calm:false, speak:true, extra:true}});
+    ok((await text(p, '#main')).includes('65 questions, 120 minutes'), 'extra time not on the mock card');
+    await p.click('[data-act=mStart][data-v=full]');
+    ok(await p.evaluate(() => S.mock.mins === 120), 'extra time not used');
+  });
+  await check('drills: lookalikes mixed across groups with how to tell them apart; key words; a score at the end (U16.4, U16.5)', async () => {
+    await seed(p, {v:2, tab:'practice'});
+    await p.click('[data-act=dStart][data-v=look]:not([data-id])');
+    const groups = await p.evaluate(() => drillUi.set.map(x => x.g));
+    ok(groups.length === 10 && groups.every((g, i) => !i || g !== groups[i - 1]), 'not mixed: ' + groups);
+    for (let i = 0; i < 10; i++) {
+      await p.click('.drill [data-act=dPick][data-i="0"]');
+      ok(await p.$('.drill .tell li') && await p.$('.drill .fb'), 'no feedback or how to tell them apart');
+      await p.click('[data-act=dNext]');
+    }
+    ok(/Lookalikes: mixed: \d+ of 10 right/.test(await text(p, '.finish b')), 'no score');
+    await p.click('[data-act=dClose]');
+    await p.click('[data-act=dStart][data-v=key]');
+    ok(await p.$('.drill .qt mark'), 'key word not highlighted');
+    const a = await p.evaluate(() => drillAnswer(drillUi.set[0]));
+    await p.click(`.drill [data-act=dPick][data-i="${(a + 1) % 4}"]`);
+    ok(await p.$('.drill .opt.wrong .why') && (await text(p, '.drill .fb')).startsWith('Not quite'), 'key word miss does not explain itself');
+    ok(await p.evaluate(() => S.days[todayISO()] === true) && !Object.keys((await saved(p)).ans).length, 'drills changed saved answers');
+    await p.click('[data-act=dClose]');
+    await p.click('[data-act=dStart][data-id=support]');
+    ok(await p.evaluate(() => drillUi.set.every(x => x.g === 'support')), 'one group drill mixed in others');
+    await p.click('[data-act=dClose]');
+  });
+  await check('readiness: no verdict on thin data; first tries weighted like the exam; the domain to do next (U16.6)', async () => {
+    await seed(p, {v:2, tab:'practice'});
+    ok((await text(p, '[data-act=toggleWeak]')).includes('Answer about 20 more'), 'verdict on no data');
+    // All right first time, except Security mostly wrong: Security is next and the verdict is not "Likely ready"
+    const ans = await p.evaluate(() => { const a = {}; QUESTIONS.forEach((q, i) => { const sec = LESSONS.find(l => l.id === q.l).d === 'sec'; if (i % 2) a[q.id] = {n:1, wrong:sec ? 1 : 0, pick:0, ok:!sec, at:Date.now(), f:!sec}; }); return a; });
+    await seed(p, {v:2, tab:'practice', ans});
+    const t = await text(p, '[data-act=toggleWeak]');
+    ok(/Not yet|Borderline/.test(t) && t.includes('do Security next'), 'verdict: ' + t);
+    const all = await p.evaluate(() => { const a = {}; QUESTIONS.forEach(q => a[q.id] = {n:2, wrong:0, pick:0, ok:true, at:Date.now()}); return a; });
+    await seed(p, {v:2, tab:'practice', ans:all});
+    ok((await text(p, '[data-act=toggleWeak]')).includes('Likely ready'), 'older answers right with no misses do not count as first tries');
+    await p.click('[data-act=toggleWeak]');
+    ok((await text(p, '.card.open')).includes('A guide, not a promise'), 'no caution');
+  });
+  await check('Today: exam plan with dates counted back, ticks saved, links copy in the Windows app; an if-then plan line (U17.1-U17.3)', async () => {
+    const q = await at('2026-11-23');
+    await q.evaluate(() => localStorage.setItem('awsCourse1', JSON.stringify({v:2, check:{acc:true}, plan:'after dinner'})));
+    await q.reload();
+    ok((await text(q, '[data-act=togglePlan]')).includes('Next: Add ESL +30') && await q.inputValue('#plan') === 'after dinner', 'summary or plan line: ' + await text(q, '[data-act=togglePlan]'));
+    await q.click('[data-act=togglePlan]');
+    const tags = await q.$$eval('.checklist .task-tag', t => t.map(x => x.textContent));
+    ok(tags.length === 8 && tags[4].includes('26') && tags[5].includes('28') && tags[7].includes('30'), 'dates: ' + tags);
+    ok(await q.$$eval('.checklist .task-tag.late', t => t.length) === 3, 'overdue items not marked (the ticked one stays calm)');
+    ok(await q.$$eval('.final-week li', l => l.length) === 8 && (await text(q, '.final-week li.today')).includes('Full mock exam'), 'final week: ' + await text(q, '.final-week'));
+    await q.click('[data-act=chk][data-v=esl]');
+    ok((await q.evaluate(() => JSON.parse(localStorage.getItem('awsCourse1')).check)).esl === true, 'tick not saved');
+    ok(await q.$$eval('a[data-ext]', a => a.every(x => x.target === '_blank' && x.rel.includes('noopener') && /^https:\/\//.test(x.href))), 'outside links unsafe');
+    await q.evaluate(() => { window.__TAURI_INTERNALS__ = {}; navigator.clipboard.writeText = t => { window.__copied = t; return Promise.resolve(); }; });
+    await q.click('a[data-ext]');
+    ok(await q.evaluate(() => window.__copied && window.__copied.startsWith('https://')) && (await text(q, '.toast')).includes('Link copied'), 'Windows app: link not copied');
+    await q.fill('#plan', 'at 7 pm, at my desk');
+    ok((await q.evaluate(() => JSON.parse(localStorage.getItem('awsCourse1')).plan)) === 'at 7 pm, at my desk', 'plan line not saved');
+    await q.context().close();
+  });
+  await check('Settings: text size, less motion, calm view, read aloud, extra time; saved, and bad values cleaned (U18.1-U18.3)', async () => {
+    await seed(p, {v:2, tab:'today'});
+    await p.click('[data-act=togglePrefs]');
+    await p.click('[data-act=pref][data-v=text][data-i=xl]');
+    await p.click('[data-act=pref][data-v=motion][data-i=reduce]');
+    ok(await p.evaluate(() => document.documentElement.dataset.text === 'xl' && getComputedStyle(document.body).zoom === '1.25' && document.documentElement.dataset.motion === 'reduce' && reduceMotion()), 'text size or motion not applied');
+    await p.click('[data-act=pref][data-v=speak][data-i="0"]');
+    await p.evaluate(() => { S.tab = 'practice'; pCur = 'q1'; render(); });
+    ok(!(await p.$('[data-act=speak]')), 'read aloud still shown when off');
+    await p.reload();
+    ok(await p.evaluate(() => S.prefs.text === 'xl' && S.prefs.speak === false), 'settings not saved');
+    const good = {at:1, kind:'cc', n:2, right:1, used:3, mins:3, dom:{cc:[1, 2]}, sureWrong:0, ids:['q1', 'q2'], picks:{q1:0}, flags:{}};
+    await seed(p, {v:2, prefs:{text:'huge', motion:7, calm:'yes', evil:'<b>', speak:true, extra:false}, guess:{l1:9, l2:-1, zz:0}, mock:{ids:['q1'], start:Date.now(), mins:5, kind:'zzz'}, check:{x:'y'},
+      mocks:{a:5, m1:{at:1, n:1, right:0, dom:{}}, m2:{...good, dom:{cc:['<b id=inj>x</b>', 1]}}, 'x"><img id=inj2 src=x>':good, m3:{...good, n:0, right:0}, m4:good}});
+    const sv = await p.evaluate(() => ({prefs:S.prefs, guess:S.guess, mock:S.mock, mocks:S.mocks, check:S.check}));
+    ok(JSON.stringify(sv.prefs) === JSON.stringify({text:'m', motion:'system', calm:false, speak:true, extra:false}) && JSON.stringify(sv.guess) === '{"l2":-1}' && sv.mock === null
+      && JSON.stringify(Object.keys(sv.mocks)) === '["m4"]' && JSON.stringify(sv.check) === '{}', 'not cleaned: ' + JSON.stringify(sv));
+    await p.evaluate(() => { S.tab = 'practice'; render(); });
+    await p.click('[data-act=mShow]');
+    ok((await text(p, '.mock')).includes('Concepts mini mock: 1 of 2') && !(await p.$('#inj, #inj2')), 'a cleaned result does not show, or markup got in');
+  });
+  await check('read aloud uses the browser voice; a second tap stops it (U18.2)', async () => {
+    await seed(p, {v:2, tab:'practice'});
+    await p.evaluate(() => { window.__said = []; speechSynthesis.speak = u => { window.__said.push(u.text); }; pCur = 'q1'; render(); });
+    await p.click('.qt-row [data-act=speak]');
+    ok(await p.evaluate(() => window.__said[0] === plain(QUESTIONS[0].q)), 'did not speak the question');
+  });
+  await check('guess first: an unstarted lesson asks one question first, shows the answer, then the lesson; skip; never for a started lesson (U17.4)', async () => {
+    await seed(p, {v:2, tab:'learn', openLesson:'l2', guess:{}});
+    ok(await p.$('.guess') && !(await p.$('[data-act=mode]')), 'guess first not alone');
+    const a = await p.evaluate(() => GUESS.l2.a);
+    await p.click(`[data-act=guess][data-i="${(a + 1) % 4}"]`);
+    ok((await text(p, '.guess .fb')).startsWith(`It is ${'ABCD'[a]}`), 'answer not shown straight away');
+    ok((await saved(p)).guess.l2 === (a + 1) % 4, 'guess not saved');
+    await p.click('[data-act=guessDone]');
+    ok(!(await p.$('.guess')) && await p.$('[data-act=mode]'), 'lesson not shown after Got it');
+    await p.click('[data-act=closeLesson]'); await p.click('[data-act=openLesson][data-id=l3]');
+    await p.click('[data-act=guessSkip]');
+    ok(!(await p.$('.guess')) && (await saved(p)).guess.l3 === -1, 'skip did not work');
+    await seed(p, {v:2, tab:'learn', openLesson:'l4', guess:{}, steps:{l4:[true]}});
+    ok(!(await p.$('.guess')), 'guess shown for a started lesson');
+  });
+  await check('look up finds services from the glossary; each lesson lists its "Also on the exam" (U15.5)', async () => {
+    await seed(p, {v:2, tab:'today'});
+    await p.fill('#lookup', 'cloudhsm');
+    ok((await text(p, '#lookupResults .term')).includes('CloudHSM') && await p.$('#lookupResults .term mark'), 'glossary term not found');
+    await p.click('#lookupResults .term [data-act=goLesson]');
+    ok(await p.$('.lesson') && (await text(p, '.lesson-t')) === await p.evaluate(() => LESSONS.find(l => l.id === GLOSSARY.find(g => g.t.includes('CloudHSM')).l).t), 'lesson link went elsewhere');
+    await p.evaluate(() => { ui.mode[S.openLesson + ':0'] = 'points'; render(); });
+    ok((await text(p, 'details.also summary')).startsWith('Also on the exam'), 'no Also on the exam list');
+  });
+  await check('review fits the exam date: no gap past the day before, and missed questions come back in the last five days (U16.7)', async () => {
+    const q = await at('2026-11-20');
+    await q.evaluate(() => { S.ans = {}; S.srs = {}; record('q1', QUESTIONS[0].a); record('q2', 0); });
+    const r = await q.evaluate(() => [S.srs.q1.due, S.srs.q2.due, capDue(14)]);
+    ok(r[0] === '2026-11-22' && r[1] === '2026-11-21' && r[2] === '2026-11-22', 'gaps not fitted: ' + r);
+    await q.context().close();
+    const z = await at('2026-11-26');
+    await z.evaluate(() => { S.ans = {q4:{n:3, wrong:1, ok:true, pick:0, at:Date.now()}}; S.srs = {q4:{box:3, due:'2026-11-29'}}; render(); });
+    ok(await z.evaluate(() => dueNow().some(q => q.id === 'q4')), 'a once-missed question is not in the final sweep');
+    await z.evaluate(() => { record('q4', QUESTIONS.find(q => q.id === 'q4').a); });
+    ok(await z.evaluate(() => S.srs.q4.sw === true && !dueNow().some(q => q.id === 'q4')), 'the sweep repeats');
+    await z.evaluate(() => { S.mock = {ids:['q4'], picks:{}, flags:{}, start:Date.now(), mins:2, kind:'cc', i:0, list:false, over:false}; mockFinish(); });
+    ok(await z.evaluate(() => S.srs.q4.sw === true), 'a blank in a mock cleared the sweep mark');
+    await z.context().close();
+  });
+  await check('Next up suggests a full mock once every lesson is done (U17.5)', async () => {
+    const done = Object.fromEntries([...Array(15)].map((x, i) => ['l' + (i + 1), true]));
+    await seed(p, {v:2, done});
+    ok(await text(p, '#nextUpBtn') === 'Start a mock', 'next up: ' + await text(p, '.nextup'));
+    await p.click('#nextUpBtn');
+    ok(await p.evaluate(() => S.tab === 'practice' && S.mock && S.mock.kind === 'full'), 'did not start a mock');
   });
 
   await check('the content security policy blocks injected script, from disk and from the website', async () => {

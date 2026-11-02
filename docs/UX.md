@@ -171,3 +171,50 @@ generic. Nothing is created in AWS and nothing costs credits.
   answers commands, a code editor with Deploy and Test (Lambda), status badges, values typed earlier carried to later
   pages (the bucket name in the breadcrumbs).
 - AC14.4 The end of a practice run leads to the real console steps. Practising saves nothing except today's study day.
+
+### U15. Practise the real question types
+The question bank grows to 86: the 45 lesson-quiz questions plus 41 bank questions (`m:1`), weighted towards
+Security and Technology, the exam's two biggest domains. Bank questions are for Practice and the mock exam, not the
+lesson quiz. Topics come from the exam guide's task statements and in-scope services the lessons did not name.
+- AC15.1 The bank has every domain in the exam's weights, enough for a full mock, and at least eight "Choose two".
+- AC15.2 "Choose two" questions: tap to select, a third tap asks to unselect first, Check marks them. All or nothing,
+  as on the exam. The pick is saved as a list.
+- AC15.3 After each answer: "How sure were you? Sure / Guessed". A right guess comes back in review tomorrow without
+  counting as a miss.
+- AC15.4 Study days are counted per week ("Studied 3 days this week", one dot a day), never as a streak that can
+  break. After three or more days away, Today says welcome back and offers one small step, never what was missed.
+- AC15.5 Services the exam names have a one-line entry each (`content/glossary.js`): found by Look up, and listed
+  under "Also on the exam" in the lesson they fit.
+
+### U16. Mock exam, drills and readiness
+- AC16.1 A full mock: the exam's question count and time, drawn by domain weight, unseen questions first, mixed.
+  Flag "not sure", Back and Next, a review list (answered, flagged, blank), a warning before submitting blanks.
+  No feedback until the end. A reload keeps the mock.
+- AC16.2 Results: right out of total, by domain (Meets / Needs work), then "Sure, but wrong" first, other misses,
+  and right-but-flagged. Every answer counts like any other; misses, blanks and flags go to review.
+- AC16.3 At zero the clock says "Time is up" and waits for a tap. Mini mocks: one domain, 12 questions, the same pace.
+- AC16.4 Lookalike drills mix easily confused services, with "how to tell them apart" after each answer. One group
+  can be drilled alone.
+- AC16.5 Key-word drills mark the constraint (MOST cost-effective, LEAST operational overhead) and explain every
+  wrong option. Drills save nothing except today's study day.
+- AC16.6 Readiness: no verdict until 20 first tries, 4 in each domain. Then Not yet / Borderline / Likely ready from
+  first tries, weighted like the exam, and the domain to do next (weight times the gap to 80 %). Said to be a guide.
+- AC16.7 Review fits the exam date: no gap longer than a quarter of the days left, nothing due after the day before
+  the exam, and in the last five days every question ever missed comes back once.
+
+### U17. Exam plan and starting
+- AC17.1 Exam plan on Today: what to do before the day with dates counted back from the exam (accommodations first,
+  ESL +30, booking, the free official practice set, the ID name, the online system test, the reschedule deadline,
+  check-in), ticks saved, overdue items marked, and the final week day by day.
+- AC17.2 Links to other sites open in a new tab; in the Windows app a tap copies the link instead.
+- AC17.3 "I will study when ___": an if-then plan line on Today, saved.
+- AC17.4 Guess first: a lesson not started yet opens with one guessable question alone, the answer straight away,
+  then "Got it: start the lesson". Skip is offered. Never shown again once the lesson is started.
+- AC17.5 Next up suggests a full mock when every lesson is done and none was taken in the last three days. The
+  timer's end opens a choice (keep going, a 5 min break, a small movement idea); nothing starts by itself.
+
+### U18. Settings
+- AC18.1 Text size (Normal, Large, Larger), Less motion, and hiding the week count and progress bars.
+- AC18.2 Read-aloud buttons (the browser's own voice) on questions and key points; a second tap stops; can be off.
+- AC18.3 Settings are saved; unknown or bad values are cleaned on load.
+- AC18.4 Mock exam time: the exam's own, or with the extra 30 minutes (ESL +30 or approved extra time).

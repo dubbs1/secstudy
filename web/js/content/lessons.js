@@ -28,7 +28,7 @@ const LESSONS = [
        '<b>Cloud Adoption Framework (CAF), 6 perspectives</b>: Business, People, Governance (business side) and Platform, Security, Operations (technical side).',
        'People perspective = training, skills, culture, org structure.',
        '<b>Migration strategies (the 7 Rs)</b>: Rehost (lift and shift), Replatform (lift, tinker, shift), Refactor / re-architect, Repurchase (move to SaaS), Retain, Retire, Relocate.',
-       'Large offline transfers: the <b>AWS Snow family</b>. Database moves: <b>AWS DMS</b>.']},
+       'Large offline transfers: the <b>AWS Snow family</b> (now legacy: new customers use <b>DataSync</b> online). Database moves: <b>AWS DMS</b>.']},
  {id:'l5', d:'sec', due:'2026-11-06', t:'The shared responsibility model',
   steps:['Read the key points (5 min)','Write two columns, "AWS" and "Me", and sort these into them: data center guards, guest OS patches, hypervisor, security group rules, IAM users, hardware disposal (5 min)','Answer the 3 questions (5 min)'],
   pts:['<b>AWS: security OF the cloud</b>: facilities, hardware, network, the virtualization layer, and the software that runs managed services.',

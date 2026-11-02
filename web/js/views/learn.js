@@ -12,6 +12,7 @@ const STAGE_ICONS = [
 // Inline style that gives a block its exam domain's colours.
 const domainVars = d => `--dc:var(--${d});--dcbg:var(--${d}-bg)`;
 const revealed = {};   // scenario answers shown this visit, by "lessonId:index"
+const guessUi = {};    // guess-first answers to show this visit (once answered and closed, they stay out of the way)
 
 function renderLearn(){
   const l = LESSONS.find(x => x.id === S.openLesson);
@@ -80,10 +81,12 @@ function stageHTML(l, st, qs){
     // A lesson that builds on earlier ones starts by remembering them (no tab of its own: it comes once, first).
     const recapping = hasRecap(l) && (!partDone(l.id, 0, 'recap') || (pathUi.next && pathUi.next.id === l.id && pathUi.next.from[1] === 'recap'));
     const mode = modeOf(l, 0, recapping ? 'recap' : SCENES[l.id] ? 'scene' : 'points');
+    // Guess first comes alone: one question before anything else, then the lesson.
+    if (guessUi[l.id] || guessDue(l)) return guessHTML(l);
     return `${taskHTML(l, 0)}${modeSwitch(l, 0, [...(SCENES[l.id] ? [['scene', 'Picture it']] : []), ['points', 'Key points'], ['cards', 'Flip cards']], mode)}` + (mode === 'cards' ? cardsHTML(l)
       : mode === 'scene' ? sceneHTML(l) : mode === 'recap' ? recapHTML(l)
       : `${lessonNo(l.id) <= 3 ? `<p class="colour-key"><b>Terms to know</b> in this lesson's colour · <span class="num">numbers</span> the exam likes to ask about</p>` : ''}
-         <ul class="pts">${l.pts.map(p => `<li>${markNumbers(p)}</li>`).join('')}</ul>${partDoneBtn(l, 0, 'points', 'I\'ve read these: flip cards next')}`);
+         <div class="pts-head">${speakBtn(l.pts.join('. '))}</div><ul class="pts">${l.pts.map(p => `<li>${markNumbers(p)}</li>`).join('')}</ul>${alsoHTML(l)}${partDoneBtn(l, 0, 'points', 'I\'ve read these: flip cards next')}`);
   }
   if (st === 1) {
     // How it works (a picture that builds up step by step), the lesson's diagram, and its game.
@@ -95,6 +98,26 @@ function stageHTML(l, st, qs){
   if (st === 2) return tryHTML(l);
   if (st === 3) return `${taskHTML(l, 2)}${quizHTML(l, qs)}`;
   return doneHTML(l, qs);
+}
+
+// Only for a lesson not started yet: nothing ticked or answered, never further than Read.
+const guessDue = l => GUESS[l.id] && S.guess[l.id] == null && !S.done[l.id] && !S.stage[l.id] && !(S.steps[l.id] || []).some(Boolean) && !qsFor(l.id).some(q => S.ans[q.id]);
+// Guess first: one question before reading. Guessing wrong still helps, as long as the answer shows straight away.
+function guessHTML(l){
+  const g = GUESS[l.id]; if (!g) return '';
+  const p = S.guess[l.id];
+  let h = `<div class="guess"><small class="task-tag">Guess first</small><p class="qt">${g.q}</p>`;
+  if (p == null) return h + `<p class="muted small">Before you read: take a guess. A wrong guess helps you remember the answer.</p>
+    <div>${g.o.map(([t], i) => `<button class="opt" data-act="guess" data-id="${l.id}" data-i="${i}"><span class="k">${LETTERS[i]}</span><span>${t}</span></button>`).join('')}</div>
+    <p class="center small"><button class="link" data-act="guessSkip" data-id="${l.id}">Skip to the lesson</button></p></div>`;
+  if (p < 0) return '';
+  return h + `<div class="fb ${p === g.a ? 'ok' : 'no'}" tabindex="-1"><b>${p === g.a ? 'Good guess.' : `It is ${LETTERS[g.a]}: ${g.o[g.a][0]}.`}</b> ${g.x}</div>
+    <div class="btns"><button class="btn small" data-act="guessDone" data-id="${l.id}">Got it: start the lesson</button></div></div>`;
+}
+// Also on the exam: services the guide names that fit this lesson, one line each (data in content/glossary.js).
+function alsoHTML(l){
+  const g = GLOSSARY.filter(x => x.l === l.id); if (!g.length) return '';
+  return `<details class="also"><summary>Also on the exam (${g.length})</summary><ul>${g.map(x => `<li><b>${x.t}</b>: ${x.s}${x.vs ? ` <small class="muted">${x.vs}</small>` : ''}</li>`).join('')}</ul></details>`;
 }
 
 function tryHTML(l){

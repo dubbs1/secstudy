@@ -1,7 +1,7 @@
 // Exam facts and domain weights. Data only.
 const EXAM = {
   code:'CLF-C02', date:'2026-11-30',
-  questions:65, scored:50, minutes:90,
+  questions:65, scored:50, minutes:90, extraMinutes:30,
   pass:700, scale:1000, cost:'$100', retakeDays:14
 };
 const DOMAINS = {
