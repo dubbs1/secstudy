@@ -22,7 +22,7 @@ function render(){
   applyTheme();
   document.querySelectorAll('#nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === S.tab));
   renderTop();
-  document.body.classList.toggle('playing', S.tab === 'learn' && !!playerUi.id);   // the lesson player gets the screen
+  document.body.classList.toggle('playing', S.tab === 'learn' && !!(playerUi.id || labPlay));   // the lesson player gets the screen
   const views = {today:renderToday, learn:renderLearn, practice:renderPractice, labs:renderLabsPage, more:renderMore};
   $('#main').innerHTML = (views[S.tab] || renderToday)();
   renderTimerButton();
@@ -91,6 +91,7 @@ window.addEventListener('keydown', armBack, {once:true, capture:true});
 // Closes one thing on the screen you are looking at. False when there is nothing left to close.
 function backOneStep(){
   if (focusOpen) { focusOpen = false; focusTo = '#timerBtn'; }
+  else if (S.tab === 'learn' && labPlay) { labPlay = null; }
   else if (S.tab === 'learn' && playerUi.id) { reveal = `[data-act=play][data-id="${playerUi.id}"]`; playerUi.id = null; }
   else if (S.tab === 'learn' && S.openLesson) {
     reveal = `[data-act=openLesson][data-id="${S.openLesson}"]`; S.openLesson = null;
@@ -258,6 +259,13 @@ document.addEventListener('click', e => {
       if (Object.keys(W.sorted).length === w.items.length) W.done = true;
       announce((it.who === b.dataset.v ? 'Right. ' : 'Not quite. ') + it.why); focusTo = W.done ? '#plNext' : '.pl-sortcard .btn'; break;
     }
+    case 'labPlay': {   // a finished run starts again from step 1
+      labPlay = id; S.tab = 'learn';
+      if (labState(id).step >= LAB_SIMS[id].steps.length) labUi[id] = {mode:'sim', step:0, vals:{}, out:{}, draft:{}};
+      window.scrollTo(0, 0); focusTo = '.lab-play h2'; break;
+    }
+    case 'labClose':    reveal = playerUi.id ? null : `[data-act=labPlay][data-id="${labPlay}"]`; focusTo = playerUi.id ? '#plNext' : reveal; labPlay = null; window.scrollTo(0, 0); break;
+    case 'labReal':     labPlay = null; labState(id).mode = 'real'; S.tab = 'labs'; labFrom = 'learn'; S.openLab = id; window.scrollTo(0, 0); break;
     case 'labsBack':    S.tab = labFrom === 'more' ? 'more' : 'learn'; S.openLab = null; window.scrollTo(0, 0); break;
     case 'goLearn':     S.tab = 'learn'; S.openLesson = null; playerUi.id = null; window.scrollTo(0, 0); break;
     case 'goReady':     S.tab = 'practice'; pSub = ''; S.open = 'weak'; window.scrollTo(0, 0); focusTo = '[data-act=toggleWeak]'; break;
@@ -412,7 +420,8 @@ document.addEventListener('click', e => {
     }
     case 'labNext': {
       const st = labState(id), steps = LAB_SIMS[id].steps; st.step++; st.err = null; st.menu = false;
-      focusTo = st.step >= steps.length ? '.pcon-done .btn' : '.pcon-task';
+      if (st.step >= steps.length) { S.sims[id] = true; studied(); }   // a finished practice run counts on the path
+      focusTo = st.step >= steps.length ? (labPlay ? '.lab-play h2' : '.pcon-done .btn') : '.pcon-task';
       announce(st.step >= steps.length ? 'Practice run done.' : `Step ${st.step + 1} of ${steps.length}: ${plain(labFill(id, steps[st.step].task))}`);
       reveal = `[data-act=openLab][data-id="${id}"]`; break;
     }

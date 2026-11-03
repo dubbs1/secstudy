@@ -16,6 +16,7 @@ const guessUi = {};    // guess-first answers to show this visit (once answered 
 
 function renderLearn(){
   const l = LESSONS.find(x => x.id === S.openLesson);
+  if (labPlay) return labPlayView();
   if (playerUi.id) return playerView();
   return l ? lessonView(l) : lessonMap();
 }

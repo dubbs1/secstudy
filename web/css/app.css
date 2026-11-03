@@ -730,3 +730,5 @@ body.playing #top{display:none}
 .map-node.lab{width:46px;height:46px;font-size:18px;margin:0 7px;background:var(--field);color:var(--text)}
 .map-stop.lab.done .map-node{background:var(--ok);color:#fff}
 .map-sec .card{margin:0 0 6px}
+.lab-play{border-top-color:var(--brand)}
+.lab-play .pl-screen{padding:6px 12px 18px}

@@ -18,6 +18,8 @@ function playerScreens(l){
   if (SCENES[l.id]) list.push({k:'match'});
   if (FLOWS[l.id]) list.push({k:'flow'});
   if (SIMS[l.id]) list.push({k:'sim'});
+  const lab = LABS.find(x => x.lessons[0] === l.id && LAB_SIMS[x.id]);
+  if (lab) list.push({k:'lab', lab:lab.id});
   list.push({k:'done'});
   return list;
 }
@@ -94,6 +96,12 @@ function plBody(l, s){
     case 'widget': return plWidget(st.widget);
     case 'flow': return `<small class="task-tag">How it works</small>${flowHTML(l.id)}`;
     case 'sim': return `<small class="task-tag">What if</small><p class="muted small">Switch parts on and off and watch what still works.</p>${simHTML(l.id)}`;
+    case 'lab': { const lab = LABS.find(x => x.id === s.lab);
+      return `<small class="task-tag">Try it hands-on · optional</small><h2 tabindex="-1" class="pl-q">${lab.t}</h2>
+        <p class="pl-lead">Do it yourself in a practice console laid out like the real AWS one, right here in the app.</p>
+        <p class="muted small">About ${lab.min} minutes · ${LAB_SIMS[lab.id].steps.length} steps · a coach guides each step · nothing is created in AWS and nothing costs anything.</p>
+        <div class="btns"><button class="btn" data-act="labPlay" data-id="${lab.id}">${S.sims[lab.id] ? 'Do the lab again' : 'Start the lab'}</button></div>
+        ${S.sims[lab.id] ? '<p class="pl-note">✓ You have done this lab.</p>' : ''}`; }
     case 'done': {
       const qs = qsFor(l.id), right = qs.filter(q => S.ans[q.id] && S.ans[q.id].ok).length;
       const terms = [...new Set(l.pts.join(' ').match(/<b>[^<]+<\/b>/g) || [])].slice(0, 5);
@@ -168,13 +176,32 @@ function lessonMap(){
         <span class="map-t"><b>${l.t}</b><small class="${late ? 'late' : ''}">${done ? 'done' : (late ? 'was due ' : 'due ') + fmtDate(l.due)}</small>${here ? '<span class="pill pill-next">Up next</span>' : ''}<button class="link small" data-act="openLesson" data-id="${l.id}">Overview</button></span></li>`;
       // A lab comes right after its main lesson (the first it lists).
       LABS.filter(lab => lab.lessons[0] === l.id).forEach(lab => {
-        const st = S.labs[lab.id] || [], all = st.filter(Boolean).length === lab.steps.length;
+        const st = S.labs[lab.id] || [], all = !!S.sims[lab.id] || st.filter(Boolean).length === lab.steps.length;
         h += `<li class="map-stop lab ${all ? 'done' : ''}" style="--x:${[0, 1, 2, 1][x++ % 4]}">
-          <button class="map-node lab" data-act="goLab" data-id="${lab.id}" aria-label="Lab: ${esc(lab.t)}${all ? ', done' : ''}">${all ? '✓' : '⚗'}</button>
-          <span class="map-t"><small class="task-tag">Hands-on lab · optional</small><b>${lab.t}</b><small>about ${lab.min} min · practise in the app first</small></span></li>`;
+          <button class="map-node lab" data-act="labPlay" data-id="${lab.id}" aria-label="Lab: ${esc(lab.t)}${all ? ', done' : ''}">${all ? '✓' : '⚗'}</button>
+          <span class="map-t"><small class="task-tag">Hands-on lab · optional</small><b>${lab.t}</b><small>about ${lab.min} min · right here in the app</small></span></li>`;
       });
     });
     h += '</ol></section>';
   }
   return h;
+}
+
+/* ---------- A lab, played like a lesson: the practice console full screen, with a coach ---------- */
+// Opened from a lab stop on the path, or from a lesson's "Try it hands-on" screen. Closing returns there.
+// The real AWS console cannot be shown inside the app (AWS blocks that, and it needs your login), so its
+// steps are an optional extra at the end.
+let labPlay = null;   // the lab on screen (not saved)
+function labPlayView(){
+  const lab = LABS.find(x => x.id === labPlay), sim = LAB_SIMS[lab.id], st = labState(lab.id), n = sim.steps.length;
+  const done = st.step >= n, pct = Math.round(Math.min(st.step, n) / n * 100);
+  return `<div class="player lab-play">
+    <div class="pl-top"><button class="pl-x" data-act="labClose" aria-label="Close the lab">✕</button>
+      <div class="pl-bar" role="progressbar" aria-label="Lab progress" aria-valuenow="${Math.min(st.step, n)}" aria-valuemin="0" aria-valuemax="${n}"><i style="width:${pct}%"></i></div>
+      <span class="pl-n">${Math.min(st.step + 1, n)}/${n}</span></div>
+    <div class="pl-screen">${done ? `<div class="pl-done"><div class="big-check on" aria-hidden="true">✓</div><h2 tabindex="-1">Lab done: ${lab.t}</h2>
+        <p class="muted">You know the screens, the buttons and the traps. Nothing was created in AWS.</p>
+        <div class="btns" style="justify-content:center"><button class="btn" data-act="labClose">Back</button><button class="btn ghost" data-act="labRestart" data-id="${lab.id}">Do it again</button></div>
+        <p class="small muted" style="margin-top:18px">Optional: try it for real in your own AWS account (Free plan). <button class="link" data-act="labReal" data-id="${lab.id}">See the real console steps</button></p></div>`
+      : `<small class="task-tag">Hands-on lab · practice console</small><h2 tabindex="-1" class="pl-q">${lab.t}</h2>${labSimHTML(lab)}`}</div></div>`;
 }
