@@ -158,12 +158,21 @@ function lessonMap(){
   let h = `<div class="map-intro"><b>Your path</b><span class="muted small">Tap a lesson to play it step by step. "Overview" opens the full lesson to revise.</span></div>`;
   for (const [d, D] of Object.entries(DOMAINS)) {
     const ls = LESSONS.filter(l => l.d === d);
-    h += `<section class="map-sec" style="${domainVars(d)}"><h2 class="group-h">${chip(d)}${D.name}<small>${D.w} % of the exam · ${ls.filter(l => S.done[l.id]).length}/${ls.length} done</small></h2><ol class="map">`;
+    h += `<section class="map-sec" style="${domainVars(d)}"><h2 class="group-h">${chip(d)}${D.name}<small>${D.w} % of the exam · ${ls.filter(l => S.done[l.id]).length}/${ls.length} done</small></h2>
+      ${FLOWS[d] ? domainFlowHTML(d) : ''}<ol class="map">`;
+    let x = 0;
     ls.forEach(l => {
-      const k = LESSONS.indexOf(l), done = !!S.done[l.id], here = l === cur;
-      h += `<li class="map-stop ${done ? 'done' : ''} ${here ? 'here' : ''}" style="--x:${[0, 1, 2, 1][k % 4]}">
+      const k = LESSONS.indexOf(l), done = !!S.done[l.id], here = l === cur, late = !done && daysUntil(l.due) < 0;
+      h += `<li class="map-stop ${done ? 'done' : ''} ${here ? 'here' : ''}" style="--x:${[0, 1, 2, 1][x++ % 4]}">
         <button class="map-node" data-act="play" data-id="${l.id}" aria-label="Lesson ${k + 1}: ${esc(l.t)}${done ? ', done' : here ? ', up next' : ''}">${done ? '✓' : k + 1}</button>
-        <span class="map-t"><b>${l.t}</b>${here ? '<span class="pill pill-next">Up next</span>' : ''}<button class="link small" data-act="openLesson" data-id="${l.id}">Overview</button></span></li>`;
+        <span class="map-t"><b>${l.t}</b><small class="${late ? 'late' : ''}">${done ? 'done' : (late ? 'was due ' : 'due ') + fmtDate(l.due)}</small>${here ? '<span class="pill pill-next">Up next</span>' : ''}<button class="link small" data-act="openLesson" data-id="${l.id}">Overview</button></span></li>`;
+      // A lab comes right after its main lesson (the first it lists).
+      LABS.filter(lab => lab.lessons[0] === l.id).forEach(lab => {
+        const st = S.labs[lab.id] || [], all = st.filter(Boolean).length === lab.steps.length;
+        h += `<li class="map-stop lab ${all ? 'done' : ''}" style="--x:${[0, 1, 2, 1][x++ % 4]}">
+          <button class="map-node lab" data-act="goLab" data-id="${lab.id}" aria-label="Lab: ${esc(lab.t)}${all ? ', done' : ''}">${all ? '✓' : '⚗'}</button>
+          <span class="map-t"><small class="task-tag">Hands-on lab · optional</small><b>${lab.t}</b><small>about ${lab.min} min · practise in the app first</small></span></li>`;
+      });
     });
     h += '</ol></section>';
   }

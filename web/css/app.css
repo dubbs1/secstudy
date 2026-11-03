@@ -711,3 +711,22 @@ body.playing #top{display:none}
 .pl-foot.sheet.info{background:var(--brand-soft)}.pl-foot.sheet.info b{color:var(--brand-text)}
 .fb.info{background:var(--brand-soft)}
 @media (prefers-reduced-motion:reduce){.pl-hint{animation:none}}
+
+/* ---------- simpler structure: Home, Learn path, Practice tiles, More ---------- */
+.top-pct{font-weight:800;color:var(--brand-text);font-size:15px}
+.prog{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.prog-t{border:1px solid var(--line);background:var(--card);border-radius:var(--r-sm);padding:10px 8px;text-align:left;display:flex;flex-direction:column;gap:2px;min-height:76px}
+.prog-t:hover{border-color:var(--brand)}
+.prog-t b{font-size:18px;line-height:1.2}.prog-t small{color:var(--muted);font-size:12.5px}
+.prog-t .bar{margin-top:auto;height:6px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.tile-btn{border:0;background:var(--card);box-shadow:var(--shadow);border-radius:var(--r);padding:16px 14px;text-align:left;display:flex;flex-direction:column;gap:4px;min-height:120px}
+.tile-btn:hover:not(:disabled){outline:2px solid var(--brand)}
+.tile-btn:disabled{opacity:.6;cursor:default}
+.tile-i{width:38px;height:38px;border-radius:12px;background:var(--brand-soft);color:var(--brand-text);display:grid;place-items:center;font-size:19px;margin-bottom:6px}
+.tile-btn b{font-size:16px}.tile-btn small{color:var(--muted);font-size:13px}
+.sub-back{margin:0 4px 10px}
+.map-t small{font-size:12.5px;color:var(--muted)}.map-t small.late{color:var(--bad-text)}
+.map-node.lab{width:46px;height:46px;font-size:18px;margin:0 7px;background:var(--field);color:var(--text)}
+.map-stop.lab.done .map-node{background:var(--ok);color:#fff}
+.map-sec .card{margin:0 0 6px}

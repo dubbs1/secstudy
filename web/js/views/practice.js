@@ -33,6 +33,18 @@ function weakCard(){
 }
 
 /* ---------- Practice ---------- */
+// Practice home: how ready you are, then four big tiles. Each tile opens one thing.
+let pSub = '';   // the screen open in Practice: '', 'mock', 'drills' or 'bank' (not saved)
+function practiceHome(){
+  const due = dueNow().length;
+  const tile = (act, v, icon, t, m, off) => `<button class="tile-btn" data-act="${act}"${v ? ` data-v="${v}"` : ''} ${off ? 'disabled' : ''}>
+    <span class="tile-i" aria-hidden="true">${icon}</span><b>${t}</b><small>${m}</small></button>`;
+  return weakCard() + `<div class="tiles">
+    ${tile('rvStart', '', '↻', 'Review', due ? `${Math.min(due, REVIEW_MAX)} due now` : 'All caught up', !due)}
+    ${tile('pSub', 'mock', '⏱', 'Mock exam', `${EXAM.questions} questions, like the real one`)}
+    ${tile('pSub', 'drills', '⚡', 'Drills', 'Lookalikes and key words')}
+    ${tile('pSub', 'bank', '☰', 'All questions', `${QUESTIONS.length}, by domain or lesson`)}</div>`;
+}
 function practiceSet(){
   return QUESTIONS.filter(q => {
     if (S.pFilter in DOMAINS && LESSONS.find(l => l.id === q.l).d !== S.pFilter) return false;
@@ -45,8 +57,13 @@ function renderPractice(){
   if (S.mock) return mockView();
   if (mockShow) return mockResult(mockShow) || renderPractice();
   if (drillUi) return drillView();
+  if (S.review) return reviewCard();
+  const back = '<p class="sub-back"><button class="link" data-act="pSub" data-v="">‹ Practice</button></p>';
+  if (pSub === 'mock') return back + mockCard();
+  if (pSub === 'drills') return back + drillCard();
+  if (pSub !== 'bank') return practiceHome();
   const lf = LESSONS.find(l => l.id === S.pFilter);
-  let h = weakCard() + mockCard() + drillCard() + `<h2 class="group-h">Question bank<small>${QUESTIONS.length} questions</small></h2><div class="seg small" role="group">${[['all', 'All']].concat(Object.entries(DOMAINS).map(([k, d]) => [k, d.short])).map(([k, n]) =>
+  let h = back + `<h2 class="group-h">All questions<small>${QUESTIONS.length} questions</small></h2><div class="seg small" role="group">${[['all', 'All']].concat(Object.entries(DOMAINS).map(([k, d]) => [k, d.short])).map(([k, n]) =>
     `<button data-act="pFilter" data-v="${k}" aria-pressed="${S.pFilter === k}">${n}</button>`).join('')}
     ${lf ? `<button data-act="pFilter" data-v="all" aria-pressed="true" title="Show all lessons">Lesson ${lessonNo(lf.id)} ✕</button>` : ''}</div>
     <div class="seg small" role="group">

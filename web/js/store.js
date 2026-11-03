@@ -1,7 +1,7 @@
 // Saved progress: localStorage key awsCourse1. load() is the only way data gets in.
 const KEY = 'awsCourse1';
 const THEMES = ['system', 'light', 'dark'];
-const TABS = ['today', 'learn', 'practice', 'labs'];   // a Timer tab saved by an older version opens Today
+const TABS = ['today', 'learn', 'practice', 'labs', 'more'];   // a Timer tab saved by an older version opens Today
 const PREFS = {text:'m', motion:'system', calm:false, speak:true, extra:false};
 const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, stage:{}, days:{}, current:null, review:null, tab:'today', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', theme:'system', timer:{len:15, end:null, left:null, task:''},
   mock:null, mocks:{}, check:{}, guess:{}, plan:'', prefs:{...PREFS}};

@@ -6,7 +6,8 @@ let announceNext = false;   // read the answer feedback to screen readers after 
 let focusTo = null;    // selector to focus after the next render, when an action names one
 let lastScore = '', tapSaid = '';   // which game's final score has been read out (lesson and run)
 let lessonFrom = null; // the tab a lesson was opened from, so Back can return there
-let labFromLesson = false;   // the lab was opened from a lesson: Back returns to the lesson
+let labFromLesson = false;
+let labFrom = 'learn';   // where the labs page was opened from: the path in Learn, or More   // the lab was opened from a lesson: Back returns to the lesson
 
 // A selector that finds "the same control" again after the page is rebuilt.
 function controlKey(el){
@@ -22,7 +23,7 @@ function render(){
   document.querySelectorAll('#nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === S.tab));
   renderTop();
   document.body.classList.toggle('playing', S.tab === 'learn' && !!playerUi.id);   // the lesson player gets the screen
-  const views = {today:renderToday, learn:renderLearn, practice:renderPractice, labs:renderLabs};
+  const views = {today:renderToday, learn:renderLearn, practice:renderPractice, labs:renderLabsPage, more:renderMore};
   $('#main').innerHTML = (views[S.tab] || renderToday)();
   renderTimerButton();
   startTick(); startMockTick();
@@ -97,6 +98,8 @@ function backOneStep(){
     lessonFrom = null;
   }
   else if (S.tab === 'labs' && labFromLesson && S.openLesson) { S.tab = 'learn'; reveal = '#lessonTop'; }
+  else if (S.tab === 'labs') { S.tab = labFrom === 'more' ? 'more' : 'learn'; }
+  else if (S.tab === 'practice' && pSub) { pSub = ''; }
   else if (S.tab === 'today' && S.review) { S.review = null; reveal = '#nextUpBtn'; }
   else if (S.tab === 'practice' && S.mock && S.mock.list) { S.mock.list = false; }
   else if (S.tab === 'practice' && (drillUi || mockShow)) { drillUi = null; mockShow = null; mockOpen = null; }
@@ -156,6 +159,7 @@ document.addEventListener('click', e => {
   if (tabBtn) {
     labFromLesson = false; stayHere();
     if (S.tab === 'learn' && tabBtn.dataset.tab === 'learn') { S.openLesson = null; lessonFrom = null; playerUi.id = null; }   // Learn again: back to the list
+    if (tabBtn.dataset.tab === 'practice' && S.tab === 'practice') pSub = '';   // Practice again: back to its tiles
     S.tab = tabBtn.dataset.tab; save(); render(); window.scrollTo(0, 0); return;
   }
   // A link to another site: the browser opens it in a new tab; the Windows app copies it for the browser.
@@ -219,8 +223,8 @@ document.addEventListener('click', e => {
       if (SCENARIOS[id].every((x, i) => revealed[id + ':' + i])) finishPart(id, [2, 'cases']);
       render(); return;   // nothing to save
     }
-    case 'goLab':       labFromLesson = S.tab === 'learn' && !!S.openLesson; S.tab = 'labs'; S.open = null; S.openLab = id; reveal = `[data-act=openLab][data-id="${id}"]`; break;
-    case 'goQuestion':  S.tab = 'practice'; S.pFilter = 'all'; S.pMode = 'all'; pCur = id; delete live['p:' + id]; window.scrollTo(0, 0); break;
+    case 'goLab':       labFrom = S.tab; labFromLesson = S.tab === 'learn' && !!S.openLesson; S.tab = 'labs'; S.open = null; S.openLab = id; reveal = `[data-act=openLab][data-id="${id}"]`; break;
+    case 'goQuestion':  pSub = 'bank'; S.tab = 'practice'; S.pFilter = 'all'; S.pMode = 'all'; pCur = id; delete live['p:' + id]; window.scrollTo(0, 0); break;
     // Step by step: the lesson player
     case 'play': playerOpen(id); S.tab = 'learn'; S.open = null; S.current = id; window.scrollTo(0, 0); focusTo = '#plScreen h2'; break;
     case 'plClose': reveal = `[data-act=play][data-id="${playerUi.id}"]`; focusTo = reveal; playerUi.id = null; break;
@@ -254,6 +258,14 @@ document.addEventListener('click', e => {
       if (Object.keys(W.sorted).length === w.items.length) W.done = true;
       announce((it.who === b.dataset.v ? 'Right. ' : 'Not quite. ') + it.why); focusTo = W.done ? '#plNext' : '.pl-sortcard .btn'; break;
     }
+    case 'labsBack':    S.tab = labFrom === 'more' ? 'more' : 'learn'; S.openLab = null; window.scrollTo(0, 0); break;
+    case 'goLearn':     S.tab = 'learn'; S.openLesson = null; playerUi.id = null; window.scrollTo(0, 0); break;
+    case 'goReady':     S.tab = 'practice'; pSub = ''; S.open = 'weak'; window.scrollTo(0, 0); focusTo = '[data-act=toggleWeak]'; break;
+    case 'goPlan':      S.tab = 'more'; S.open = 'plan'; window.scrollTo(0, 0); focusTo = '[data-act=togglePlan]'; break;
+    case 'goLabs':      S.tab = 'labs'; labFrom = 'more'; window.scrollTo(0, 0); break;
+    case 'goDrill':     S.tab = 'practice'; drillStart('look'); window.scrollTo(0, 0); focusTo = '.drill .opt'; break;
+    case 'pSub':        pSub = b.dataset.v; drillUi = null; window.scrollTo(0, 0); focusTo = pSub ? '.sub-back .link' : `[data-act=pSub]`; break;
+    case 'themeSet':    S.theme = b.dataset.v; focusTo = controlKey(b); break;
     case 'goPractice':  S.tab = 'practice'; window.scrollTo(0, 0); break;
     case 'goMock':      S.tab = 'practice'; drillUi = null; mockShow = null; if (!S.mock) mockStart('full'); window.scrollTo(0, 0); focusTo = '#main .opt'; break;
     case 'lessonTimer': case 'breakTimer': {
@@ -345,7 +357,7 @@ document.addEventListener('click', e => {
       announce(`Lesson done. ${LESSONS.filter(l => !S.done[l.id]).length} to go.`);
       focusTo = '.finish ~ .btns .btn'; break;
     }
-    case 'pFilter': S.pFilter = b.dataset.v; pCur = null; break;
+    case 'pFilter': S.pFilter = b.dataset.v; pCur = null; pSub = 'bank'; break;
     case 'pMode':   S.pMode = b.dataset.v; pCur = null; break;
     case 'pNext': {
       const cur = pCur; delete live['p:' + cur];
@@ -360,7 +372,7 @@ document.addEventListener('click', e => {
       S.review.ids.forEach(q => delete live['r:' + q]); window.scrollTo(0, 0); break;
     case 'rvNext':  S.review.i++; break;
     case 'rvClose': S.review = null; reveal = '#nextUpBtn'; break;
-    case 'pLesson': S.pFilter = id; S.pMode = 'all'; S.open = null; pCur = null; break;
+    case 'pLesson': S.pFilter = id; S.pMode = 'all'; S.open = null; pCur = null; pSub = 'bank'; break;
     case 'labReset': S.labs[id] = []; break;
     // Practise here: the practice console
     case 'labMode': labState(id).mode = b.dataset.v; focusTo = `[data-act=labMode][data-v="${b.dataset.v}"]`; break;

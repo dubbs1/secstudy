@@ -8,8 +8,29 @@ function renderToday(){
   let h = away >= 3 ? '<p class="hello">Welcome back. One small step is enough today.</p>'
     : n ? `<p class="hello week-count"><span class="wkdots" aria-hidden="true">${weekDays().map(d => `<i class="${S.days[d] ? 'on' : ''} ${d === todayISO() ? 'today' : ''}"></i>`).join('')}</span>
       <span>Studied <b>${n} day${n > 1 ? 's' : ''}</b> this week</span></p>` : '';
-  h += nextUpCard() + planLine() + examPlanCard() + weekCard() + domainCard() + lookupCard() + factsCard() + prefsCard();
+  // Home: the one next step, at most two small extras, and how far along you are. Everything else is in More.
+  h += nextUpCard() + planLine() + alsoToday() + progressCard();
   return h;
+}
+// Up to two small extras, each one tap: review that is due (when it is not already the next step), a drill on
+// the weakest domain, a full mock in the final week.
+function alsoToday(){
+  const n = nextUp(), due = dueNow().length, R = readiness(), last = lastMock(), out = [];
+  if (due && n.act !== 'rvStart') out.push(['rvStart', '', `Review ${Math.min(due, REVIEW_MAX)} question${due > 1 ? 's' : ''}`, 'about 5 min · questions due again']);
+  if (R.all >= 10) out.push(['goDrill', '', 'A quick drill: lookalike services', `10 questions · 5 min${R.next ? ` · your weakest area: ${DOMAINS[R.next].short}` : ''}`]);
+  if (daysUntil(EXAM.date) <= 7 && (!last || Date.now() - last.at > 3 * 864e5) && n.act !== 'goMock') out.unshift(['goMock', '', 'A full mock exam', `${EXAM.questions} questions · ${examMins()} min`]);
+  if (!out.length) return '';
+  return `<div class="card"><div class="body"><h3>Also today, if you have time</h3><ul class="hits">${out.slice(0, 2).map(([act, id, t, m]) =>
+    `<li><button class="row-link" data-act="${act}"${id ? ` data-id="${id}"` : ''}><span><b>${t}</b></span><small>${m}</small></button></li>`).join('')}</ul></div></div>`;
+}
+// Three numbers, each a door: lessons (to Learn), readiness (to Practice), the exam (to its plan in More).
+function progressCard(){
+  const done = LESSONS.filter(l => S.done[l.id]).length, R = readiness(), left = daysUntil(EXAM.date);
+  return `<div class="card"><div class="body"><h3>Your progress</h3><div class="prog">
+    <button class="prog-t" data-act="goLearn"><b>${done}/${LESSONS.length}</b><small>lessons done</small><span class="bar"><i style="width:${Math.round(done / LESSONS.length * 100)}%"></i></span></button>
+    <button class="prog-t" data-act="goReady"><b class="ready-${R.cls}">${R.cls === 'none' ? '—' : R.verdict}</b><small>${R.cls === 'none' ? 'readiness: needs a few more answers' : 'exam readiness'}</small></button>
+    <button class="prog-t" data-act="goPlan"><b>${left > 0 ? left : 0}</b><small>days to the exam · plan</small></button>
+  </div></div></div>`;
 }
 
 // Exactly one suggestion: review that is due, else the lesson in progress or the next one.
@@ -80,11 +101,13 @@ function examPlanCard(){
 function prefsCard(){
   const open = S.open === 'prefs', P = S.prefs;
   let h = `<div class="card ${open ? 'open' : ''}"><button class="row" data-act="togglePrefs" aria-expanded="${open}">
-    <span class="n">⚙</span><span class="t"><b>Settings</b><small>Text size, motion, read aloud, exam time</small></span><span class="chev">›</span></button>`;
+    <span class="n">⚙</span><span class="t"><b>Settings</b><small>Theme, text size, motion, read aloud, exam time</small></span><span class="chev">›</span></button>`;
   if (!open) return h + '</div>';
   const seg = (k, label, opts) => `<div class="pref"><span id="pl-${k}">${label}</span><div class="seg small" role="group" aria-labelledby="pl-${k}">${opts.map(([v, t]) =>
     `<button data-act="pref" data-v="${k}" data-i="${v}" aria-pressed="${String(P[k]) === v || (P[k] === true && v === '1') || (P[k] === false && v === '0')}">${t}</button>`).join('')}</div></div>`;
   h += `<div class="body">
+    <div class="pref"><span id="pl-theme">Theme</span><div class="seg small" role="group" aria-labelledby="pl-theme">${THEMES.map(t =>
+      `<button data-act="themeSet" data-v="${t}" aria-pressed="${S.theme === t}">${THEME_LABEL[t]}</button>`).join('')}</div></div>
     ${seg('text', 'Text size', [['m', 'Normal'], ['l', 'Large'], ['xl', 'Larger']])}
     ${seg('motion', 'Motion', [['system', 'Like my device'], ['reduce', 'Less motion']])}
     ${seg('calm', 'Week count and progress bars', [['0', 'Show'], ['1', 'Hide']])}
