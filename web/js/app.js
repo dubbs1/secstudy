@@ -51,6 +51,12 @@ function render(){
   const br = $('#main .bridge.fresh');
   if (br) { br.classList.remove('fresh'); const r = br.getBoundingClientRect(); if (r.bottom > innerHeight) br.scrollIntoView({behavior:reduceMotion() ? 'auto' : 'smooth', block:'nearest'}); }
 }
+// Leaves the lesson player for where it was opened from: Home, or the lesson's stop on the path.
+function playerClose(){
+  const id = playerUi.id; playerUi.id = null;
+  if (playerUi.from === 'today') { S.tab = 'today'; focusTo = '#nextUpBtn'; window.scrollTo(0, 0); }
+  else { reveal = `[data-act=play][data-id="${id}"]`; focusTo = reveal; }
+}
 // Scroll only when the row is off screen, so opening a card never makes the page jump needlessly.
 function onScreen(el){ const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }
 function keepInView(el){
@@ -92,7 +98,7 @@ window.addEventListener('keydown', armBack, {once:true, capture:true});
 function backOneStep(){
   if (focusOpen) { focusOpen = false; focusTo = '#timerBtn'; }
   else if (S.tab === 'learn' && labPlay) { labPlay = null; }
-  else if (S.tab === 'learn' && playerUi.id) { reveal = `[data-act=play][data-id="${playerUi.id}"]`; playerUi.id = null; }
+  else if (S.tab === 'learn' && playerUi.id) { playerClose(); }
   else if (S.tab === 'learn' && S.openLesson) {
     reveal = `[data-act=openLesson][data-id="${S.openLesson}"]`; S.openLesson = null;
     if (lessonFrom && lessonFrom !== 'learn') { S.tab = lessonFrom; reveal = null; }   // opened from a lab or Today: go back there
@@ -228,7 +234,7 @@ document.addEventListener('click', e => {
     case 'goQuestion':  pSub = 'bank'; S.tab = 'practice'; S.pFilter = 'all'; S.pMode = 'all'; pCur = id; delete live['p:' + id]; window.scrollTo(0, 0); break;
     // Step by step: the lesson player
     case 'play': playerOpen(id); S.tab = 'learn'; S.open = null; S.current = id; window.scrollTo(0, 0); focusTo = '#plScreen h2'; break;
-    case 'plClose': reveal = `[data-act=play][data-id="${playerUi.id}"]`; focusTo = reveal; playerUi.id = null; break;
+    case 'plClose': playerClose(); break;
     case 'plPick': playerUi.sel = +b.dataset.i; focusTo = controlKey(b); break;
     case 'plCheck': {
       const s = plScreen(), q = s.k === 'q' ? s.q : GUESS[playerUi.id];
@@ -241,7 +247,7 @@ document.addEventListener('click', e => {
       { const g = GUESS[playerUi.id]; announce(`The answer is ${LETTERS[g.a]}. ${plain(g.x)}`); } break;
     case 'plNext': playerUi.i = Math.min(playerUi.i + 1, playerUi.list.length - 1); playerUi.sel = null; playerUi.checked = false; playerUi.anim = true; playerUi.w = null; playerUi.hint = false;
       window.scrollTo(0, 0); focusTo = '#plScreen h2, #plScreen .flow-say, #plScreen .pl-point, #plNext'; break;
-    case 'plFinish': S.done[playerUi.id] = true; S.current = null; studied(); reveal = `[data-act=play][data-id="${playerUi.id}"]`; focusTo = reveal; playerUi.id = null; toast('Lesson done'); break;
+    case 'plFinish': S.done[playerUi.id] = true; S.current = null; studied(); toast('Lesson done'); playerClose(); break;
     case 'plMatch': {
       const M = playerUi.m, i = +b.dataset.i, side = b.dataset.v;
       M.miss = null; M[side] = M[side] === i ? null : i;
@@ -334,10 +340,10 @@ document.addEventListener('click', e => {
       if (blank && !b.dataset.v && !M.over) { mockConfirm = true; focusTo = '#mockWarn'; break; }
       mockFinish(); window.scrollTo(0, 0); focusTo = '.mock .finish b'; break;
     }
-    case 'mQuit': S.mock = null; mockConfirm = false; focusTo = '[data-act=mStart]'; break;
+    case 'mQuit': S.mock = null; mockConfirm = false; pSub = 'mock'; focusTo = '[data-act=mStart]'; break;
     case 'mShow': mockShow = b.dataset.v; mockOpen = null; window.scrollTo(0, 0); focusTo = '.mock .finish b'; break;
     case 'mOpen': mockOpen = mockOpen === b.dataset.q ? null : b.dataset.q; focusTo = controlKey(b); break;
-    case 'mClose': mockShow = null; mockOpen = null; focusTo = '[data-act=mStart]'; break;
+    case 'mClose': mockShow = null; mockOpen = null; pSub = 'mock'; focusTo = '[data-act=mStart]'; break;
     // Drills
     case 'dStart': drillStart(b.dataset.v, id); focusTo = '.drill .opt'; reveal = '.drill'; break;
     case 'dPick': { const D = drillUi, x = D.set[D.i], i = +b.dataset.i; D.picks[D.i] = i; if (i === drillAnswer(x)) D.right++; studied(); focusTo = '.drill .fb'; announce((i === drillAnswer(x) ? 'Right. ' : `Not quite: ${drillOpts(x)[drillAnswer(x)]}. `) + plain(x.q.x)); break; }

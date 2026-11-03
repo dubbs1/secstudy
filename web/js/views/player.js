@@ -5,7 +5,7 @@
 // review, How it works, What if, and a finish. Every question has a Hint that shows its key point; a wrong answer
 // offers "Show me the idea again". Pick, then Check; the answer and why come up from the bottom. Continue moves on:
 // nothing moves by itself. Hands-on screens unlock Continue once tried, and each can be skipped. Visit-only state.
-const playerUi = {id:null, i:0, list:[], sel:null, checked:false, anim:false, m:null, w:null, hint:false};
+const playerUi = {id:null, i:0, list:[], sel:null, checked:false, anim:false, m:null, w:null, hint:false, from:'learn'};
 
 function playerScreens(l){
   const list = [{k:'hook'}], qs = qsFor(l.id);
@@ -29,7 +29,7 @@ function plHintHTML(l, q){
 }
 function playerOpen(id){
   const l = LESSONS.find(x => x.id === id);
-  Object.assign(playerUi, {id, i:0, list:playerScreens(l), sel:null, checked:false, anim:true, m:null, w:null, hint:false});
+  Object.assign(playerUi, {id, i:0, list:playerScreens(l), sel:null, checked:false, anim:true, m:null, w:null, hint:false, from:S.tab === 'today' ? 'today' : 'learn'});
   delete flowUi.order[id]; flowUi.at[id] = 0;
 }
 const plScreen = () => playerUi.list[playerUi.i];
@@ -163,7 +163,8 @@ function plFoot(s){
 /* The lesson map on Learn: one path, a stop per lesson, in exam-domain colours */
 function lessonMap(){
   const cur = nextLesson();
-  let h = `<div class="map-intro"><b>Your path</b><span class="muted small">Tap a lesson to play it step by step. "Overview" opens the full lesson to revise.</span></div>`;
+  let h = cur ? '' : `<div class="note">All ${LESSONS.length} lessons done. Use Practice for the questions you haven't got right yet, and a full mock exam.</div>`;
+  h += `<div class="map-intro"><b>Your path</b><span class="muted small">Tap a lesson to play it step by step. "Overview" opens the full lesson to revise.</span></div>`;
   for (const [d, D] of Object.entries(DOMAINS)) {
     const ls = LESSONS.filter(l => l.d === d);
     h += `<section class="map-sec" style="${domainVars(d)}"><h2 class="group-h">${chip(d)}${D.name}<small>${D.w} % of the exam · ${ls.filter(l => S.done[l.id]).length}/${ls.length} done</small></h2>
@@ -173,7 +174,7 @@ function lessonMap(){
       const k = LESSONS.indexOf(l), done = !!S.done[l.id], here = l === cur, late = !done && daysUntil(l.due) < 0;
       h += `<li class="map-stop ${done ? 'done' : ''} ${here ? 'here' : ''}" style="--x:${[0, 1, 2, 1][x++ % 4]}">
         <button class="map-node" data-act="play" data-id="${l.id}" aria-label="Lesson ${k + 1}: ${esc(l.t)}${done ? ', done' : here ? ', up next' : ''}">${done ? '✓' : k + 1}</button>
-        <span class="map-t"><b>${l.t}</b><small class="${late ? 'late' : ''}">${done ? 'done' : (late ? 'was due ' : 'due ') + fmtDate(l.due)}</small>${here ? '<span class="pill pill-next">Up next</span>' : ''}<button class="link small" data-act="openLesson" data-id="${l.id}">Overview</button></span></li>`;
+        <span class="map-t"><b>${l.t}</b><small class="${late ? 'late' : ''}">${done ? 'done' : (S.stage[l.id] ? `In progress: ${STAGES[S.stage[l.id]]} · ` : '') + (late ? 'was due ' : 'due ') + fmtDate(l.due)}</small>${here ? '<span class="pill pill-next">Up next</span>' : ''}<button class="link small" data-act="openLesson" data-id="${l.id}">Overview</button></span></li>`;
       // A lab comes right after its main lesson (the first it lists).
       LABS.filter(lab => lab.lessons[0] === l.id).forEach(lab => {
         const st = S.labs[lab.id] || [], all = !!S.sims[lab.id] || st.filter(Boolean).length === lab.steps.length;

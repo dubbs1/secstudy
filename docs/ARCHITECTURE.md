@@ -36,6 +36,7 @@ web/js/content/           data only, no logic
     scenes.js             SCENES: "Picture it", an everyday scene per lesson (emoji pictures and what each stands for)
     labsims.js            LAB_SIMS: each lab as a practice run (choices, switches, text, terminal) for Practise here
     glossary.js           GLOSSARY: one line per service the exam names (lesson it fits, "often confused with")
+    steps.js              STEPS: a lesson's hook line and hands-on widget (demand slider, sort) for the player
     drills.js             LOOKALIKES (groups of confusable services with scenarios), KEYWORDS (exam key-word
                           questions), GUESS (one guess-first question per lesson)
 web/js/util.js            DOM and date helpers, toast
@@ -55,6 +56,9 @@ web/js/views/path.js      the guided path through a lesson: bridge cards, Rememb
 web/js/views/labsim.js    Practise here: the practice console for a lab, checking each answer as it is given
 web/js/views/mock.js      the mock exam (full or one domain): drawing, the clock, flags, review list, results
 web/js/views/drill.js     lookalike and key-word drills (visit-only state)
+web/js/views/player.js    the lesson player (a lesson step by step), the lesson map in Learn, and labs played full
+                          screen (visit-only state; finishing saves done / sims)
+web/js/views/more.js      the More tab: look up, exam plan, labs, exam facts, settings
 web/js/views/*.js         one file per screen: header, today, learn, practice, labs. Each returns an HTML
                           string from the current state. They may settle view state while drawing (which
                           lesson is open, which quiz or practice question shows) but never save
@@ -111,6 +115,7 @@ Adding things:
 | `check[id]` | exam plan items ticked |
 | `guess[lessonId]` | the guess-first answer (-1 skipped) |
 | `plan` | the "I will study when" line |
+| `sims[labId]` | true once the lab's practice run was finished |
 | `prefs` | `{text m/l/xl, motion system/reduce, calm, speak, extra}` |
 | `review` | review in progress `{ids, i, right}` or null |
 | `tab`, `open`, `openLesson`, `openLab`, `pFilter`, `pMode` | where you were |
