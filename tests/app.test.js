@@ -35,10 +35,13 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
 
   // ---------- content ----------
   const p = await fresh();
-  await check('content: lessons, questions and labs present; header counts match', async () => {
+  await check('content: lessons, questions and labs present; Home and Practice counts match', async () => {
     const c = await p.evaluate(() => [LESSONS.length, QUESTIONS.length, LABS.length]);
     ok(c.every(n => n > 0), 'got ' + c);
-    ok((await text(p, '.stats')).includes(`Lessons 0/${c[0]}`) && (await text(p, '.stats')).includes(`/${c[1]}`), 'header counts');
+    ok((await text(p, '.prog')).includes(`0/${c[0]}`), 'lesson count on Home');
+    await p.click('#nav [data-tab=practice]');
+    ok((await text(p, '[data-act=pSub][data-v=bank]')).includes(`${c[1]},`), 'question count on Practice');
+    await p.click('#nav [data-tab=today]');
   });
   await check('content: every question is well-formed', async () => {
     const bad = await p.evaluate(() => {
@@ -77,7 +80,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   await check('older data under awsCourse1 is backed up and never dropped', async () => {
     const old = {lessons:[true, false], done:[1, 2], xp:7};
     await seed(p, old, {legacy:true});
-    await p.click('#nav [data-tab=labs]');   // forces a save
+    await p.click('#nav [data-tab=more]');   // forces a save
     const s = await saved(p);
     ok(await p.evaluate(() => localStorage.getItem('awsCourse1_backup')) === JSON.stringify(old), 'backup missing');
     ok(s.xp === 7 && JSON.stringify(s.lessons) === '[true,false]', 'unknown fields lost');
@@ -142,10 +145,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('text=Next lesson');
     const s2 = await saved(p);
     ok(s2.openLesson === 'l2' && await text(p, '.lesson-t') === 'Service and deployment models', 'next lesson not shown');
-    ok((await text(p, '.stats')).includes('Lessons 1/' + await p.evaluate(() => LESSONS.length)), 'header not updated');
-  });
-  await check('exam facts open and close on Today', async () => {
     await p.click('#nav [data-tab=today]');
+    ok((await text(p, '.prog')).startsWith('1/' + await p.evaluate(() => LESSONS.length)), 'Home progress not updated');
+  });
+  await check('exam facts open and close in More', async () => {
+    await p.click('#nav [data-tab=more]');
     await p.click('[data-act=toggleFacts]');
     ok((await text(p, '.card.open')).includes('700 / 1000'), 'facts not shown');
     await p.click('[data-act=toggleFacts]');
@@ -159,7 +163,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const today = await p.evaluate(() => todayISO()), in7 = await p.evaluate(() => addDays(todayISO(), 7));
     const srs = await p.evaluate(() => S.srs);
     ok(srs.q2.due === today && srs.q1.due === in7, JSON.stringify(srs));
-    ok((await text(p, '.stats')).includes('Review due 1'), 'header has no review count');
+    await p.click('#nav [data-tab=practice]');
+    ok((await text(p, '[data-act=rvStart]')).includes('1 due now'), 'Practice has no review count');
+    await p.click('#nav [data-tab=today]');
   });
   await check('review: session runs alone on Today, schedules 1 / 3 / 7 days', async () => {
     ok(await text(p, '#nextUpBtn') === 'Start review', 'due review is not the next step');
@@ -173,7 +179,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('[data-act=rvClose]');
     ok(await text(p, '#nextUpBtn') === 'Start lesson', 'after review, next up is not the lesson');
     // a miss comes back tomorrow
-    await p.click('#nav [data-tab=practice]');
+    await p.click('#nav [data-tab=practice]'); await p.click('[data-act=pSub][data-v=bank]');
     await p.click('[data-act=pMode][data-v=all]');
     const qid = await p.getAttribute('[data-act=pick]', 'data-q');
     await p.click(`[data-act=pick][data-i="${((await answerOf(p, qid)) + 1) % 4}"]`);
@@ -191,6 +197,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   // ---------- Practice ----------
   await check('practice: filters, "not right yet" drops right answers after Next', async () => {
     await seed(p, {v:2, tab:'practice'});
+    await p.click('[data-act=pSub][data-v=bank]');
     await p.click('[data-act=pFilter][data-v=bill]');
     const nBill = await p.evaluate(() => QUESTIONS.filter(q => LESSONS.find(l => l.id === q.l).d === 'bill').length);
     ok((await text(p, '.qhead')).includes('of ' + nBill), 'billing filter wrong');
@@ -229,7 +236,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('[data-act=tGo]');
     await p.waitForTimeout(1300);
     ok((await text(p, '#clock')) < '15:00' && (await text(p, '#timerLabel')) < '15:00', 'not counting');
-    await p.click('#nav [data-tab=labs]'); await p.waitForTimeout(1100);
+    await p.click('#nav [data-tab=more]'); await p.waitForTimeout(1100);
     ok((await text(p, '#timerLabel')) < '14:59', 'stopped after a tab switch');
     await p.reload();
     ok((await text(p, '#timerLabel')) < '15:00' && await p.evaluate(() => document.querySelector('#timerBtn').classList.contains('running')), 'lost on reload');
@@ -283,7 +290,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.waitForFunction(() => S.done.l2 === true);
     p.off('dialog', onDialog);
     ok(!dialogs, 'a browser dialog was used (AC8.1)');
-    ok((await text(p, '.stats')).includes('Lessons 2/' + await p.evaluate(() => LESSONS.length)), 'import not shown');
+    ok((await text(p, '.prog')).startsWith('2/' + await p.evaluate(() => LESSONS.length)), 'import not shown');
     ok(await p.evaluate(() => JSON.parse(localStorage.getItem('awsCourse1_beforeImport')).done.l3 === true), 'no backup of the replaced progress');
   });
 
@@ -303,8 +310,8 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   for (const [name, opts] of [['phone width, light', {}], ['phone width, dark', {colorScheme:'dark'}], ['narrow phone, 320 px (U7.3)', {viewport:{width:320, height:640}}], ['desktop width', {viewport:{width:1280, height:900}}]]) {
     await check('layout: no sideways scroll at ' + name, async () => {
       const q = await fresh(opts);
-      for (const tab of ['today', 'learn', 'practice', 'labs']) {
-        await q.click(`#nav [data-tab=${tab}]`);
+      for (const tab of ['today', 'learn', 'practice', 'more', 'labs']) {
+        if (tab === 'labs') await q.evaluate(() => { S.tab = 'labs'; render(); }); else await q.click(`#nav [data-tab=${tab}]`);
         const w = await q.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         ok(w <= 0, `${tab} overflows by ${w}px`);
       }
@@ -336,7 +343,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       await q.waitForFunction(() => navigator.serviceWorker.controller);
       await ctx.setOffline(true);
       await q.reload();
-      ok((await text(q, '#main')).includes('Exam facts'), 'app did not load offline');
+      ok((await text(q, '#main')).includes('Next up'), 'app did not load offline');
       ok(await q.evaluate(() => getComputedStyle(document.querySelector('.card')).borderRadius === '16px'), 'stylesheet missing offline');
     } finally { await ctx.close(); close(); }
   });
@@ -347,7 +354,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const q = await at('2026-10-29');   // the day the fixture was saved, so its review dates read the same
     await seed(q, fx.saved, {legacy:true});
     const nq = await q.evaluate(() => QUESTIONS.length);   // the bank grew in 1.3.0; the answers right are the same
-    ok((await text(q, '.stats')).startsWith(fx.shown.stats.replace('/45', '/' + nq)), 'header differs: ' + await text(q, '.stats'));
+    // 1.4.0: the numbers moved from the header to Home's progress card
+    const lessons = fx.shown.stats.match(/Lessons (\d+\/\d+)/)[1];
+    ok((await text(q, '.prog')).startsWith(lessons) && nq > 0, 'progress differs: ' + await text(q, '.prog'));
     // First load after updating opens Today once (U1.1); everything else is kept as it was.
     ok(await q.getAttribute('#nav [data-tab=today]', 'aria-selected') === 'true', 'update did not open on Today');
     ok((await text(q, '.nextup')).includes('Lesson 2: ' + fx.shown.open), 'next up is not the lesson that was open: ' + await text(q, '.nextup'));
@@ -356,10 +365,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     // the streak starts from the days already studied
     const studiedOn = [...new Set(Object.values(fx.saved.ans).map(a => new Date(a.at)).map(d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')))];
     ok(studiedOn.every(d => now.days[d] === true), 'old study days not in the streak: ' + JSON.stringify(now.days));
-    await q.click('#nextUpBtn');
-    ok(await text(q, '.lesson-t') === fx.shown.open, 'different lesson open');
+    await q.click('#nextUpBtn');   // 1.4.0: Next up plays the lesson step by step
+    ok(await text(q, '.player h2') === fx.shown.open, 'different lesson open');
     await q.reload();
-    ok(await text(q, '.lesson-t') === fx.shown.open, 'Today was forced again on the second load');
+    ok(await q.evaluate(() => S.tab === 'learn'), 'Today was forced again on the second load');
     await q.context().close();
   });
   await check('footer shows the version (AC3.1)', async () => {
@@ -371,7 +380,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.evaluate(() => {
       EXAM.date = '2027-03-15'; EXAM.questions = 70;
       LESSONS.push({...LESSONS.find(l => l.d === 'bill'), id:'lx', t:'Extra billing lesson', due:'2027-03-01'});
-      S.tab = 'today'; S.open = 'facts'; render();
+      S.tab = 'more'; S.open = 'facts'; render();
     });
     const head = await text(p, '#top .sub'), facts = await text(p, '.card.open');
     await p.evaluate(() => { LESSONS.forEach(l => S.done[l.id] = true); S.open = null; S.tab = 'learn'; S.openLesson = null; render(); });
@@ -380,7 +389,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(head.includes('2027'), 'header year did not follow: ' + head);
     ok(facts.includes('70 questions') && facts.includes(`${nBillLessons + 1} billing`), 'facts did not follow: ' + facts.slice(0, 160));
     ok(doneMsg.startsWith(`All ${nLessons + 1} lessons done`), 'done message: ' + doneMsg);
-    ok((await text(p, '.stats')).includes(`Lessons 0/${nLessons}`), 'content not restored');
+    ok((await text(p, '.prog')).includes(`0/${nLessons}`), 'content not restored');
   });
   await check('an opened lesson, lab or card stays on screen (AC5.1)', async () => {
     await seed(p, {v:2, tab:'learn'});
@@ -391,10 +400,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await onScreen('#lessonTop'), 'next stage starts off screen');
     await p.click('[data-act=closeLesson]');
     ok(await onScreen('[data-act=openLesson][data-id=l14]'), 'back to the list, lesson 14 row off screen');
-    await p.click('#nav [data-tab=today]');
+    await p.click('#nav [data-tab=more]');
     await p.evaluate(() => scrollTo(0, 1e5)); await p.click('[data-act=toggleFacts]');
     ok(await onScreen('[data-act=toggleFacts]'), 'exam facts off screen');
-    await p.click('#nav [data-tab=labs]'); await p.click('[data-act=openLab][data-id=lab1]');
+    await p.click('[data-act=goLabs]'); await p.click('[data-act=openLab][data-id=lab1]');
     await p.evaluate(() => scrollTo(0, 1e5)); await p.click('[data-act=openLab][data-id=lab6]');
     ok(await onScreen('[data-act=openLab][data-id=lab6]'), 'lab 6 off screen');
   });
@@ -407,9 +416,10 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(/^(Right\.|The answer is)/.test(await text(p, '#announce')), 'announcement: ' + await text(p, '#announce'));
     await p.focus('[data-act=step][data-id=l1][data-i="2"]'); await p.keyboard.press('Space');
     ok(await active() === '|step|2', 'after ticking, focus is on ' + await active());
-    await p.focus('[data-act=theme]'); await p.keyboard.press('Enter');
-    ok((await active()).includes('|theme|'), 'after theme change, focus is on ' + await active());
-    await p.keyboard.press('Enter'); await p.keyboard.press('Enter');   // back to System
+    await p.evaluate(() => { S.tab = 'more'; S.open = 'prefs'; render(); });
+    await p.focus('[data-act=themeSet][data-v=dark]'); await p.keyboard.press('Enter');
+    ok((await active()).includes('|themeSet|') && await p.evaluate(() => S.theme === 'dark'), 'after theme change, focus is on ' + await active());
+    await p.evaluate(() => { S.theme = 'system'; S.open = null; S.tab = 'learn'; render(); });
     // the control goes away: "Next question" -> first answer of the next question
     await p.focus('[data-act=lqNext]'); await p.keyboard.press('Enter');
     ok(await p.evaluate(() => document.activeElement.dataset.act === 'pick' && document.activeElement.dataset.q === 'q2'), 'after Next question, focus is on ' + await active());
@@ -424,7 +434,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.keyboard.press('Enter'); await p.focus('[data-act=rvNext]'); await p.keyboard.press('Enter');
     ok(['rvStart', 'rvClose'].includes(await seen()), 'after Finish: ' + await seen());
     await p.focus('[data-act=rvClose]'); await p.keyboard.press('Enter');
-    ok(await seen() === 'openLesson', 'after Done: ' + await seen());
+    ok(['openLesson', 'play'].includes(await seen()), 'after Done: ' + await seen());
   });
   await check('filter rows are toggle buttons, only the tab bar is tabs (AC6.5)', async () => {
     await p.click('#nav [data-tab=practice]');
@@ -436,14 +446,16 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await check(`theme: cycles, overrides a ${system} system, survives reload (AC7.1-7.3)`, async () => {
       const q = await fresh({colorScheme:system});
       const bg = () => q.evaluate(() => getComputedStyle(document.body).backgroundColor);
-      ok((await q.getAttribute('[data-act=theme]', 'aria-label')).startsWith('Theme: System'), 'does not start on System');
-      await q.click('[data-act=theme]');
-      ok((await q.getAttribute('[data-act=theme]', 'aria-label')).startsWith('Theme: Light') && await bg() === 'rgb(245, 244, 242)', 'Light not applied: ' + await bg());
-      await q.click('[data-act=theme]');
-      ok((await q.getAttribute('[data-act=theme]', 'aria-label')).startsWith('Theme: Dark') && await bg() === 'rgb(22, 20, 28)', 'Dark not applied: ' + await bg());
+      const on = () => q.$eval('[data-act=themeSet][aria-pressed=true]', b => b.dataset.v);
+      await q.click('#nav [data-tab=more]'); await q.click('[data-act=togglePrefs]');   // the theme is in Settings
+      ok(await on() === 'system', 'does not start on System');
+      await q.click('[data-act=themeSet][data-v=light]');
+      ok(await on() === 'light' && await bg() === 'rgb(245, 244, 242)', 'Light not applied: ' + await bg());
+      await q.click('[data-act=themeSet][data-v=dark]');
+      ok(await on() === 'dark' && await bg() === 'rgb(22, 20, 28)', 'Dark not applied: ' + await bg());
       await q.reload();
-      ok((await q.getAttribute('[data-act=theme]', 'aria-label')).startsWith('Theme: Dark') && await bg() === 'rgb(22, 20, 28)', 'Dark lost on reload');
-      await q.click('[data-act=theme]');
+      ok(await on() === 'dark' && await bg() === 'rgb(22, 20, 28)', 'Dark lost on reload');
+      await q.click('[data-act=themeSet][data-v=system]');
       ok(await bg() === (system === 'dark' ? 'rgb(22, 20, 28)' : 'rgb(245, 244, 242)'), 'System not restored');
       await q.context().close();
     });
@@ -508,11 +520,12 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.tab = 'learn'; S.openLesson = 'l5'; S.stage.l5 = 0; delete S.guess.l5;`,
       `S.tab = 'learn'; S.openLesson = 'l6'; S.stage.l6 = 0; S.guess.l6 = (GUESS.l6.a + 1) % 4; guessUi.l6 = true;`,
       `S.tab = 'learn'; S.openLesson = 'l7'; S.stage.l7 = 0; ui.mode['l7:0'] = 'points'; document.querySelector('details.also') || 0;`,
-      `S.tab = 'today'; S.days[todayISO()] = true; S.open = 'plan';`,
-      `S.tab = 'today'; S.open = 'prefs'; lookupQ = 'Firewall';`,
+      `S.tab = 'more'; S.days[todayISO()] = true; S.open = 'plan';`,
+      `S.tab = 'more'; S.open = 'prefs'; lookupQ = 'Firewall';`,
+      `S.tab = 'today'; S.open = null;`,
       `S.tab = 'today'; focusOpen = true; timerEnded = true;`,
       `focusOpen = false; timerEnded = false; S.tab = 'practice'; S.open = 'weak'; QUESTIONS.slice(0, 30).forEach((q, i) => S.ans[q.id] = {n:1, wrong:i % 3 ? 0 : 1, ok:!!(i % 3), f:!!(i % 3), pick:0, at:Date.now()});`,
-      `S.open = null; pCur = QUESTIONS.find(q => Array.isArray(q.a)).id; live['sel:p:' + pCur] = [0];`,
+      `S.open = null; pSub = 'bank'; pCur = QUESTIONS.find(q => Array.isArray(q.a)).id; live['sel:p:' + pCur] = [0];`,
       `delete live['sel:p:' + pCur]; live['p:' + pCur] = [0, 1]; S.ans[pCur] = {n:1, wrong:1, ok:false, f:false, pick:[0, 1], at:Date.now(), sure:false};`,
       `mockStart('full'); S.mock.flags[S.mock.ids[0]] = true; S.mock.picks[S.mock.ids[0]] = 0; S.mock.i = 0;`,
       `S.mock.i = S.mock.ids.findIndex(id => Array.isArray(QUESTIONS.find(q => q.id === id).a)); S.mock.picks[S.mock.ids[S.mock.i]] = [1];`,
@@ -521,19 +534,27 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
       `S.mock.ids.forEach(id => { const q = QUESTIONS.find(x => x.id === id); S.mock.picks[id] = q.a; }); const w = S.mock.ids.find(id => !Array.isArray(QUESTIONS.find(x => x.id === id).a)); S.mock.picks[w] = (S.mock.picks[w] + 1) % 4; mockFinish(); mockOpen = w;`,
       `mockShow = null; mockOpen = null; drillStart('look'); drillUi.picks[0] = (drillAnswer(drillUi.set[0]) + 1) % drillOpts(drillUi.set[0]).length;`,
       `drillStart('key'); drillUi.picks[0] = (drillAnswer(drillUi.set[0]) + 1) % 4;`,
-      `drillUi = null; S.tab = 'practice';`
+      `drillUi = null; S.tab = 'practice'; pSub = '';`,
+      `S.tab = 'learn'; S.openLesson = null; S.stage.l3 = 2;`,
+      `playerOpen('l1'); playerUi.i = playerUi.list.findIndex(s => s.k === 'point');`,
+      `playerUi.i = playerUi.list.findIndex(s => s.k === 'q'); playerUi.hint = true; playerUi.sel = (playerUi.list[playerUi.i].q.a + 1) % 4; playerUi.checked = true;`,
+      `playerUi.i = 1; playerUi.hint = false; playerUi.sel = null; playerUi.checked = true;`,
+      `playerUi.i = playerUi.list.findIndex(s => s.k === 'match'); playerUi.checked = false; playerUi.m = {l:0, r:1, done:[2], miss:1}; playerUi.hint = true;`,
+      `playerUi.id = null; labPlay = 'lab3';`,
+      `labPlay = null; S.tab = 'labs';`
     ];
-    const sels = ['body', '#top .sub', '.stat', '.stat.timer', '.theme', '.chip.d-cc', '.chip.d-sec', '.chip.d-tech', '.chip.d-bill', '.foot', '.foot .link', 'h3',
-      '.hello', '.week-count b', '.task-tag', '.nextup small', '.week li.behind small', '.week small', '.row-link small', 'mark', '.group-h small', '.row .t small', '.pill-going',
+    const sels = ['body', '#top .sub', '.chip.d-cc', '.chip.d-sec', '.chip.d-tech', '.chip.d-bill', '.foot', '.foot .link', 'h3',
+      '.hello', '.week-count b', '.task-tag', '.nextup small', '.row-link small', 'mark', '.group-h small', '.row .t small',
       '.stage.cur', '.stage', '.opt.wrong .why', '.fb', '.check em', '.answer', '.scenario p', '.who-c.mine', '.who-c.theirs', '.who-h small', '.vis figcaption',
       '.tile small', '.tile span', '.vis-col.tone-you b', '.vis-col.tone-aws li', '.nbox > small', '.nside small', '.scale-ends', '.scale li small', '.see', '.lab-steps li.now .task-tag',
       '.num', '.band-meta', '.lesson .pts b', '.colour-key b', '.stage.cur', '.flipcard small', '.flipcard span', '.chipbtn.right', '.chipbtn.wrong', '.game-fb',
       '.who-c.blank', '.btn.good', '.sim-part b', '.why-tag', '.sim-picked', '.sim-part.on .sw', '.sim-part .sw', '.sim-sum', '.sim-goals li.ok', '.sim-goals li.no', '.never-tag', '.pcon-task', '.coach', '.lc-fb.ok', '.lc-fb.no', '.cs-crumbs', '.cs-title', '.cs-flash.ok', '.cs-flash.bad', '.cs-label', '.cs-desc', '.cs-err', '.cs-radio', '.cs-check',
       '.cs-btn', '.cs-btn.primary', '.cs-table th', '.cs-table td', '.cs-badge', '.cs-nav span', '.cs-menu button', '.cs-term-bar', '.term-out div', '.term-p', '.cs-ed-tab', '.cs-ed-lines code', '.cs-panel-h b', '.scene-t', '.scene-q', '.scene-a b', '.scene-a small', '.bridge', '.bridge-t', '.part-ok', '.mnode', '.mnode small', '.mnode.part.off small', '.mframe span', '.sim-test.ok', '.sim-test.no', '.sim-test.never', '.sim-result', '.sim-result small', '.sim-goals li small', '.sim-needs i', '.flow-say', '.flow-say small', '.flow-t', '.fnode b', '.fnode small', '.flow-row.past .fnode small', '.flow-arrow small', '.dflow .row .t small', '.who-c.no', '.who-fb li.ok', '.who-fb li.no', '.answer-order', '.answer-order small', '.game-fb .muted', '.deck-done p',
-      '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill',
+      '.flipcard.gap span', '.qhead span', '.row .n.d-cc', '.row .n.d-sec', '.row .n.d-tech', '.row .n.d-bill', '.prog-t small', '.prog-t b', '.tile-btn small', '.map-t small', '.map-t small.late', '.map-stop .task-tag', '.sub-back .link', '.pl-point', '.pl-hint',
+      '.pl-fb', '.pl-n', '.pl-card', '.pl-card.aws', '.top-pct',
       '.week-count span', '.plan-line label', '.checklist .task-tag', '.final-week small', '.ext', '.pref > span', '.mock-head small', '.mock-clock', '.mock-grid button', '.mock-key span',
       '.opt.picked', '.flagbtn[aria-pressed=true]', '.tell', '.ready b', '.hits .term', '.hits .term small', '.also summary', '.also small', '.sure .muted', '.choose', '.guess .muted',
-      '.pill-late', '.pill-done', '.speak', '.mock-item .why', '.chipbtn[aria-pressed=true]'];
+      '.pill-done', '.speak', '.mock-item .why', '.chipbtn[aria-pressed=true]'];
     for (const theme of ['light', 'dark']) {
       const q = await fresh();
       for (const setup of screens) {
@@ -575,26 +596,30 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('#nextUpBtn');
     ok(await text(p, '.lesson-t') === 'Global infrastructure' && await p.getAttribute('[data-act=stage][aria-current=step]', 'data-i') === '2', 'did not continue at Try');
   });
-  await check('This week lists lessons due in 7 days, done ticked, late marked (U1.3)', async () => {
+  await check('the path shows each lesson with its due date, done ticked, late marked, up next, in progress (U1.3, U19.2)', async () => {
     const q = await at('2026-11-02');
-    await q.evaluate(() => { localStorage.setItem('awsCourse1', JSON.stringify({v:2, done:{l1:true, l3:true}})); });
+    await q.evaluate(() => { localStorage.setItem('awsCourse1', JSON.stringify({v:2, done:{l1:true, l3:true}, stage:{l4:2}})); });
     await q.reload();
-    const rows = await q.$$eval('.week li', ls => ls.map(l => l.className + ':' + l.querySelector('b').textContent));
-    ok(JSON.stringify(rows) === JSON.stringify(['behind:1 lesson behind', 'done:Global infrastructure', ':Well-Architected, CAF and migration', ':The shared responsibility model', ':IAM: who can do what']), 'week: ' + JSON.stringify(rows));
-    ok((await text(q, '.week li.behind')).includes('Catch up: start with Service and deployment models'), 'late line does not say where to start');
-    await q.click('.week li.behind button');
-    ok(await text(q, '.lesson-t') === 'Service and deployment models', 'catch up did not open the late lesson');
+    await q.click('#nav [data-tab=learn]');
+    const stop = id => text(q, `.map-stop:has([data-act=play][data-id=${id}]) .map-t`);
+    ok((await stop('l1')).includes('done') && await q.$eval('[data-act=play][data-id=l1]', b => b.textContent) === '✓', 'done lesson: ' + await stop('l1'));
+    ok((await stop('l2')).includes('was due') && await q.$('.map-stop:has([data-id=l2]) small.late') && (await stop('l2')).includes('Up next'), 'late lesson: ' + await stop('l2'));
+    ok((await stop('l4')).includes('In progress: Try') && (await stop('l5')).includes('due Fri, Nov 6'), 'in progress or due date: ' + await stop('l4'));
+    await q.click('[data-act=play][data-id=l2]');
+    ok(await q.evaluate(() => playerUi.id === 'l2') && await q.$('.player'), 'the stop did not play the lesson');
     await q.context().close();
   });
   await check('progress bar per exam domain; study days counted per week, never a streak; welcome back after a gap (U1.4, U1.5, U15.4)', async () => {
     const q = await at('2026-11-11');   // a Wednesday
     await q.evaluate(() => { localStorage.setItem('awsCourse1', JSON.stringify({v:2, done:{l1:true, l5:true, l6:true}, days:{'2026-11-08':true, '2026-11-09':true, '2026-11-10':true}})); });
     await q.reload();
-    const doms = await q.$$eval('.dom', ds => ds.map(d => d.innerText.replace(/\s+/g, ' ')));
-    ok(doms[0].includes('24 % of the exam') && doms[0].includes('1/4 lessons') && doms[1].includes('2/4 lessons'), 'domains: ' + doms);
+    await q.click('#nav [data-tab=learn]');
+    const doms = await q.$$eval('.map-sec .group-h', ds => ds.map(d => d.innerText.replace(/\s+/g, ' ')));
+    ok(doms[0].includes('24 % of the exam') && doms[0].includes('1/4 done') && doms[1].includes('2/4 done'), 'domains: ' + doms);
+    await q.click('#nav [data-tab=today]');
     ok(await text(q, '.week-count') === 'Studied 2 days this week', 'week count (Sunday is last week): ' + await text(q, '.hello'));
     ok(await q.$$eval('.wkdots i.on', d => d.length) === 2 && !(await q.$('.streak')) && !/streak/i.test(await text(q, '#main')), 'dots, or a streak still shows');
-    await q.click('#nextUpBtn'); await q.click('[data-act=guessSkip]').catch(() => {}); await q.click('[data-act=step][data-i="0"]');
+    await q.evaluate(() => { S.tab = 'learn'; S.openLesson = 'l2'; S.guess.l2 = -1; render(); }); await q.click('[data-act=step][data-i="0"]');
     await q.click('#nav [data-tab=today]');
     ok(await text(q, '.week-count') === 'Studied 3 days this week', 'after a tick today: ' + await text(q, '.hello'));
     await q.evaluate(() => { S.days = {'2026-11-01':true}; render(); });
@@ -616,7 +641,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.reload();
     ok(await p.$('.opt') && await text(p, '.lesson-t') === 'Service and deployment models', 'stage not kept after reload');
     await p.click('[data-act=closeLesson]');
-    ok((await text(p, '[data-act=openLesson][data-id=l2]')).includes('In progress: Check'), 'list does not show the stage');
+    ok((await text(p, '.map-stop:has([data-act=play][data-id=l2]) .map-t')).includes('In progress: Check'), 'the path does not show the stage');
   });
   await check('each Do this task sits on its stage and keeps the same tick data (U2.3)', async () => {
     await seed(p, {v:2, tab:'learn', openLesson:'l4', steps:{l4:[true, false, true]}});
@@ -633,7 +658,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('[data-act=breakTimer]');
     ok(await p.evaluate(() => S.timer.len === 5 && S.timer.end > Date.now()) && await p.evaluate(() => document.querySelector('#timerBtn').classList.contains('running')), 'break timer not running');
     await p.click('[data-act=goLab]');
-    ok(await p.getAttribute('#nav [data-tab=labs]', 'aria-selected') === 'true' && (await text(p, '.card.open')).includes('S3: bucket'), 'lab not opened');
+    ok(await p.evaluate(() => S.tab === 'labs') && (await text(p, '.card.open')).includes('S3: bucket'), 'lab not opened');
   });
   await check('no stage of any lesson is taller than 1.4 screens on a phone, in every mode (U2.5, U10.5)', async () => {
     // Its own page: timer idle, at 390 x 844. Cards are measured flipped on their longest back, games after an answer.
@@ -705,18 +730,18 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await p.getAttribute('[aria-current=step]', 'data-i') === '2', 'a lab link sent the lesson back to Read');
   });
   await check('look up: word starts, highlighted, opens the place, keeps focus (U6)', async () => {
-    await seed(p);
-    await p.evaluate(() => { document.querySelector('#nextUpBtn').dataset.probe = 'same'; });
+    await seed(p, {v:2, tab:'more'});
+    await p.evaluate(() => { document.querySelector('[data-act=togglePlan]').dataset.probe = 'same'; });
     await p.click('#lookup');
     await p.keyboard.type('nat');
     ok(await p.evaluate(() => document.activeElement.id === 'lookup'), 'typing lost focus');
-    ok(await p.evaluate(() => document.querySelector('#nextUpBtn').dataset.probe === 'same'), 'typing redrew the page');
+    ok(await p.evaluate(() => document.querySelector('[data-act=togglePlan]').dataset.probe === 'same'), 'typing redrew the page');
     const hits = await p.$$eval('.hits li', ls => ls.map(l => l.innerText));
     ok(hits.length >= 1 && hits[0].includes('Networking and content delivery') && hits.every(h => !/designated|Terminate/.test(h)), 'hits: ' + hits);
     ok(await text(p, '.hits mark') === 'NAT', 'match not highlighted');
     await p.click('.hits [data-act=goLesson]');
     ok(await text(p, '.lesson-t') === 'Networking and content delivery' && await p.getAttribute('[aria-current=step]', 'data-i') === '0', 'did not open the lesson at Read');
-    await p.click('#nav [data-tab=today]'); await p.fill('#lookup', 'xyzzy');
+    await p.click('#nav [data-tab=more]'); await p.fill('#lookup', 'xyzzy');
     ok((await text(p, '#lookupResults')).startsWith('Nothing found'), 'no empty message');
     await p.fill('#lookup', 'cross-site');
     await p.click('.hits [data-act=goQuestion]');
@@ -776,19 +801,22 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   const left = q => q.url() === 'about:blank';
   await check("Back closes what is on screen, returns to Today, and only then leaves the app", async () => {
     const q = await backPage({v:2});
-    await q.click('#nextUpBtn');                                   // lesson 1, opened from Today
+    await q.click('#nextUpBtn');                                   // lesson 1 plays, opened from Home
+    ok(await q.evaluate(() => playerUi.id === 'l1'), 'Next up did not play lesson 1');
     await back(q);
-    ok(!left(q) && await q.evaluate(() => S.tab === 'today' && !S.openLesson), 'Back from a lesson opened on Today did not return to Today');
+    ok(!left(q) && await q.evaluate(() => S.tab === 'today' && !S.openLesson && !playerUi.id), 'Back from a lesson opened on Home did not return to Home');
     await q.click('#nav [data-tab=learn]'); await q.click('[data-act=openLesson][data-id=l2]');
     await back(q);
     ok(!left(q) && await q.evaluate(() => S.tab === 'learn' && !S.openLesson), 'Back from a lesson did not return to the list');
     await back(q);
     ok(!left(q) && await q.evaluate(() => S.tab === 'today'), 'Back from Learn did not go to Today');
-    await q.click('[data-act=toggleFacts]');
+    await q.click('#nav [data-tab=more]'); await q.click('[data-act=toggleFacts]');
     await back(q);
-    ok(!left(q) && await q.evaluate(() => !S.open), 'Back did not fold the exam facts card first');
+    ok(!left(q) && await q.evaluate(() => S.tab === 'more' && !S.open), 'Back did not fold the exam facts card first');
     await back(q);
-    ok(left(q), 'Back on Today with nothing open did not leave the app');
+    ok(!left(q) && await q.evaluate(() => S.tab === 'today'), 'Back from More did not go to Home');
+    await back(q);
+    ok(left(q), 'Back on Home with nothing open did not leave the app');
     await q.context().close();
   });
   await check('Back: a double tap on All lessons stays in the app; a hidden review and a lesson stay separate', async () => {
@@ -828,14 +856,14 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await seed(p, {v:2, tab:'learn'});
     const col = await p.evaluate(() => { const v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return {sec:v('--sec'), secbg:v('--sec-bg'), bill:v('--bill')}; });
     const rgb = hex => { const n = parseInt(hex.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`; };
-    ok(await p.evaluate(() => getComputedStyle(document.querySelector('[data-id=l5] .n')).color) === rgb(col.sec), 'list number not in its domain colour');
+    ok(await p.evaluate(() => getComputedStyle(document.querySelector('.map-node[data-id=l5]')).color) === rgb(col.sec), 'path stop not in its domain colour');
     await p.click('[data-act=openLesson][data-id=l5]');
     await p.click('[data-act=mode][data-v=points]');
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lesson-band')).backgroundColor) === rgb(col.secbg), 'lesson band not in its domain colour');
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lesson .pts b')).color) === rgb(col.sec), 'key terms not in the domain colour');
-    await p.click('#nav [data-tab=today]');
-    ok(await p.evaluate(() => getComputedStyle(document.querySelectorAll('.dom .bar i')[3]).backgroundColor) === rgb(col.bill), 'Today bar not in its domain colour');
-    await p.evaluate(() => { S.tab = 'practice'; pCur = 'q44'; render(); });
+    await p.evaluate(() => { S.tab = 'learn'; S.openLesson = null; render(); });
+    ok(await p.evaluate(() => getComputedStyle(document.querySelector('.map-node[data-id=l14]')).color) === rgb(col.bill), 'billing stop not in its domain colour');
+    await p.evaluate(() => { S.tab = 'practice'; pSub = 'bank'; pCur = 'q44'; render(); });
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('.coloured-top')).borderTopColor) === rgb(col.bill), 'practice card not in its domain colour');
   });
   await check('each lesson stage has its own icon, the current one stands out (U9.2)', async () => {
@@ -1274,7 +1302,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     });
     ok(!bad.length, bad.join(', '));
     await seed(p, {v:2, tab:'labs', openLab:'lab3'});
-    const before = await p.evaluate(() => { save(); const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; return JSON.stringify(s); });
+    const before = await p.evaluate(() => { save(); const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; delete s.sims; return JSON.stringify(s); });
     ok(await p.$eval('[data-act=labMode][aria-pressed=true]', b => b.dataset.v) === 'sim' && await p.$('.cs .cs-top') && (await text(p, '.cs-brand')) === 'Practice console', 'a new lab does not open on the practice console');
     ok((await text(p, '.cs-crumbs')).includes('Amazon S3') && (await text(p, '.cs-title')) === 'Create bucket' && (await text(p, '.cs-panel-h')).includes('General configuration'), 'not laid out like the Create bucket page');
     await p.click('[data-act=labNav]');
@@ -1316,8 +1344,8 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok((await text(p, '.cs-flash.ok')).includes('Successfully deleted bucket') && (await text(p, '.cs-empty')).includes('No buckets'), 'bucket not deleted');
     await p.click('[data-act=labNext]');
     ok((await text(p, '.pcon-done')).includes('all 6 steps'), 'no end of the practice run');
-    const after = await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; return JSON.stringify(s); });
-    ok(after === before, 'practising changed saved progress');
+    const after = await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('awsCourse1')); delete s.days; const done = s.sims.lab3 === true; delete s.sims; return done && JSON.stringify(s); });
+    ok(after === before, 'practising changed saved progress other than marking the lab done');
     await p.click('[data-act=labMode][data-v=real]');
     ok(await p.$('.lab-steps') && (await text(p, '.lab-meta')).includes('Cost: less than a cent'), 'Do it in the real console did not show the real steps');
   });
@@ -1387,7 +1415,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const qid = await p.evaluate(() => QUESTIONS.find(q => Array.isArray(q.a)).id);
     const a = await answerOf(p, qid);
     await seed(p, {v:2, tab:'practice', pMode:'all'});
-    await p.evaluate(id => { pCur = id; render(); }, qid);
+    await p.evaluate(id => { pSub = 'bank'; pCur = id; render(); }, qid);
     ok((await text(p, '.choose')).startsWith('Choose 2. 0 chosen') && await p.isDisabled('[data-act=pickCheck]'), 'no Choose 2 line, or Check enabled with none chosen');
     const wrong = [0, 1, 2, 3, 4].find(i => !a.includes(i));
     await p.click(`[data-act=pickM][data-i="${a[0]}"]`); await p.click(`[data-act=pickM][data-i="${wrong}"]`);
@@ -1403,7 +1431,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
   await check('"How sure were you?": a right guess comes back tomorrow without counting as a miss (U15.3)', async () => {
     await seed(p, {v:2, tab:'practice', pMode:'all'});
-    await p.evaluate(() => { pCur = 'q1'; render(); });
+    await p.evaluate(() => { pSub = 'bank'; pCur = 'q1'; render(); });
     await p.click(`[data-act=pick][data-q=q1][data-i="${await answerOf(p, 'q1')}"]`);
     ok((await text(p, '.sure')).includes('How sure were you?'), 'no sure / guessed choice');
     ok((await saved(p)).srs.q1.due > await p.evaluate(() => addDays(todayISO(), 1)), 'a right answer is not scheduled later');
@@ -1417,7 +1445,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
   });
   await check('mock exam: the exam size and weights, unseen first, flag, review list, blank warning, results only at the end (U16.1, U16.2)', async () => {
     await seed(p, {v:2, tab:'practice', ans:{q1:{n:1, wrong:0, pick:0, ok:true, at:Date.now()}}});
-    await p.click('[data-act=mStart][data-v=full]');
+    await p.click('[data-act=pSub][data-v=mock]'); await p.click('[data-act=mStart][data-v=full]');
     const m = await p.evaluate(() => ({n:S.mock.ids.length, mins:S.mock.mins, dom:Object.fromEntries(Object.keys(DOMAINS).map(d => [d, S.mock.ids.filter(id => LESSONS.find(l => l.id === QUESTIONS.find(q => q.id === id).l).d === d).length])), q1:S.mock.ids.includes('q1')}));
     ok(m.n === 65 && m.mins === 90 && JSON.stringify(m.dom) === JSON.stringify({cc:16, sec:19, tech:22, bill:8}) && !m.q1, 'mock: ' + JSON.stringify(m));
     ok((await text(p, '.mock-clock')).includes('left') && (await text(p, '#mockPace')) === 'on track' && !(await p.$('.fb')), 'clock, pace, or feedback shown during the mock');
@@ -1446,11 +1474,11 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const flagged = await p.evaluate(() => { const R = Object.values(S.mocks)[0]; return Object.keys(R.flags)[0]; });
     ok(sv.ans[flagged].sure === false, 'a flagged answer was not counted as unsure');
     await p.click('[data-act=mClose]');
-    ok((await text(p, '.mock-past, #main')).includes('Past results'), 'past results not listed');
+    ok((await text(p, '#main')).includes('Past results'), 'past results not listed');
   });
   await check('mock exam: at zero it says Time is up and waits for a tap; mini mocks and extra time (U16.3, U18.4)', async () => {
     await seed(p, {v:2, tab:'practice'});
-    await p.click('[data-act=mStart][data-v=sec]');
+    await p.click('[data-act=pSub][data-v=mock]'); await p.click('[data-act=mStart][data-v=sec]');
     ok(await p.evaluate(() => S.mock.ids.length === 12 && S.mock.mins === 17 && S.mock.kind === 'sec'), 'mini mock size or time');
     await p.evaluate(() => { S.mock.start = Date.now() - S.mock.mins * 60000 + 1200; save(); render(); });
     await p.waitForTimeout(2600);
@@ -1460,13 +1488,14 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await p.click('[data-act=mSubmit]');
     ok((await text(p, '.mock')).includes('Security & Compliance mini mock: 0 of 12'), 'results after time up: ' + (await text(p, '.mock')).slice(0, 100));
     await seed(p, {v:2, tab:'practice', prefs:{text:'m', motion:'system', calm:false, speak:true, extra:true}});
+    await p.click('[data-act=pSub][data-v=mock]');
     ok((await text(p, '#main')).includes('65 questions, 120 minutes'), 'extra time not on the mock card');
     await p.click('[data-act=mStart][data-v=full]');
     ok(await p.evaluate(() => S.mock.mins === 120), 'extra time not used');
   });
   await check('drills: lookalikes mixed across groups with how to tell them apart; key words; a score at the end (U16.4, U16.5)', async () => {
     await seed(p, {v:2, tab:'practice'});
-    await p.click('[data-act=dStart][data-v=look]:not([data-id])');
+    await p.click('[data-act=pSub][data-v=drills]'); await p.click('[data-act=dStart][data-v=look]:not([data-id])');
     const groups = await p.evaluate(() => drillUi.set.map(x => x.g));
     ok(groups.length === 10 && groups.every((g, i) => !i || g !== groups[i - 1]), 'not mixed: ' + groups);
     for (let i = 0; i < 10; i++) {
@@ -1505,7 +1534,9 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const q = await at('2026-11-23');
     await q.evaluate(() => localStorage.setItem('awsCourse1', JSON.stringify({v:2, check:{acc:true}, plan:'after dinner'})));
     await q.reload();
-    ok((await text(q, '[data-act=togglePlan]')).includes('Next: Add ESL +30') && await q.inputValue('#plan') === 'after dinner', 'summary or plan line: ' + await text(q, '[data-act=togglePlan]'));
+    ok(await q.inputValue('#plan') === 'after dinner', 'plan line on Home');
+    await q.click('#nav [data-tab=more]');
+    ok((await text(q, '[data-act=togglePlan]')).includes('Next: Add ESL +30'), 'summary: ' + await text(q, '[data-act=togglePlan]'));
     await q.click('[data-act=togglePlan]');
     const tags = await q.$$eval('.checklist .task-tag', t => t.map(x => x.textContent));
     ok(tags.length === 8 && tags[4].includes('26') && tags[5].includes('28') && tags[7].includes('30'), 'dates: ' + tags);
@@ -1517,18 +1548,18 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     await q.evaluate(() => { window.__TAURI_INTERNALS__ = {}; navigator.clipboard.writeText = t => { window.__copied = t; return Promise.resolve(); }; });
     await q.click('a[data-ext]');
     ok(await q.evaluate(() => window.__copied && window.__copied.startsWith('https://')) && (await text(q, '.toast')).includes('Link copied'), 'Windows app: link not copied');
-    await q.fill('#plan', 'at 7 pm, at my desk');
+    await q.click('#nav [data-tab=today]'); await q.fill('#plan', 'at 7 pm, at my desk');
     ok((await q.evaluate(() => JSON.parse(localStorage.getItem('awsCourse1')).plan)) === 'at 7 pm, at my desk', 'plan line not saved');
     await q.context().close();
   });
   await check('Settings: text size, less motion, calm view, read aloud, extra time; saved, and bad values cleaned (U18.1-U18.3)', async () => {
-    await seed(p, {v:2, tab:'today'});
+    await seed(p, {v:2, tab:'more'});
     await p.click('[data-act=togglePrefs]');
     await p.click('[data-act=pref][data-v=text][data-i=xl]');
     await p.click('[data-act=pref][data-v=motion][data-i=reduce]');
     ok(await p.evaluate(() => document.documentElement.dataset.text === 'xl' && getComputedStyle(document.body).zoom === '1.25' && document.documentElement.dataset.motion === 'reduce' && reduceMotion()), 'text size or motion not applied');
     await p.click('[data-act=pref][data-v=speak][data-i="0"]');
-    await p.evaluate(() => { S.tab = 'practice'; pCur = 'q1'; render(); });
+    await p.evaluate(() => { S.tab = 'practice'; pSub = 'bank'; pCur = 'q1'; render(); });
     ok(!(await p.$('[data-act=speak]')), 'read aloud still shown when off');
     await p.reload();
     ok(await p.evaluate(() => S.prefs.text === 'xl' && S.prefs.speak === false), 'settings not saved');
@@ -1538,13 +1569,13 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     const sv = await p.evaluate(() => ({prefs:S.prefs, guess:S.guess, mock:S.mock, mocks:S.mocks, check:S.check}));
     ok(JSON.stringify(sv.prefs) === JSON.stringify({text:'m', motion:'system', calm:false, speak:true, extra:false}) && JSON.stringify(sv.guess) === '{"l2":-1}' && sv.mock === null
       && JSON.stringify(Object.keys(sv.mocks)) === '["m4"]' && JSON.stringify(sv.check) === '{}', 'not cleaned: ' + JSON.stringify(sv));
-    await p.evaluate(() => { S.tab = 'practice'; render(); });
+    await p.evaluate(() => { S.tab = 'practice'; pSub = 'mock'; render(); });
     await p.click('[data-act=mShow]');
     ok((await text(p, '.mock')).includes('Concepts mini mock: 1 of 2') && !(await p.$('#inj, #inj2')), 'a cleaned result does not show, or markup got in');
   });
   await check('read aloud uses the browser voice; a second tap stops it (U18.2)', async () => {
     await seed(p, {v:2, tab:'practice'});
-    await p.evaluate(() => { window.__said = []; speechSynthesis.speak = u => { window.__said.push(u.text); }; pCur = 'q1'; render(); });
+    await p.evaluate(() => { window.__said = []; speechSynthesis.speak = u => { window.__said.push(u.text); }; pSub = 'bank'; pCur = 'q1'; render(); });
     await p.click('.qt-row [data-act=speak]');
     ok(await p.evaluate(() => window.__said[0] === plain(QUESTIONS[0].q)), 'did not speak the question');
   });
@@ -1553,7 +1584,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await p.$('.guess') && !(await p.$('[data-act=mode]')), 'guess first not alone');
     const a = await p.evaluate(() => GUESS.l2.a);
     await p.click(`[data-act=guess][data-i="${(a + 1) % 4}"]`);
-    ok((await text(p, '.guess .fb')).startsWith(`It is ${'ABCD'[a]}`), 'answer not shown straight away');
+    ok((await text(p, '.guess .fb')).startsWith(`Good try. It is ${'ABCD'[a]}`), 'answer not shown straight away');
     ok((await saved(p)).guess.l2 === (a + 1) % 4, 'guess not saved');
     await p.click('[data-act=guessDone]');
     ok(!(await p.$('.guess')) && await p.$('[data-act=mode]'), 'lesson not shown after Got it');
@@ -1564,7 +1595,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(!(await p.$('.guess')), 'guess shown for a started lesson');
   });
   await check('look up finds services from the glossary; each lesson lists its "Also on the exam" (U15.5)', async () => {
-    await seed(p, {v:2, tab:'today'});
+    await seed(p, {v:2, tab:'more'});
     await p.fill('#lookup', 'cloudhsm');
     ok((await text(p, '#lookupResults .term')).includes('CloudHSM') && await p.$('#lookupResults .term mark'), 'glossary term not found');
     await p.click('#lookupResults .term [data-act=goLesson]');
@@ -1593,6 +1624,162 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await text(p, '#nextUpBtn') === 'Start a mock', 'next up: ' + await text(p, '.nextup'));
     await p.click('#nextUpBtn');
     ok(await p.evaluate(() => S.tab === 'practice' && S.mock && S.mock.kind === 'full'), 'did not start a mock');
+  });
+
+  // ---------- 1.4.0: a simpler layout, lessons step by step, labs in the app (docs/UX.md U19-U21) ----------
+  await check('Home: one next step, at most two extras, and progress that opens the right place (U19.1)', async () => {
+    const ans = await p.evaluate(() => { const a = {}; QUESTIONS.slice(0, 12).forEach(q => a[q.id] = {n:1, wrong:0, pick:0, ok:true, at:Date.now()}); a.q2 = {n:1, wrong:1, pick:0, ok:false, at:Date.now() - 2 * 864e5}; return a; });
+    await seed(p, {v:2, ans, srs:{q2:{box:0, due:'2026-01-01'}}});
+    ok(await p.$$eval('#main .nextup', n => n.length) === 1 && await p.$$eval('#main .card', c => c.length) <= 3, 'more than the next step, extras and progress on Home');
+    ok(await p.$$eval('#main .hits li', l => l.length) <= 2, 'more than two extras');
+    ok(!(await p.$('#lookup')) && !(await p.$('[data-act=togglePlan]')) && !(await p.$('[data-act=togglePrefs]')), 'look up, plan or settings still on Home');
+    await p.click('[data-act=goLearn]'); ok(await p.evaluate(() => S.tab === 'learn') && await p.$('.map'), 'lessons box did not open Learn');
+    await p.click('#nav [data-tab=today]'); await p.click('[data-act=goReady]');
+    ok(await p.evaluate(() => S.tab === 'practice' && S.open === 'weak'), 'readiness box did not open readiness');
+    await p.click('#nav [data-tab=today]'); await p.click('[data-act=goPlan]');
+    ok(await p.evaluate(() => S.tab === 'more' && S.open === 'plan') && await p.$('.checklist'), 'days box did not open the exam plan');
+    ok((await text(p, '#nav')).includes('Home') && (await text(p, '#nav')).includes('More') && !(await p.$('#nav [data-tab=labs]')), 'tabs are not Home, Learn, Practice, More');
+  });
+  await check('Practice: four tiles, each opens one thing and comes back; More holds the rest (U19.3, U19.4)', async () => {
+    await seed(p, {v:2, tab:'practice'});
+    ok(await p.$$eval('.tile-btn', t => t.length) === 4 && await p.isDisabled('.tile-btn[data-act=rvStart]'), 'not four tiles, or Review enabled with nothing due');
+    for (const [v, sel] of [['mock', '[data-act=mStart][data-v=full]'], ['drills', '[data-act=dStart]'], ['bank', '[data-act=pFilter]']]) {
+      await p.click(`[data-act=pSub][data-v=${v}]`);
+      ok(await p.$(sel) && !(await p.$('.tile-btn')), v + ' did not open on its own');
+      await p.click('.sub-back .link');
+      ok(await p.$$eval('.tile-btn', t => t.length) === 4, v + ': ‹ Practice did not come back');
+    }
+    await p.click('[data-act=pSub][data-v=bank]'); await p.click('#nav [data-tab=practice]');
+    ok(await p.$('.tile-btn'), 'tapping Practice again did not return to the tiles');
+    await p.click('#nav [data-tab=more]');
+    const more = await text(p, '#main');
+    ok(['Look something up', 'Exam plan', 'Hands-on labs', 'Exam facts', 'Settings'].every(t => more.includes(t)), 'More is missing something: ' + more.slice(0, 200));
+    await p.click('[data-act=goLabs]');
+    ok(await p.evaluate(() => S.tab === 'labs') && (await text(p, '.sub-back')).includes('More'), 'labs page not reachable from More');
+    await p.click('[data-act=labsBack]'); ok(await p.evaluate(() => S.tab === 'more'), 'back from labs did not return to More');
+  });
+  await check('step by step: each key point has its screen and every question comes right after its point (U20.1)', async () => {
+    const bad = await p.evaluate(() => {
+      const out = [];
+      for (const l of LESSONS) {
+        qsFor(l.id).forEach(q => { if (!Number.isInteger(q.p) || q.p < 0 || q.p >= l.pts.length) out.push(q.id + ' has no key point'); });
+        const list = playerScreens(l), at = k => list.findIndex(s => s.k === 'point' && s.i === k);
+        if (list.filter(s => s.k === 'point').length !== l.pts.length) out.push(l.id + ' not one screen per point');
+        qsFor(l.id).forEach(q => { const qi = list.findIndex(s => s.k === 'q' && s.q.id === q.id); if (qi < at(q.p) || list.slice(at(q.p) + 1, qi).some(s => s.k === 'point')) out.push(`${l.id} ${q.id} is not right after point ${q.p + 1}`); });
+        if (list[0].k !== 'hook' || list[list.length - 1].k !== 'done') out.push(l.id + ' order');
+        if (SCENES[l.id] && list.findIndex(s => s.k === 'match') < at(l.pts.length - 1)) out.push(l.id + ' matching comes before the ideas');
+      }
+      return out;
+    });
+    ok(!bad.length, bad.join('; '));
+  });
+  await check('step by step: Check after a pick, Hint shows the key idea, a miss offers it again, I don\'t know yet shows the answer; nothing moves by itself (U20.2, U20.3)', async () => {
+    await seed(p, {v:2, tab:'learn'});
+    await p.click('[data-act=play][data-id=l1]');
+    ok(await p.evaluate(() => document.body.classList.contains('playing')) && !(await p.isVisible('#top')), 'the player does not get the screen');
+    await p.click('#plNext');   // hook -> guess first
+    ok(await p.isDisabled('#plNext'), 'Check enabled before a pick');
+    await p.click('[data-act=plDunno]');
+    ok((await text(p, '.pl-fb')).startsWith('Here\'s the answer:') && await p.$('.pl-foot.sheet.info'), 'I don\'t know yet: ' + await text(p, '.pl-fb'));
+    ok((await saved(p)).guess.l1 === -1, 'guess not saved');
+    await p.waitForTimeout(600);
+    ok(await p.evaluate(() => plScreen().k === 'guess'), 'moved on by itself');
+    await p.click('#plNext');
+    ok((await text(p, '.pl-screen .task-tag')).startsWith('Key idea 1 of'), 'first point screen');
+    while (await p.evaluate(() => plScreen().k !== 'q')) await p.click('#plNext');
+    const q = await p.evaluate(() => { const s = plScreen(); return {id:s.q.id, a:s.q.a, pt:plain(plLesson().pts[s.q.p])}; });
+    await p.click('[data-act=plHint]');
+    ok((await text(p, '.pl-hint')).includes(q.pt.slice(0, 30)), 'Hint is not the question\'s key idea');
+    await p.evaluate(() => { playerUi.hint = false; render(); });
+    await p.click(`[data-act=plPick][data-i="${(q.a + 1) % 4}"]`); await p.click('[data-act=plCheck]');
+    ok((await text(p, '.pl-fb')).startsWith('Not quite.') && await p.$('.pl-foot [data-act=plHint]'), 'a miss does not offer the idea again');
+    await p.click('.pl-foot [data-act=plHint]');
+    ok(await p.$('.pl-hint') && await p.$('.pl-foot.sheet'), 'Show me the idea again');
+    ok((await saved(p)).ans[q.id].ok === false, 'the answer was not recorded');
+    await p.click('[data-act=plClose]');
+    ok(await p.evaluate(() => !playerUi.id && S.tab === 'learn') && await p.$('.map'), 'closing did not return to the path');
+  });
+  await check('step by step: matching locks right pairs, shakes wrong ones; hands-on screens unlock Continue once tried; finishing marks the lesson done (U20.4, U20.5)', async () => {
+    await seed(p, {v:2, tab:'learn'});
+    await p.click('[data-act=play][data-id=l1]');
+    await p.evaluate(() => { playerUi.i = playerUi.list.findIndex(s => s.k === 'match'); render(); });
+    ok(await p.isDisabled('#plNext') && await p.$('[data-act=plNext][data-v=skip]'), 'matching not gated, or no Skip');
+    await p.click('[data-act=plMatch][data-v=l][data-i="0"]'); await p.click('[data-act=plMatch][data-v=r][data-i="1"]');
+    ok(await p.$('.pl-card.miss') && !(await p.$('.pl-card.ok')), 'a wrong pair was accepted');
+    const n = await p.evaluate(() => plMatchItems().length);
+    for (let i = 0; i < n; i++) { await p.click(`[data-act=plMatch][data-v=l][data-i="${i}"]`); await p.click(`[data-act=plMatch][data-v=r][data-i="${i}"]`); }
+    ok(!(await p.isDisabled('#plNext')) && await p.$$eval('.pl-match > div:first-child .pl-card.ok', c => c.length) === n, 'all matched but Continue still off');
+    await p.click('#plNext');
+    ok(await p.evaluate(() => plScreen().k === 'flow'), 'matching did not lead on to How it works');
+    await p.evaluate(() => { playerUi.i = playerUi.list.findIndex(s => s.k === 'widget'); playerUi.w = null; render(); });
+    ok(await p.isDisabled('#plNext'), 'the slider screen is not gated');
+    for (const v of ['12', '3']) await p.fill('#plDemand', v);
+    ok(!(await p.isDisabled('#plNext')) && (await text(p, '#plDemandOut')).includes('elasticity'), 'the slider did not unlock Continue or explain');
+    await p.evaluate(() => { playerUi.i = playerUi.list.length - 1; render(); });
+    await p.click('[data-act=plFinish]');
+    ok((await saved(p)).done.l1 === true && await p.evaluate(() => !playerUi.id) && await p.$eval('[data-act=play][data-id=l1]', b => b.textContent) === '✓', 'finishing did not mark the lesson done on the path');
+    await seed(p, {v:2, tab:'learn'});
+    await p.click('[data-act=play][data-id=l5]');
+    await p.evaluate(() => { playerUi.i = playerUi.list.findIndex(s => s.k === 'widget'); render(); });
+    while (await p.$('[data-act=plSort][data-v=you]')) await p.click('[data-act=plSort][data-v=you]');
+    ok(!(await p.isDisabled('#plNext')) && await p.$$eval('.pl-bin li.no small', l => l.length) === 4, 'sorting: wrong ones not explained, or Continue still off');
+    await seed(p, {v:2});
+    await p.click('#nextUpBtn'); await p.click('[data-act=plClose]');
+    ok(await p.evaluate(() => S.tab === 'today'), 'a lesson opened on Home did not return to Home');
+  });
+  await check('labs in the app: a stop on the path plays the practice console full screen; finishing ticks it; the real console is optional (U21.1-U21.3)', async () => {
+    await seed(p, {v:2, tab:'learn'});
+    const stops = await p.$$eval('.map-stop.lab [data-act=labPlay]', b => b.map(x => x.dataset.id));
+    ok(stops.length === await p.evaluate(() => LABS.length), 'not every lab on the path: ' + stops);
+    ok(await p.evaluate(() => LABS.every(lab => { const node = document.querySelector(`.map-stop.lab [data-id=${lab.id}]`).closest('li'), prev = [...node.parentElement.children].slice(0, [...node.parentElement.children].indexOf(node)).reverse().find(li => li.querySelector('[data-act=play]'));
+      return prev && prev.querySelector('[data-act=play]').dataset.id === lab.lessons[0]; })), 'a lab is not right after its main lesson');
+    await p.click('[data-act=labPlay][data-id=lab3]');
+    ok(await p.$('.lab-play .cs') && await p.$('.lab-play .coach') && await p.evaluate(() => document.body.classList.contains('playing')), 'the lab does not open full screen in the app');
+    await p.evaluate(() => { labState('lab3').step = LAB_SIMS.lab3.steps.length - 1; render(); const b = document.createElement('button'); b.dataset.act = 'labNext'; b.dataset.id = 'lab3'; document.querySelector('#main').append(b); b.click(); });
+    ok((await text(p, '.lab-play')).includes('Lab done') && (await saved(p)).sims.lab3 === true, 'finishing did not save the lab as done');
+    ok(await p.$('[data-act=labReal]'), 'no optional real console link');
+    await p.click('.lab-play [data-act=labClose]');
+    ok(await p.evaluate(() => !labPlay && S.tab === 'learn') && await p.$eval('[data-act=labPlay][data-id=lab3]', b => b.textContent) === '✓', 'the stop is not ticked');
+    await p.click('[data-act=play][data-id=l10]');
+    await p.evaluate(() => { playerUi.i = playerUi.list.findIndex(s => s.k === 'lab'); render(); });
+    ok((await text(p, '.pl-screen')).includes('Try it hands-on') && (await text(p, '.pl-screen')).includes('You have done this lab'), 'the lesson does not offer its lab');
+    await p.click('.pl-screen [data-act=labPlay]');
+    ok(await p.evaluate(() => labState('lab3').step === 0), 'a finished lab did not start again');
+    await p.click('.lab-play [data-act=labClose]');
+    ok(await p.evaluate(() => playerUi.id === 'l10' && plScreen().k === 'lab'), 'closing the lab did not return to the lesson');
+    await seed(p, {v:2, sims:{lab1:true, nope:true, lab2:'yes'}});
+    ok(await p.evaluate(() => JSON.stringify(S.sims)) === '{"lab1":true}', 'bad finished-lab data not cleaned');
+  });
+
+  await check('1.4.0 review fixes: focus never drops to the page, Back closes the screen on top, tabs reset, Continue is kept (U19.3, U20.5)', async () => {
+    await seed(p, {v:2, tab:'learn'});
+    await p.focus('[data-act=play][data-id=l1]'); await p.keyboard.press('Enter');
+    for (let i = 0; i < 20 && await p.evaluate(() => plScreen().k !== 'done'); i++) {
+      const k = await p.evaluate(() => plScreen().k);
+      if (k === 'guess') { await p.click('[data-act=plDunno]'); }
+      else if (k === 'q') { await p.click('[data-act=plPick][data-i="0"]'); await p.click('[data-act=plCheck]'); }
+      else if (await p.isDisabled('#plNext')) { await p.focus('[data-act=plNext][data-v=skip]'); await p.keyboard.press('Enter'); continue; }
+      await p.focus('#plNext'); await p.keyboard.press('Enter');
+      ok(await p.evaluate(() => document.activeElement !== document.body && !!document.activeElement.closest('.player')), `focus dropped after the ${k} screen`);
+    }
+    await p.evaluate(() => { playerUi.id = null; render(); });
+    const q = await backPage({v:2, tab:'practice'});
+    await q.click('[data-act=pSub][data-v=drills]'); await q.click('[data-act=dStart][data-v=look]:not([data-id])');
+    await back(q);
+    ok(await q.evaluate(() => !drillUi && pSub === 'drills'), 'Back from a drill did not return to the Drills card');
+    await back(q);
+    ok(await q.evaluate(() => pSub === '' && S.tab === 'practice'), 'Back from Drills did not return to the tiles');
+    await q.context().close();
+    await seed(p, {v:2, tab:'practice', ans:{q2:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}}});
+    await p.click('[data-act=rvStart]'); await p.click('#nav [data-tab=practice]');
+    ok(await p.evaluate(() => !S.review) && await p.$('.tile-btn'), 'Practice again did not close the review');
+    await p.click('#nav [data-tab=learn]'); await p.click('[data-act=labPlay][data-id=lab3]'); await p.click('#nav [data-tab=learn]');
+    ok(await p.evaluate(() => !labPlay) && await p.$('.map'), 'Learn again did not close the lab');
+    await seed(p, {v:2, done:{l1:true, l2:true}, stage:{l3:2}, current:'l3'});
+    ok(await text(p, '#nextUpBtn') === 'Continue', 'no Continue to start with');
+    await p.click('#nav [data-tab=learn]'); await p.click('[data-act=play][data-id=l1]'); await p.click('[data-act=plClose]');
+    await p.click('#nav [data-tab=today]');
+    ok(await text(p, '#nextUpBtn') === 'Continue', 'replaying lesson 1 lost Continue for lesson 3');
   });
 
   await check('the content security policy blocks injected script, from disk and from the website', async () => {

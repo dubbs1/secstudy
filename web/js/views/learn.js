@@ -16,7 +16,9 @@ const guessUi = {};    // guess-first answers to show this visit (once answered 
 
 function renderLearn(){
   const l = LESSONS.find(x => x.id === S.openLesson);
-  return l ? lessonView(l) : lessonList();
+  if (labPlay) return labPlayView();
+  if (playerUi.id) return playerView();
+  return l ? lessonView(l) : lessonMap();
 }
 
 function lessonStatus(l){
@@ -107,11 +109,10 @@ function guessHTML(l){
   const g = GUESS[l.id]; if (!g) return '';
   const p = S.guess[l.id];
   let h = `<div class="guess"><small class="task-tag">Guess first</small><p class="qt">${g.q}</p>`;
-  if (p == null) return h + `<p class="muted small">Before you read: take a guess. A wrong guess helps you remember the answer.</p>
+  if (p == null) return h + `<p class="muted small">Nobody is expected to know this yet. Go with your gut, or tap "I don't know yet" to see the answer. Either way you'll remember it better.</p>
     <div>${g.o.map(([t], i) => `<button class="opt" data-act="guess" data-id="${l.id}" data-i="${i}"><span class="k">${LETTERS[i]}</span><span>${t}</span></button>`).join('')}</div>
-    <p class="center small"><button class="link" data-act="guessSkip" data-id="${l.id}">Skip to the lesson</button></p></div>`;
-  if (p < 0) return '';
-  return h + `<div class="fb ${p === g.a ? 'ok' : 'no'}" tabindex="-1"><b>${p === g.a ? 'Good guess.' : `It is ${LETTERS[g.a]}: ${g.o[g.a][0]}.`}</b> ${g.x}</div>
+    <p class="center small"><button class="link" data-act="guess" data-id="${l.id}" data-i="-1">I don't know yet: show me</button> · <button class="link" data-act="guessSkip" data-id="${l.id}">Skip to the lesson</button></p></div>`;
+  return h + `<div class="fb ${p === g.a ? 'ok' : p < 0 ? 'info' : 'no'}" tabindex="-1"><b>${p === g.a ? 'Good guess.' : p < 0 ? `Here's the answer: ${LETTERS[g.a]}: ${g.o[g.a][0]}.` : `Good try. It is ${LETTERS[g.a]}: ${g.o[g.a][0]}.`}</b> ${g.x}</div>
     <div class="btns"><button class="btn small" data-act="guessDone" data-id="${l.id}">Got it: start the lesson</button></div></div>`;
 }
 // Also on the exam: services the guide names that fit this lesson, one line each (data in content/glossary.js).

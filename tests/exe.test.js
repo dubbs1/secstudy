@@ -47,7 +47,7 @@ async function connect(){
     await check('ticking a lesson step is saved', async () => {
       await page.evaluate(() => { localStorage.clear(); location.reload(); }).catch(() => {});
       await page.waitForSelector('#nextUpBtn');
-      await page.click('#nextUpBtn');   // opens lesson 1 at Read
+      await page.click('#nav [data-tab=learn]'); await page.click('[data-act=openLesson][data-id=l1]');   // lesson 1's overview, at Read
       const skip = await page.$('[data-act=guessSkip]'); if (skip) await skip.click();   // a new lesson asks Guess first
       await page.click('[data-act=step][data-id=l1][data-i="0"]');
       const s = await page.evaluate(() => JSON.parse(localStorage.getItem('awsCourse1')));

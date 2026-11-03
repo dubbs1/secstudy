@@ -218,3 +218,31 @@ lesson quiz. Topics come from the exam guide's task statements and in-scope serv
 - AC18.2 Read-aloud buttons (the browser's own voice) on questions and key points; a second tap stops; can be off.
 - AC18.3 Settings are saved; unknown or bad values are cleaned on load.
 - AC18.4 Mock exam time: the exam's own, or with the extra 30 minutes (ESL +30 or approved extra time).
+
+### U19. A simpler layout: four tabs, one next step
+Four tabs: **Home**, **Learn**, **Practice**, **More**. The header keeps only the name, the exam date and one bar.
+- AC19.1 Home shows the one next step, at most two small extras ("Also today, if you have time"), the "I will study
+  when" line and three progress boxes, each a door: lessons done (Learn), readiness (Practice), days to the exam (the
+  exam plan in More).
+- AC19.2 Learn is one path: a stop per lesson in exam-domain colours with its due date, late, up next, in progress or
+  done; each domain's "How this section fits together"; and each lab as an optional stop after its main lesson.
+  Tapping a stop plays the lesson step by step; "Overview" opens the full lesson (Read, See, Try, Check, Done).
+- AC19.3 Practice shows readiness, then four tiles: Review, Mock exam, Drills, All questions. Each opens on its own
+  with "‹ Practice" to come back; tapping Practice again also comes back.
+- AC19.4 More holds look up, the exam plan, hands-on labs, exam facts and settings (the theme is there).
+
+### U20. Lessons step by step: teach, then ask
+- AC20.1 One screen per key point. Each lesson question names its key point (`p`) and comes right after it; nothing is
+  asked before it is taught. The matching game comes after the ideas, as a review.
+- AC20.2 Pick, then Check; the answer and why slide up from the bottom. Continue moves on: nothing moves by itself.
+- AC20.3 Every question has a Hint that shows its key point; a miss says "Not quite" and offers "Show me the idea
+  again". Guess first has "I don't know yet", which shows the answer without a pick (also in the lesson overview).
+- AC20.4 Hands-on screens (match, slider, sort, How it works, What if) unlock Continue once tried; each can be skipped.
+- AC20.5 Finishing marks the lesson done and returns to where it was opened from: Home, or its stop on the path.
+
+### U21. Labs in the app
+- AC21.1 A lab stop plays the lab's practice console full screen, with its coach and a progress bar. Nothing is
+  created in AWS. Lessons with a lab offer it near their end; closing returns there.
+- AC21.2 Finishing a practice run ticks the stop on the path (saved in `sims`).
+- AC21.3 The real AWS console cannot be shown inside the app (AWS forbids it and it needs a login); its steps are an
+  optional link at the end of a lab.

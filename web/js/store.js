@@ -1,10 +1,10 @@
 // Saved progress: localStorage key awsCourse1. load() is the only way data gets in.
 const KEY = 'awsCourse1';
 const THEMES = ['system', 'light', 'dark'];
-const TABS = ['today', 'learn', 'practice', 'labs'];   // a Timer tab saved by an older version opens Today
+const TABS = ['today', 'learn', 'practice', 'labs', 'more'];   // a Timer tab saved by an older version opens Today
 const PREFS = {text:'m', motion:'system', calm:false, speak:true, extra:false};
 const DEFAULTS = {done:{}, steps:{}, ans:{}, labs:{}, srs:{}, stage:{}, days:{}, current:null, review:null, tab:'today', openLesson:null, openLab:null, open:null, pFilter:'all', pMode:'todo', theme:'system', timer:{len:15, end:null, left:null, task:''},
-  mock:null, mocks:{}, check:{}, guess:{}, plan:'', prefs:{...PREFS}};
+  mock:null, mocks:{}, check:{}, guess:{}, plan:'', prefs:{...PREFS}, sims:{}};
 let S;   // loaded just before the first render, once the helpers below exist
 
 function load(){
@@ -48,6 +48,7 @@ function load(){
   if (!['system', 'reduce'].includes(s.prefs.motion)) s.prefs.motion = 'system';
   if (typeof s.plan !== 'string') s.plan = ''; else s.plan = s.plan.slice(0, 120);
   for (const k in s.check) if (s.check[k] !== true) delete s.check[k];
+  for (const k in s.sims) if (s.sims[k] !== true || !LABS.some(l => l.id === k)) delete s.sims[k];   // practice labs finished
   for (const k in s.guess) if (!LESSONS.some(l => l.id === k) || !(s.guess[k] === -1 || Number.isInteger(validPick(s.guess[k])))) delete s.guess[k];   // -1: skipped
   for (const k in s.mocks) { const m = cleanResult(s.mocks[k], known); if (m && /^m\d+$/.test(k)) s.mocks[k] = m; else delete s.mocks[k]; }
   s.mock = cleanMock(s.mock, known);
