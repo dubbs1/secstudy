@@ -79,7 +79,7 @@ function plBody(l, s){
       ${playerUi.hint ? plHintHTML(l, s.q) : ''}${plOptions(s.q.o, s.q.a, playerUi.checked)}
       ${playerUi.checked || playerUi.hint ? '' : '<p class="center small"><button class="link" data-act="plHint">Hint: show the key idea</button></p>'}`;
     case 'point': { const p = l.pts[s.i], n = l.pts.length;
-      return `<small class="task-tag">Key idea ${s.i + 1} of ${n}</small><p class="pl-point">${markNumbers(p)}</p>
+      return `<small class="task-tag">Key idea ${s.i + 1} of ${n}</small><p class="pl-point" tabindex="-1">${markNumbers(p)}</p>
       <div class="pl-tools">${speakBtn(p)}</div>`; }
     case 'match': {
       const items = plMatchItems(), M = playerUi.m || (playerUi.m = {l:null, r:null, done:[], miss:null});
@@ -154,7 +154,7 @@ function plFoot(s){
       ${s.k === 'q' && !ok && !playerUi.hint ? '<button class="link" data-act="plHint">Show me the idea again</button>' : ''}
       <button class="btn big" data-act="plNext" id="plNext">Continue</button></div>`;
   }
-  if (last) return `<div class="pl-foot"><button class="btn big" data-act="plFinish" id="plNext">${S.done[playerUi.id] ? 'Back to the map' : 'Mark done and go to the map'}</button></div>`;
+  if (last) return `<div class="pl-foot"><button class="btn big" data-act="plFinish" id="plNext">${playerUi.from === 'today' ? (S.done[playerUi.id] ? 'Back to Home' : 'Mark done and go back') : S.done[playerUi.id] ? 'Back to the map' : 'Mark done and go to the map'}</button></div>`;
   const ready = plReady(), gated = ['match', 'widget', 'flow', 'sim'].includes(s.k);
   return `<div class="pl-foot"><button class="btn big" data-act="plNext" id="plNext" ${ready ? '' : 'disabled'}>${s.k === 'hook' ? 'Start' : 'Continue'}</button>
     ${gated && !ready ? '<button class="link" data-act="plNext" data-v="skip">Skip this one</button>' : ''}</div>`;

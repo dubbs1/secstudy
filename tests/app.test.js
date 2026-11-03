@@ -1751,6 +1751,37 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await p.evaluate(() => JSON.stringify(S.sims)) === '{"lab1":true}', 'bad finished-lab data not cleaned');
   });
 
+  await check('1.4.0 review fixes: focus never drops to the page, Back closes the screen on top, tabs reset, Continue is kept (U19.3, U20.5)', async () => {
+    await seed(p, {v:2, tab:'learn'});
+    await p.focus('[data-act=play][data-id=l1]'); await p.keyboard.press('Enter');
+    for (let i = 0; i < 20 && await p.evaluate(() => plScreen().k !== 'done'); i++) {
+      const k = await p.evaluate(() => plScreen().k);
+      if (k === 'guess') { await p.click('[data-act=plDunno]'); }
+      else if (k === 'q') { await p.click('[data-act=plPick][data-i="0"]'); await p.click('[data-act=plCheck]'); }
+      else if (await p.isDisabled('#plNext')) { await p.focus('[data-act=plNext][data-v=skip]'); await p.keyboard.press('Enter'); continue; }
+      await p.focus('#plNext'); await p.keyboard.press('Enter');
+      ok(await p.evaluate(() => document.activeElement !== document.body && !!document.activeElement.closest('.player')), `focus dropped after the ${k} screen`);
+    }
+    await p.evaluate(() => { playerUi.id = null; render(); });
+    const q = await backPage({v:2, tab:'practice'});
+    await q.click('[data-act=pSub][data-v=drills]'); await q.click('[data-act=dStart][data-v=look]:not([data-id])');
+    await back(q);
+    ok(await q.evaluate(() => !drillUi && pSub === 'drills'), 'Back from a drill did not return to the Drills card');
+    await back(q);
+    ok(await q.evaluate(() => pSub === '' && S.tab === 'practice'), 'Back from Drills did not return to the tiles');
+    await q.context().close();
+    await seed(p, {v:2, tab:'practice', ans:{q2:{n:1, wrong:1, pick:0, ok:false, at:Date.now()}}});
+    await p.click('[data-act=rvStart]'); await p.click('#nav [data-tab=practice]');
+    ok(await p.evaluate(() => !S.review) && await p.$('.tile-btn'), 'Practice again did not close the review');
+    await p.click('#nav [data-tab=learn]'); await p.click('[data-act=labPlay][data-id=lab3]'); await p.click('#nav [data-tab=learn]');
+    ok(await p.evaluate(() => !labPlay) && await p.$('.map'), 'Learn again did not close the lab');
+    await seed(p, {v:2, done:{l1:true, l2:true}, stage:{l3:2}, current:'l3'});
+    ok(await text(p, '#nextUpBtn') === 'Continue', 'no Continue to start with');
+    await p.click('#nav [data-tab=learn]'); await p.click('[data-act=play][data-id=l1]'); await p.click('[data-act=plClose]');
+    await p.click('#nav [data-tab=today]');
+    ok(await text(p, '#nextUpBtn') === 'Continue', 'replaying lesson 1 lost Continue for lesson 3');
+  });
+
   await check('the content security policy blocks injected script, from disk and from the website', async () => {
     const before = errors.length;   // the blocked injections below log errors on purpose
     for (const where of ['disk', 'site']) {

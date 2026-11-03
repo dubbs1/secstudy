@@ -16,6 +16,7 @@ function nextPart(part){
 }
 // Called when a tap finishes a part: marks it and (the first time only) shows the bridge to the next part.
 function finishPart(lid, part){
+  if (playerUi.id) return;   // the step-by-step player has its own way on; this is the overview's
   const k = `${lid}:${part[0]}:${part[1]}`;
   if (pathUi.done[k]) return;
   pathUi.done[k] = true;

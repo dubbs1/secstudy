@@ -732,3 +732,4 @@ body.playing #top{display:none}
 .map-sec .card{margin:0 0 6px}
 .lab-play{border-top-color:var(--brand)}
 .lab-play .pl-screen{padding:6px 12px 18px}
+.pl-point:focus{outline:none}

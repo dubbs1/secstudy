@@ -1,7 +1,7 @@
 /* ---------- Labs ---------- */
 // Opened from a lab stop on the path in Learn, or from More; Back returns there.
 function renderLabsPage(){
-  return `<p class="sub-back"><button class="link" data-act="labsBack">‹ ${labFrom === 'more' ? 'More' : 'Your path'}</button></p>` + renderLabs();
+  return `<p class="sub-back"><button class="link" data-act="labsBack">‹ ${labFrom === 'more' ? 'More' : labFrom === 'lesson' ? 'Back to the lesson' : 'Your path'}</button></p>` + renderLabs();
 }
 function renderLabs(){
   const fOpen = S.open === 'free';
