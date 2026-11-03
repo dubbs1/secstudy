@@ -1553,7 +1553,7 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await p.$('.guess') && !(await p.$('[data-act=mode]')), 'guess first not alone');
     const a = await p.evaluate(() => GUESS.l2.a);
     await p.click(`[data-act=guess][data-i="${(a + 1) % 4}"]`);
-    ok((await text(p, '.guess .fb')).startsWith(`It is ${'ABCD'[a]}`), 'answer not shown straight away');
+    ok((await text(p, '.guess .fb')).startsWith(`Good try. It is ${'ABCD'[a]}`), 'answer not shown straight away');
     ok((await saved(p)).guess.l2 === (a + 1) % 4, 'guess not saved');
     await p.click('[data-act=guessDone]');
     ok(!(await p.$('.guess')) && await p.$('[data-act=mode]'), 'lesson not shown after Got it');

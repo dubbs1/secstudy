@@ -231,7 +231,10 @@ document.addEventListener('click', e => {
       playerUi.checked = true; studied(); focusTo = '#plNext';
       announce((playerUi.sel === q.a ? 'Right. ' : `Not quite: it's ${LETTERS[q.a]}. `) + plain(q.x)); break;
     }
-    case 'plNext': playerUi.i = Math.min(playerUi.i + 1, playerUi.list.length - 1); playerUi.sel = null; playerUi.checked = false; playerUi.anim = true; playerUi.w = null;
+    case 'plHint': playerUi.hint = true; focusTo = '.pl-hint'; break;
+    case 'plDunno': playerUi.sel = null; playerUi.checked = true; S.guess[playerUi.id] = -1; studied(); focusTo = '#plNext';
+      { const g = GUESS[playerUi.id]; announce(`The answer is ${LETTERS[g.a]}. ${plain(g.x)}`); } break;
+    case 'plNext': playerUi.i = Math.min(playerUi.i + 1, playerUi.list.length - 1); playerUi.sel = null; playerUi.checked = false; playerUi.anim = true; playerUi.w = null; playerUi.hint = false;
       window.scrollTo(0, 0); focusTo = '#plScreen h2, #plScreen .flow-say, #plScreen .pl-point, #plNext'; break;
     case 'plFinish': S.done[playerUi.id] = true; S.current = null; studied(); reveal = `[data-act=play][data-id="${playerUi.id}"]`; focusTo = reveal; playerUi.id = null; toast('Lesson done'); break;
     case 'plMatch': {
@@ -239,7 +242,7 @@ document.addEventListener('click', e => {
       M.miss = null; M[side] = M[side] === i ? null : i;
       if (M.l != null && M.r != null) {
         const it = plMatchItems()[M.l];
-        if (M.l === M.r) { M.done.push(M.l); announce(`Match: ${it.t} is ${it.aws}. ${it.n}`); }
+        if (M.l === M.r) { M.done.push(M.l); playerUi.hint = false; announce(`Match: ${it.t} is ${it.aws}. ${it.n}`); }
         else { M.miss = M.r; announce('Not a match. Try another.'); }
         M.l = M.r = null;
       }

@@ -1,29 +1,33 @@
 /* ---------- Step by step: a lesson as a short run of screens, one idea and one thing to do on each ---------- */
-// Built from the lesson's own content: a hook, a guess, a matching game from Picture it, key points two at a time
-// with a question after each pair, a hands-on widget (content/steps.js), How it works, What if, and a finish.
-// Pick, then Check; the answer and why come up from the bottom. Continue moves on: nothing moves by itself.
-// Hands-on screens unlock Continue once tried, and each can be skipped. State is for this visit only.
-const playerUi = {id:null, i:0, list:[], sel:null, checked:false, anim:false, m:null, w:null};
+// Teach, then ask: each key point gets its own screen, and a question comes only right after the point it is about
+// (questions carry p, the point's index). Built from the lesson's own content: a hook, a guess (with "I don't know
+// yet"), one screen per key point and its question, a hands-on widget (content/steps.js), then a matching game as
+// review, How it works, What if, and a finish. Every question has a Hint that shows its key point; a wrong answer
+// offers "Show me the idea again". Pick, then Check; the answer and why come up from the bottom. Continue moves on:
+// nothing moves by itself. Hands-on screens unlock Continue once tried, and each can be skipped. Visit-only state.
+const playerUi = {id:null, i:0, list:[], sel:null, checked:false, anim:false, m:null, w:null, hint:false};
 
 function playerScreens(l){
-  const list = [{k:'hook'}], pts = l.pts.slice(), qs = qsFor(l.id).slice();
+  const list = [{k:'hook'}], qs = qsFor(l.id);
   if (GUESS[l.id]) list.push({k:'guess'});
+  l.pts.forEach((p, i) => {
+    list.push({k:'point', i});
+    qs.filter(q => (q.p != null ? q.p : l.pts.length - 1) === i).forEach(q => list.push({k:'q', q}));
+  });
+  if (STEPS[l.id]) list.push({k:'widget'});
   if (SCENES[l.id]) list.push({k:'match'});
-  while (pts.length) {
-    list.push({k:'point', pts:pts.splice(0, 2)});
-    if (qs.length && pts.length) list.push({k:'q', q:qs.shift()});
-    if (list.filter(s => s.k === 'point').length === 2 && STEPS[l.id]) list.push({k:'widget'});
-  }
-  if (STEPS[l.id] && !list.some(s => s.k === 'widget')) list.push({k:'widget'});
   if (FLOWS[l.id]) list.push({k:'flow'});
   if (SIMS[l.id]) list.push({k:'sim'});
-  qs.forEach(q => list.push({k:'q', q}));
   list.push({k:'done'});
   return list;
 }
+// The key point a question is about, shown by Hint and by "Show me the idea again".
+function plHintHTML(l, q){
+  return `<div class="pl-hint" tabindex="-1"><small class="task-tag">The key idea</small>${markNumbers(l.pts[q.p != null ? q.p : l.pts.length - 1])}</div>`;
+}
 function playerOpen(id){
   const l = LESSONS.find(x => x.id === id);
-  Object.assign(playerUi, {id, i:0, list:playerScreens(l), sel:null, checked:false, anim:true, m:null, w:null});
+  Object.assign(playerUi, {id, i:0, list:playerScreens(l), sel:null, checked:false, anim:true, m:null, w:null, hint:false});
   delete flowUi.order[id]; flowUi.at[id] = 0;
 }
 const plScreen = () => playerUi.list[playerUi.i];
@@ -66,15 +70,22 @@ function plBody(l, s){
       <p class="pl-lead">${st ? st.hook : sc ? sc.title + ': everyday things that work like the cloud.' : ''}</p>
       <p class="muted small">About ${Math.max(6, playerUi.list.length)} minutes · ${playerUi.list.length} short screens · tap, try, then read why</p></div>`;
     case 'guess': { const g = GUESS[l.id];
-      return `<small class="task-tag">Guess first</small><h2 tabindex="-1" class="pl-q">${g.q}</h2><p class="muted small">No pressure: a wrong guess helps you remember.</p>${plOptions(g.o, g.a, playerUi.checked)}`; }
-    case 'q': return `<small class="task-tag">Quick check</small><h2 tabindex="-1" class="pl-q">${s.q.q}</h2>${plOptions(s.q.o, s.q.a, playerUi.checked)}`;
-    case 'point': return `<small class="task-tag">Key idea</small>${s.pts.map(p => `<p class="pl-point">${markNumbers(p)}</p>`).join('')}
-      <div class="pl-tools">${speakBtn(s.pts.join('. '))}</div>`;
+      return `<small class="task-tag">Guess first</small><h2 tabindex="-1" class="pl-q">${g.q}</h2>
+        <p class="muted small">Nobody is expected to know this yet. Go with your gut, or tap "I don't know yet" to see the answer. Either way you'll remember it better.</p>
+        ${plOptions(g.o, g.a, playerUi.checked)}`; }
+    case 'q': return `<small class="task-tag">Quick check</small><h2 tabindex="-1" class="pl-q">${s.q.q}</h2>
+      ${playerUi.hint ? plHintHTML(l, s.q) : ''}${plOptions(s.q.o, s.q.a, playerUi.checked)}
+      ${playerUi.checked || playerUi.hint ? '' : '<p class="center small"><button class="link" data-act="plHint">Hint: show the key idea</button></p>'}`;
+    case 'point': { const p = l.pts[s.i], n = l.pts.length;
+      return `<small class="task-tag">Key idea ${s.i + 1} of ${n}</small><p class="pl-point">${markNumbers(p)}</p>
+      <div class="pl-tools">${speakBtn(p)}</div>`; }
     case 'match': {
       const items = plMatchItems(), M = playerUi.m || (playerUi.m = {l:null, r:null, done:[], miss:null});
       const right = shuffled(items.map((it, i) => i), 'match' + l.id);
-      return `<small class="task-tag">Match them</small><h2 tabindex="-1" class="pl-q">${sc.title}: which AWS idea is each one?</h2>
-        <p class="muted small">Tap a picture, then the AWS idea it stands for.</p>
+      const hint = playerUi.hint && M.l != null ? items[M.l] : null;
+      return `<small class="task-tag">Link them up</small><h2 tabindex="-1" class="pl-q">${sc.title}: which AWS idea from this lesson is each one?</h2>
+        <p class="muted small">You've just met every one of these ideas. Tap a picture, then the AWS idea it works like. ${M.l != null ? '' : 'Pick a picture to get a hint.'}</p>
+        ${hint ? `<p class="pl-hint" tabindex="-1">${hint.e} <b>Clue:</b> ${hint.n}</p>` : M.l != null ? '<p class="center small"><button class="link" data-act="plHint">Hint for this picture</button></p>' : ''}
         <div class="pl-match"><div>${items.map((it, i) => `<button class="pl-card ${M.done.includes(i) ? 'ok' : M.l === i ? 'picked' : ''}" data-act="plMatch" data-v="l" data-i="${i}" ${M.done.includes(i) ? 'disabled' : ''} aria-pressed="${M.l === i}">
           <span class="pl-e" aria-hidden="true">${it.e}</span><span>${it.t}</span></button>`).join('')}</div>
           <div>${right.map(i => `<button class="pl-card aws ${M.done.includes(i) ? 'ok' : M.miss === i ? 'miss' : M.r === i ? 'picked' : ''}" data-act="plMatch" data-v="r" data-i="${i}" ${M.done.includes(i) ? 'disabled' : ''} aria-pressed="${M.r === i}">${items[i].aws}</button>`).join('')}</div></div>
@@ -125,9 +136,14 @@ function plDemandOut(w){
 function plFoot(s){
   const last = playerUi.i === playerUi.list.length - 1;
   if (s.k === 'q' || s.k === 'guess') {
-    if (!playerUi.checked) return `<div class="pl-foot"><button class="btn big" data-act="plCheck" id="plNext" ${playerUi.sel == null ? 'disabled' : ''}>Check</button></div>`;
-    const q = s.k === 'q' ? s.q : GUESS[playerUi.id], ok = playerUi.sel === q.a;
-    return `<div class="pl-foot sheet ${ok ? 'ok' : 'no'}" role="status"><div class="pl-fb" tabindex="-1"><b>${ok ? (s.k === 'guess' ? 'Good guess!' : 'Right!') : `Not quite: it's ${LETTERS[q.a]}.`}</b> ${q.x}</div>
+    if (!playerUi.checked) return `<div class="pl-foot"><button class="btn big" data-act="plCheck" id="plNext" ${playerUi.sel == null ? 'disabled' : ''}>Check</button>
+      ${s.k === 'guess' ? '<button class="link" data-act="plDunno">I don\'t know yet: show me</button>' : ''}</div>`;
+    const q = s.k === 'q' ? s.q : GUESS[playerUi.id], ok = playerUi.sel === q.a, none = playerUi.sel == null;
+    const head = ok ? (s.k === 'guess' ? 'Good guess!' : 'Right!')
+      : none ? `Here's the answer: ${LETTERS[q.a]}: ${plain(q.o[q.a][0])}.`
+      : s.k === 'guess' ? `Good try. It's ${LETTERS[q.a]}: ${plain(q.o[q.a][0])}.` : `Not quite. It's ${LETTERS[q.a]}: ${plain(q.o[q.a][0])}.`;
+    return `<div class="pl-foot sheet ${ok ? 'ok' : none ? 'info' : 'no'}" role="status"><div class="pl-fb" tabindex="-1"><b>${head}</b> ${q.x}</div>
+      ${s.k === 'q' && !ok && !playerUi.hint ? '<button class="link" data-act="plHint">Show me the idea again</button>' : ''}
       <button class="btn big" data-act="plNext" id="plNext">Continue</button></div>`;
   }
   if (last) return `<div class="pl-foot"><button class="btn big" data-act="plFinish" id="plNext">${S.done[playerUi.id] ? 'Back to the map' : 'Mark done and go to the map'}</button></div>`;

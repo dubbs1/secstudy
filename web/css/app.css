@@ -706,3 +706,8 @@ html[data-calm] .top .bar,html[data-calm] .dom .bar,html[data-calm] .week-count{
 .map-t .link.small{font-size:13px}
 @media (prefers-reduced-motion:reduce){.map-stop.here .map-node,.pl-screen.in,.pl-foot.sheet,.pl-opts .opt.right,.pl-card.miss{animation:none}}
 body.playing #top{display:none}
+.pl-hint{background:var(--dcbg);border-left:4px solid var(--dc);border-radius:var(--r-sm);padding:10px 12px;margin:0 0 12px;font-size:15px;line-height:1.5;outline:none;animation:plIn .25s ease-out}
+.pl-hint .task-tag{color:var(--dc)}
+.pl-foot.sheet.info{background:var(--brand-soft)}.pl-foot.sheet.info b{color:var(--brand-text)}
+.fb.info{background:var(--brand-soft)}
+@media (prefers-reduced-motion:reduce){.pl-hint{animation:none}}
