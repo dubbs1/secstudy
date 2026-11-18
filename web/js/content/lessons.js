@@ -56,7 +56,7 @@ const LESSONS = [
  {id:'l8', d:'sec', due:'2026-11-11', t:'Compliance and governance',
   steps:['Read the key points (5 min)','Write one sentence on the difference between CloudTrail, CloudWatch and Config (5 min)','Answer the 3 questions (5 min)'],
   pts:['<b>AWS Artifact</b>: download AWS\'s compliance reports (SOC, ISO, PCI) and agreements.',
-       '<b>CloudTrail</b>: logs every API call: who did what, when, from where. Think "audit".',
+       '<b>CloudTrail</b>: records API calls (account activity): who did what, when, from where. Think "audit".',
        '<b>CloudWatch</b>: metrics, logs and alarms for performance. Think "monitoring".',
        '<b>Config</b>: records resource configuration over time and checks it against rules. Think "is it set up right?"',
        '<b>Organizations</b>: manage many accounts; <b>service control policies (SCPs)</b> set the maximum permissions for accounts in it.',

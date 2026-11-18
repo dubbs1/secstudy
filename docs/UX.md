@@ -246,3 +246,5 @@ Four tabs: **Home**, **Learn**, **Practice**, **More**. The header keeps only th
 - AC21.2 Finishing a practice run ticks the stop on the path (saved in `sims`).
 - AC21.3 The real AWS console cannot be shown inside the app (AWS forbids it and it needs a login); its steps are an
   optional link at the end of a lab.
+- AC20.6 Every lesson has a hook line and a hands-on screen (`content/steps.js`): lesson 1 a demand slider, the
+  others a sort of real situations into 2 to 4 named bins, each with its reason. Continue unlocks once all are sorted.
