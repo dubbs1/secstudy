@@ -1782,6 +1782,32 @@ const text = async (p, sel) => (await p.textContent(sel)).replace(/\s+/g, ' ').t
     ok(await text(p, '#nextUpBtn') === 'Continue', 'replaying lesson 1 lost Continue for lesson 3');
   });
 
+  await check('every lesson has a hook and a hands-on screen; each sort item belongs to one of its bins (U20.6)', async () => {
+    const bad = await p.evaluate(() => {
+      const out = [];
+      for (const l of LESSONS) {
+        const st = STEPS[l.id];
+        if (!st || !st.hook || !st.widget || !st.widget.ask || !st.widget.then) { out.push(l.id + ' has no hands-on screen'); continue; }
+        const w = st.widget;
+        if (w.kind === 'sort') {
+          const ids = w.bins.map(b => b.id);
+          if (w.bins.length < 2 || w.bins.length > 4 || w.bins.some(b => !b.t || !b.h)) out.push(l.id + ' bins');
+          w.items.forEach(it => { if (!ids.includes(it.who) || !it.t || !it.why) out.push(`${l.id} item: ${it.t}`); });
+          ids.forEach(id => { if (w.items.filter(it => it.who === id).length < 1) out.push(`${l.id} bin ${id} is empty`); });
+        } else if (w.kind !== 'demand') out.push(l.id + ' kind ' + w.kind);
+        if (!playerScreens(l).some(s => s.k === 'widget')) out.push(l.id + ' player has no hands-on screen');
+      }
+      return out;
+    });
+    ok(!bad.length, bad.join('; '));
+    await seed(p, {v:2, tab:'learn'});
+    await p.click('[data-act=play][data-id=l12]');
+    await p.evaluate(() => { playerUi.i = playerUi.list.findIndex(s => s.k === 'widget'); render(); });
+    ok(await p.$$eval('.pl-sortcard [data-act=plSort]', b => b.length) === 4 && await p.$$eval('.pl-bin', b => b.length) === 4, 'four bins not shown');
+    while (await p.$('[data-act=plSort][data-v=r53]')) await p.click('[data-act=plSort][data-v=r53]');
+    ok(!(await p.isDisabled('#plNext')) && (await text(p, '.pl-note')).includes('Security groups') && await p.$$eval('.pl-bin li.ok', l => l.length) === 2, 'sorting with four bins');
+  });
+
   await check('the content security policy blocks injected script, from disk and from the website', async () => {
     const before = errors.length;   // the blocked injections below log errors on purpose
     for (const where of ['disk', 'site']) {

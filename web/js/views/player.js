@@ -122,10 +122,11 @@ function plWidget(w){
   // sort
   const left = w.items.map((it, i) => i).filter(i => W.sorted[i] == null), cur = W.cur != null && W.sorted[W.cur] == null ? W.cur : left[0];
   return `<small class="task-tag">Try it</small><h2 tabindex="-1" class="pl-q">${w.ask}</h2>
-    ${cur != null ? `<div class="pl-sortcard"><b>${w.items[cur].t}</b><div class="btns"><button class="btn" data-act="plSort" data-i="${cur}" data-v="aws">AWS</button><button class="btn" data-act="plSort" data-i="${cur}" data-v="you">You</button></div></div>`
+    ${cur != null ? `<div class="pl-sortcard"><small class="muted">${left.length} left</small><b>${w.items[cur].t}</b><div class="btns">${w.bins.map(b =>
+        `<button class="btn" data-act="plSort" data-i="${cur}" data-v="${b.id}">${b.t}</button>`).join('')}</div></div>`
       : `<p class="pl-note">${w.then}</p>`}
-    <div class="pl-bins">${['aws', 'you'].map(b => `<div class="pl-bin"><b>${b === 'aws' ? 'AWS: security OF the cloud' : 'You: security IN the cloud'}</b><ul>${w.items.map((it, i) => W.sorted[i] === b
-      ? `<li class="${it.who === b ? 'ok' : 'no'}">${it.who === b ? '✓' : '✗'} ${it.t}${it.who === b ? '' : `<small>${it.why}</small>`}</li>` : '').join('')}</ul></div>`).join('')}</div>`;
+    <div class="pl-bins">${w.bins.map(b => `<div class="pl-bin"><b>${b.h}</b><ul>${w.items.map((it, i) => W.sorted[i] === b.id
+      ? `<li class="${it.who === b.id ? 'ok' : 'no'}">${it.who === b.id ? '✓' : '✗'} ${it.t}${it.who === b.id ? '' : `<small>${it.why}</small>`}</li>` : '').join('')}</ul></div>`).join('')}</div>`;
 }
 function plDemandOut(w){
   const W = playerUi.w, h = W.v, need = w.need[h], own = w.fixed;
